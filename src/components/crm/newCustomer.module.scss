@@ -1,0 +1,71 @@
+@import '../../overalStyle/colors';
+
+.ovDiv{
+   display: block;
+   margin: 40px auto 0px auto;
+}
+
+
+.dashLine {
+   border-top: 1px line  $dimText;
+}
+.dashLineVer {
+   border-top: 2px dashed  $dimText;
+   transform: rotate(90deg);
+   max-width: 30px;
+   padding: 5px 0px 5px 0px;
+   margin-right: 20px;
+}
+ .personalInformation{
+   padding: 25px 20px 20px 20px;
+   margin-top: 10px;
+   background-color:$blockColor;
+   border-radius: 11px;
+ }
+ .phoneNumberMainDiv{
+   
+   display: flex;
+   align-items: center;
+ }
+ .dot{
+   width: 10px;
+   height: 10px;
+   background-color: $dimText;
+   border-radius: 100px;
+   margin-left: 6px;
+ }
+ .phoneNumberCountry{
+   width: 100%;
+   padding: 0px 10px 0px 10px;
+ }
+ .iconButtonWithText{
+   
+ }
+
+
+ .littleTitleDiv{
+   margin-right: 14px;
+
+ }
+
+
+ .NormalBtn{
+  width: 100%;
+  padding: 10px 0px 10px 0px;
+  background-color: $primaryColor;
+  color:$darkBackText ;
+  border: none;
+  border-radius: 11px;
+  margin-top: 35px;
+  margin-bottom: 20px;
+  font-size: 20px;
+  
+ }
+
+ .addressDeleteBtnWithIcon{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+ }

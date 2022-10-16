@@ -1,0 +1,10 @@
+@import '../../overalStyle/colors';
+.ovDiv{
+    width: 100%;
+    margin:50px auto 0px auto;
+}
+.dashLine{
+    border-right:3px $dimText dashed ;
+    height: 100%;
+    margin-right: 20px;
+}

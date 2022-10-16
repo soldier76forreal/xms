@@ -1,0 +1,49 @@
+@import '../../overalStyle/colors';
+.firstSectionDiv{
+    height: 100%;
+    text-align: right;
+    display: flex;
+    align-items: center;
+    h3{
+        width: fit-content;
+        text-align: right;
+        font-size: 25px;
+        padding: 10px 0px 10px 0px !important;
+    }
+
+    h4{
+        font-size: 18px;
+        margin-right: 30px;
+        margin-top: 4px;
+        color: $dimText;
+    }
+
+}
+.dashLine{
+    border-right:3px $dimText dashed ;
+    height: 100%;
+    margin-right: 20px;
+}
+.searchDiv{
+    display: flex;
+    height: 100%;
+    
+}
+
+.leftSection{
+    height: 100%;
+    padding: 8px 0px 8px 0px;
+    display: flex;
+   
+    button{
+        height: 100%;
+        font-size: 15px;
+        border: none;
+        border-radius: 11px;
+        padding: 6px 20px 6px 12px;
+        color: $darkBackText;
+        background-color: $primaryColor;
+        margin-right: 10px;
+
+    }
+}

@@ -1,0 +1,12 @@
+@import '../../overalStyle/colors';
+.textInputDiv{
+    width: 100%;
+    display: inline-block;
+    input{
+        background-color: $inputColor;
+        width: 100%;
+        border: none;
+        padding: 9px 12px 9px 12px;
+        border-radius: 11px;
+    }
+}

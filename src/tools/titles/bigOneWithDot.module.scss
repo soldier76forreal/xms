@@ -1,0 +1,16 @@
+@import '../../overalStyle/colors';
+.titleDiv{
+    display: inline-block;
+    h3{
+        font-size: 28px;
+        font-weight: 400;
+    }
+    span{
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        margin-left: 6px;
+        border-radius: 80px;
+        background-color: $primaryColor;
+    }
+}
