@@ -1,0 +1,27 @@
+.topSection{
+    width: 100%;
+    display: flex;
+    position: relative;
+    border-bottom:2px solid rgb(138, 138, 138) ;
+    display: flex;
+    align-items: center;
+    margin-top: -8px;
+}
+.backBtn{
+    padding: 10px 15px 10px 24px;
+    border-right:2px solid rgb(138, 138, 138) ;
+    transition: 0.2s all ease-in-out;
+}
+.backBtn:hover{
+
+    background-color: rgb(182, 182, 182);
+}
+.topTitle{
+    position: absolute;
+    right: 20px;
+    margin-top: -4px;
+    font-size: 16px;
+    
+}
+
+

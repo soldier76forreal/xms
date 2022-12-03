@@ -1,16 +1,6 @@
-import React from 'react';
+import {React, useContext} from 'react';
 import Select from 'react-select';
-const measureOptionForNormalSelect = [
-  { value:0, label:'هر اسلب'},
-  { value:1, label:'هرمتر'},
-  { value:2, label:'هر کاشی'}
-]
 
-const options = [
-    { value: 'chocolate', label: 'Chocolate' },
-    { value: 'strawberry', label: 'Strawberry' },
-    { value: 'vanilla', label: 'Vanilla' }
-  ]
 const customStyles = {
   menu: (provided, state) => ({
     ...provided,
@@ -48,8 +38,9 @@ const MultiSelect = (props) =>{
         className="basic-multi-select"
         classNamePrefix="select"
         ref={props.ref}
+        getOptionLabel={option => option.name}
+        getOptionValue={option => option.value}
         placeholder={props.placeholder}
-        value={props.value}
         theme={(theme) => ({
             ...theme,
             borderRadius: 0,

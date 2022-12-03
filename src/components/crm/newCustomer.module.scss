@@ -1,8 +1,19 @@
 @import '../../overalStyle/colors';
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: rgb(73, 73, 73)  !important;
+  opacity: 1; /* Firefox */
+}
 
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+  color: rgb(73, 73, 73)  !important;
+}
+
+::-ms-input-placeholder { /* Microsoft Edge */
+  color: rgb(73, 73, 73)  !important;
+}
 .ovDiv{
    display: block;
-   margin: 40px auto 0px auto;
+   margin: 10px auto 0px auto;
 }
 
 
@@ -18,7 +29,6 @@
 }
  .personalInformation{
    padding: 25px 20px 20px 20px;
-   margin-top: 10px;
    background-color:$blockColor;
    border-radius: 11px;
  }
@@ -68,4 +78,13 @@
   display: flex;
   justify-content: center;
   align-items: center;
+ }
+
+
+ .titlePaddign{
+  padding: 35px 0px 35px 0px;
+ }
+ .titlePaddignSecond{
+  padding: 25px 0px 0px 0px;
+
  }

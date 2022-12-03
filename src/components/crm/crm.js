@@ -11,6 +11,7 @@ import CustomerTable from '../../tools/crm/customerTable';
 
 
 const Crm = (props) =>{
+    
     return(
         <Fragment>
                 <div style={{maxWidth:'1600px'}} dir='rtl' className={Style.ovDiv}>

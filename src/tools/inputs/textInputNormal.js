@@ -6,8 +6,11 @@ const TextInputNormal = (props) =>{
     return(
         <Fragment>
             <div className={Style.textInputDiv}>
-                <input placeholder={props.placeholder} type='text' ></input>
+                <input onChange={props.onChange} name={props.name} placeholder={props.placeholder} type='text' ></input>
             </div>
+
+
+            
         </Fragment>
     )
 }

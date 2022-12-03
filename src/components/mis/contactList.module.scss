@@ -1,0 +1,50 @@
+.topSection{
+    width: 100%;
+    position: fixed;
+    border-bottom:2px solid rgb(138, 138, 138) ;
+    display: flex;
+    align-items: center;
+    background-color: rgb(255, 255, 255);
+    margin-top: 55px;
+    z-index: 10;
+}
+.backBtn{
+    padding: 20px 25px 20px 34px;
+    border-right:2px solid rgb(138, 138, 138) ;
+    transition: 0.2s all ease-in-out;
+}
+.backBtn:hover{
+
+    background-color: rgb(182, 182, 182);
+}
+.topTitle{
+    position: absolute;
+    right: 20px;
+    font-family: YekanBold;
+    font-size: 25px;
+
+}
+.sendBtn{
+    max-width: 300px;
+    margin: 0px auto 0px auto;
+    padding: 0px;
+    position: fixed;
+    
+}
+
+
+.topSectionDiv span{
+    color: rgb(0, 0, 0);
+
+}
+.topSectionDiv{
+    text-align: right;
+    margin-top: 50px;
+    padding: 10px 30px 5px 0px;
+
+}
+.topSectionDiv span{
+    text-align: right;
+    right: 0px;
+    font-family: YekanBold;
+}

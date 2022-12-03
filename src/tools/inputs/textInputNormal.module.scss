@@ -8,5 +8,13 @@
         border: none;
         padding: 9px 12px 9px 12px;
         border-radius: 11px;
+        :focus{
+            border: solid 4px rgb(231, 0, 0) !important;
+        }
     }
 }
+
+
+
+
+

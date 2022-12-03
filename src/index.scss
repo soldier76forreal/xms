@@ -2,23 +2,23 @@
 @font-face {
   font-family: "YekanBold";
   src: url("./fonts/YekanBakhBold.woff") format("woff");
-  font-weight: 400;
+  font-weight: 700;
 }
 @font-face {
   font-family: "YekanRegular";
   src:   url("./fonts/YekanBakhRegular.woff") format("woff");
-  font-weight: 300;
+  font-weight: 400;
   
   }
   @font-face {
     font-family: "YekanMedium";
     src:   url("./fonts/YekanBakhMedium.woff") format("woff");
-    font-weight: 200;
+    font-weight: 500;
   }
 @font-face {
   font-family: "YekanLight";
   src:   url("./fonts/YekanBakhLight.woff") format("woff");
-  font-weight: 100;
+  font-weight: 200;
       
 }
 body {
@@ -26,15 +26,15 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
+    height: 100% !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: 'YekanRegular' , 'YekanBold' ,'YekanRegular' ,'YekanLight' !important;
+  font-family: YekanRegular;
   background-color: $background !important;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: YekanRegular;
 }
 
 h1

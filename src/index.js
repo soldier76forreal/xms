@@ -5,14 +5,49 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './index.scss';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { AxiosGlobalProvider } from './components/authAndConnections/axiosGlobalUrl';
 import {BrowserRouter} from "react-router-dom";
+
 import './App.scss';
+import allReducers from './redux/reducers';
+import { createStore } from 'redux';
+import { Provider } from 'react-redux';
+import { createTheme, ThemeProvider } from '@mui/material';
+import { WebSectionsProvider } from './contextApi/webSection';
+import { GetDatasProvider } from './contextApi/getDatas';
+import { AuthContextProvider } from './components/authAndConnections/auth';
+
+const store = createStore(allReducers);
 const root = ReactDOM.createRoot(document.getElementById('root'));
+const THEME = createTheme({
+  typography: {
+   "fontFamily": `"YekanRegular", sans-serif`,
+  }
+});
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+            <AxiosGlobalProvider>
+    <ThemeProvider theme={THEME}>
+      <AuthContextProvider>
+
+      <GetDatasProvider>
+
+      <WebSectionsProvider>
+  
+      
+          <BrowserRouter>
+          <Provider store={store}>
+
+                <App />
+            </Provider>
+
+          </BrowserRouter>
+        </WebSectionsProvider>
+      </GetDatasProvider>
+      </AuthContextProvider>
+
+        </ThemeProvider>
+            </AxiosGlobalProvider>
   </React.StrictMode>
 );
 
