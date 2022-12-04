@@ -22,11 +22,10 @@ export const AuthContextProvider = (props) =>{
     const savedToken = Cookies.get('accessToken');
     const [accessSection , setAccessSection] = useState([]);
     const [userId , setUserId] = useState('');
-
     const [token , setToken] = useState(savedToken);
     const userIsLoggedIn = !!token;
     const history = useHistory();
-
+    
     const logOutHandler = () =>{
         setToken(null)
         Cookies.remove('accessToken');

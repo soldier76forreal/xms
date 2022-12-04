@@ -2,9 +2,10 @@ import * as React from 'react';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import AuthContext from '../../components/authAndConnections/auth';
 
 export default function NormalMenuForProfile(props) {
-
+const authContext = React.useContext(AuthContext)
 
   return (
     <div>
@@ -26,7 +27,7 @@ export default function NormalMenuForProfile(props) {
         sx={{marginTop:'38px'}}
       >
         <MenuItem onClick={props.handleClose}>تنظیمات</MenuItem>
-        <MenuItem onClick={props.handleClose}>خروج از حساب کاربری</MenuItem>
+        <MenuItem onClick={props.logOut}>خروج از حساب کاربری</MenuItem>
       </Menu>
     </div>
   );

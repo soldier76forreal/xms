@@ -19,7 +19,9 @@ import { Search } from "@mui/icons-material";
 import { Badge, Button } from "@mui/material";
 import MenuIcon from '@mui/icons-material/Menu';
 import LeftSideNav from "./leftSideNav";
+import AuthContext from "../../components/authAndConnections/auth";
 const MainNavPortal = (props) =>{
+    const authContext = useContext(AuthContext);
     const [leftSideNav , setLeftSideNav] = useState({
         left: false,
       
@@ -43,10 +45,13 @@ const MainNavPortal = (props) =>{
       const handleClose = () => {
         setAnchorEl(null);
       };
-    
+      const logOut = () => {
+        authContext.logout()
+        setAnchorEl(null);
+      };
     return(
         <Fragment>
-            <NormalMenuForProfile handleClick={handleClick} handleClose={handleClose} open={open} anchorEl={anchorEl} setAnchorEl={setAnchorEl}></NormalMenuForProfile>
+            <NormalMenuForProfile logOut={logOut} handleClick={handleClick} handleClose={handleClose} open={open} anchorEl={anchorEl} setAnchorEl={setAnchorEl}></NormalMenuForProfile>
             <LeftSideNav toggleDrawer={toggleDrawer} setLeftSideNav={setLeftSideNav} leftSideNav={leftSideNav}></LeftSideNav>
             <div  className={Style.navDiv}>
                 <Navbar className={Style.navBar}  expand="lg">

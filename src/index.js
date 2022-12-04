@@ -26,6 +26,7 @@ const THEME = createTheme({
 });
 root.render(
   <React.StrictMode>
+          <BrowserRouter>
             <AxiosGlobalProvider>
     <ThemeProvider theme={THEME}>
       <AuthContextProvider>
@@ -35,19 +36,17 @@ root.render(
       <WebSectionsProvider>
   
       
-          <BrowserRouter>
           <Provider store={store}>
-
                 <App />
             </Provider>
 
-          </BrowserRouter>
         </WebSectionsProvider>
       </GetDatasProvider>
       </AuthContextProvider>
 
         </ThemeProvider>
             </AxiosGlobalProvider>
+          </BrowserRouter>
   </React.StrictMode>
 );
 

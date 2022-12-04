@@ -46,3 +46,29 @@
     text-align: right;
     padding: 0px 2px 0px 2px;
 }
+
+
+.topTitleDiv{
+    width: 100%;
+    border-bottom: solid 2px rgb(181, 181, 181);
+    text-align: right;
+    margin-top: 5px;
+}
+.preInvoice{
+    font-family:YekanBold;
+    display: inline-block;
+    font-size: 20px;
+    
+    padding: 6px 6px 6px 0px;
+}
+.editIcon{
+    float: left;
+    display: flex;
+    cursor: pointer;
+    margin-top: 0px;
+    padding: 6px;
+    transition: all 0.2s ease-in-out;
+}
+.editIcon:hover{
+    color: rgb(116, 116, 116);
+}

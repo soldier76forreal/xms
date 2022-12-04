@@ -1,8 +1,5 @@
 @import '../../overalStyle/colors';
 .datePickerDiv input{
-    border: none;
-    background-color:$inputColor ;
-    border-radius: 11px;
     width: 100%;
-    padding: 9px 12px 9px 12px;
+    padding: 8px 4px 8px 8px !important;
 }

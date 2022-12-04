@@ -17,9 +17,8 @@
   }
 @font-face {
   font-family: "YekanLight";
-  src:   url("./fonts/YekanBakhLight.woff") format("woff");
-  font-weight: 200;
-      
+  src:url("./fonts/YekanBakhLight.woff") format("woff");
+  font-weight: 200; 
 }
 body {
   margin: 0;
@@ -29,7 +28,7 @@ body {
     height: 100% !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: YekanRegular;
+  font-family: YekanRegular !important;
   background-color: $background !important;
 }
 
