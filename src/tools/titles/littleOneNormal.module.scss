@@ -1,8 +1,25 @@
 @import '../../overalStyle/colors';
 
 .littleOneNormal{
-    font-size: 20px;
-    font-family: 'YekanMedium';
+    font-size: 18px;
+    font-family: YekanRegular;
     color: #707070;
-    
 }
+
+
+
+ @media only screen and (max-width: 576.98px) {
+
+    .littleOneNormal{
+        font-size: 15px;
+        font-family: YekanRegular;
+        color: #707070;
+    }
+    
+ }
+
+ @media only screen and (max-width: 356.98px) {
+
+    
+
+ }

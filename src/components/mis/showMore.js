@@ -69,11 +69,11 @@ export default function ShowMore(props) {
           <Send />
           ارسال
         </MenuItem>
-        <MenuItem onClick={props.handleClose} disableRipple>
+        <MenuItem onClick={props.openEditInv} disableRipple>
           <EditIcon />
           ویرایش
         </MenuItem>
-        <MenuItem onClick={props.handleClose} disableRipple>
+        <MenuItem onClick={props.deleteModal} disableRipple>
           <Delete />
           حذف
         </MenuItem>

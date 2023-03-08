@@ -1,0 +1,48 @@
+.failedMsgDiv{
+    background-color: #ff7284;
+    height: 60px;
+    max-width: 300px;
+    border-radius: 5px;
+    width: 100%;
+    display: flex;
+    align-content: center;
+    align-items: center;
+    margin-left: auto;
+    margin-right: auto;
+}
+.failedMsg{
+    transition: 0.5s all ease-in-out;
+    width: 100%;
+    text-align: center;
+    z-index: 13;
+    position: fixed;
+    margin-top: 30px;
+}
+.failedIconMsg{
+    display: inline-block;
+    margin-top: 5px;
+    padding-right: 10px;
+    text-align: right;
+}
+
+.failedMsgTextDiv{
+    display: inline-block;
+    height: fit-content;
+    margin-top: 7px;
+    margin-right: 5px;
+}
+.failedMsgTextDiv h4{
+    display: inline-block;
+    font-size: 15px;
+    color:#5f000d ;
+    font-family: Dana1;
+
+}
+.failedMsgAnimateIn{
+    transform: translateY(0);
+}
+.failedMsgAnimateOut{
+    transform: translateY(-200%);
+}
+
+

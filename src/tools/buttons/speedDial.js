@@ -34,12 +34,15 @@ const OpenIconSpeedDial = (props)=>{
 
   return(
       <Fragment>
+        <div style={{position:'absolute' , bottom:'0px'}}>
+
           {ReactDom.createPortal(
               <OpenIconSpeedDialPortal onClick={props.onClick} ></OpenIconSpeedDialPortal>
           ,
           document.getElementById('speedDial')
           
           )}
+        </div>
 
       </Fragment>
   );

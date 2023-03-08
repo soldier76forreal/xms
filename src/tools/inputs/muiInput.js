@@ -22,21 +22,25 @@ export default function MultilineTextFields(props) {
     <Box
       component="form"
       sx={{
-        '& .MuiTextField-root': { m: 1, width: props.width  },
+        '& .MuiTextField-root': { m: 0, width: props.width , padding:'0px' , margin:'0px'},
       }}
+     
       noValidate
       autoComplete="off"
     >
-
         {props.type === 'normal'?
           <div className={Style.normalDiv}>
             <TextField
+              disabled={props.insertFactor}
               id="filled-multiline-flexible"
-              label={props.name}
+              label={props.err !== undefined && props.err.status === true?'خطا':props.name}
+              value={props.value}
+              error={props.err !== undefined && props.err.status === true?true:false}
+              helperText={props.err !== undefined && props.err.status === true?props.err.msg:null}
               multiline
               onChange={props.onChange}
-              maxRows={4}
-              inputProps={{min: 0, style: { textAlign: 'right' }}} // the change is here
+              maxRows={4}   
+              inputProps={{min: 0, style: { textAlign: 'right'  }}} // the change is here
               variant="filled"
             />
           </div>
@@ -44,9 +48,12 @@ export default function MultilineTextFields(props) {
 
           <div className={Style.meterDiv}>
           <TextField
-              label={props.name}
+              label={props.err !== undefined && props.err.status === true?'خطا':props.name}
+              disabled={props.insertFactor}
+              error={props.err !== undefined && props.err.status === true?true:false}
+              helperText={props.err !== undefined && props.err.status === true?props.err.msg:null}
               id="filled-start-adornment"
-              
+              value={props.value}
               sx={{ m: 1, width: '25ch' }}
               onChange={props.onChange}
               InputProps={{
@@ -55,18 +62,38 @@ export default function MultilineTextFields(props) {
               variant="filled"
             />
           </div>
+            :props.type === 'cm'?
+
+            <div className={Style.normalDiv}>
+            <TextField
+                label={props.err !== undefined && props.err.status === true?'خطا':props.name}
+                disabled={props.insertFactor}
+                error={props.err !== undefined && props.err.status === true?true:false}
+                helperText={props.err !== undefined && props.err.status === true?props.err.msg:null}
+                id="filled-start-adornment"
+                value={props.value}
+                sx={{ m: 1, width: '25ch' }}
+                onChange={props.onChange}
+                InputProps={{
+                  startAdornment: <InputAdornment  position="start"><span style={{fontSize:'7px'}}>سانتی متر</span> </InputAdornment>,
+                }}
+                variant="filled"
+              />
+            </div>
         :props.type === 'password'?
           <div  className={Style.passwordDiv}>
 
             <FormControl dir='rtl' sx={{ m: 1, width: props.width }} variant="filled">
               <InputLabel htmlFor="filled-adornment-password">{props.name}</InputLabel>
               <FilledInput
+                disabled={props.insertFactor}
                 id="filled-adornment-password"
                 type={showPassword ? 'text' : 'password'}
                 onChange={props.onChange}
                 endAdornment={
                   <InputAdornment position="end">
                     <IconButton
+  
                       aria-label="toggle password visibility"
                       onClick={()=>{if(showPassword === true){setShowPassword(false)}else if(showPassword === false){setShowPassword(true)}}}
                       edge="end"
@@ -82,9 +109,12 @@ export default function MultilineTextFields(props) {
 
       <div className={Style.meterDiv}>
       <TextField
-          label={props.name}
+          disabled={props.insertFactor}
           id="filled-start-adornment"
-          
+          label={props.err !== undefined && props.err.status === true?'خطا':props.name}
+          value={props.value}
+          error={props.err !== undefined && props.err.status === true?true:false}
+          helperText={props.err !== undefined && props.err.status === true?props.err.msg:null}
           sx={{ m: 1, width: '25ch' }}
           onChange={props.onChange}
           InputProps={{

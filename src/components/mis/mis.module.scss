@@ -1,5 +1,13 @@
 .overalDiv{
+    min-height: 80vh;
     margin: 0px auto 0px auto;
+}
+.overalDivLoad{
+  min-height: 80vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0px auto 0px auto;
 }
 .invoiceCard{
     width: 100%;
@@ -24,12 +32,19 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s all ease-in-out;
+    border-radius: 9px;
     background-color: rgb(233, 233, 233);
 }
-.title{
+.sideBtn:hover{
+    background-color: rgb(203, 203, 203);
+}
+.titleProfile{
     font-size: 20px;
-    margin-top: 10px;
+    margin-top: 5px;
+    display: inline-block;
+    color: #fff;
     font-family: YekanBold;
 }
 .meter{
@@ -38,17 +53,166 @@
     font-family: YekanBold;
 }
 .dis{
-    font-size: 12px;
-    color: rgb(73, 73, 73);
+    font-size: 14px;
+    color: rgb(33, 33, 33);
     margin-top: -5px;
+}
+.disProfAccess{
+  font-size: 14px;
+  color: rgb(175, 175, 175);
+  margin-top: -3px;
 }
 .top{
     width: 100%;
     display: flex;
-    
 }
 .date{
-    font-size: 11px;
-
+    font-size: 12px;
+    font-family: YekanBold;
     margin: 0px auto 0px 0px;
 }
+
+.date2{
+  font-size: 12px;
+  font-family: YekanBold;
+  display: none;
+  margin: 0px auto 0px 0px;
+}
+.editBtn{
+  background-color: rgb(77, 77, 77);
+  width: 40px;
+  align-items: center;
+  justify-content: center;
+  display: flex;
+  height: 40px;
+  transition: 0.2s all ease-in-out;
+  border-radius: 80px;
+}
+.editBtn:hover{
+  background-color: rgb(103, 103, 103);
+
+}
+@keyframes fadeO { 
+    from {
+      opacity: 1;
+    }
+  
+    to {
+      opacity: 0;
+    }
+  }
+  .fadeOut {
+    animation: fadeO 0.2s;
+    animation-fill-mode: forwards;
+  }
+
+  @keyframes fadeI { 
+    from {
+      opacity: 0;
+    }
+  
+    to{
+      opacity: 1;
+    }
+  }
+  .fadeIn {
+    animation: fadeI 0.5s;
+    animation-fill-mode: forwards;
+  } 
+
+
+  .editIcon{
+    font-size: 22px;
+  }
+
+
+  @media only screen and (max-width: 1200.98px) {
+
+  }
+  
+  
+  @media only screen and (max-width: 992.98px) {
+  
+      
+  }
+  
+    @media only screen and (max-width: 768.98px) {
+      .date{
+        font-size: 9px;
+      }
+      .effectBy{
+        background-color: rgb(69, 69, 69);
+        padding: 4px 5px 3px 5px;
+        border-radius:40px ;
+        color: rgb(229, 229, 229);
+        font-size: 11px;
+        display: inline-block;
+        
+    }
+    .title{
+      font-size: 15px;
+      margin-top: 5px;
+      line-height: 16px;
+      font-family: YekanBold;
+    }
+    .titleProfile{
+      font-size: 15px;
+      margin-top: 5px;
+      line-height: 16px;
+      font-family: YekanBold;
+      display: inline-block;
+      color: #fff;
+
+    }
+    .dis{
+        font-size: 12px;
+        color: rgb(33, 33, 33);
+        margin-top: 3px;
+      }
+      .sideBtn{
+        width: 5%;
+        max-height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        transition: 0.2s all ease-in-out;
+        border-radius: 9px;
+        padding: 0px 12px 0px 12px;
+        background-color: rgb(233, 233, 233);
+    }
+    .date{
+      display: none;
+    }
+    .date2{
+      font-size: 9px;
+      font-family: YekanBold;
+      display: flex;
+      margin: 0px auto 0px 0px;
+    }
+    .editBtn{
+      background-color: rgb(77, 77, 77);
+      width: 30px;
+      align-items: center;
+      justify-content: center;
+      display: flex;
+      height: 30px;
+      margin-left: 10px;
+      transition: 0.2s all ease-in-out;
+      border-radius: 80px;
+    }
+    .editIcon{
+      font-size: 18px;
+    }
+   }
+   @media only screen and (max-width: 576.98px) {
+  
+  
+      
+   }
+  
+   @media only screen and (max-width: 356.98px) {
+  
+      
+  
+   }

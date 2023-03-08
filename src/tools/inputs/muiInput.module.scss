@@ -6,6 +6,7 @@
     max-width: 100% !important;
     text-align: right;
     margin-right: 12px;
+    max-width: 100% !important;
 }
 .meterDiv label{
     position: absolute;
@@ -24,4 +25,39 @@
     max-width: 100% !important;
     text-align: right;
     margin-right: 20px;
+}
+
+
+@media only screen and (max-width: 768.98px) {
+    .normalDiv label{
+        position: absolute;
+        right: 0px;
+        left: auto;
+        padding: 0px 10px 0px 10px;
+        max-width: 100% !important;
+        text-align: right;
+        font-size: 12px;
+        margin-right: 12px;
+        max-width: 100% !important;
+    }
+    .meterDiv label{
+        position: absolute;
+        right: 0px;
+        left: auto;
+        padding: 0px 0px 0px 00px;
+        max-width: 100% !important;
+        text-align: right;
+        font-size: 12px;
+        margin-right: 0px;
+    }
+    .passwordDiv label{
+        position: absolute;
+        right: 0px;
+        font-size: 12px;
+        left: auto;
+        padding: 0px 0px 0px 00px;
+        max-width: 100% !important;
+        text-align: right;
+        margin-right: 20px;
+    }
 }

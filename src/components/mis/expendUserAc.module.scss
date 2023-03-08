@@ -1,0 +1,23 @@
+.validationDiv{
+    display:flex;
+    align-items:center;
+
+}
+.taskBtn{
+
+  margin:0px 0px 0px auto !important;
+}
+.validation{
+    margin-right:8px;
+    font-size:13px;
+}
+@media only screen and (max-width: 768.98px) {
+.editSpan{
+    display: none;
+}
+.validation{
+    margin-right:8px;
+    font-size:10px;
+}
+}
+

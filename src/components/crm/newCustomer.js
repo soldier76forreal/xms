@@ -20,26 +20,41 @@ import NormalBtn from '../../tools/buttons/normalBtn';
 import Datep from '../../tools/inputs/datePicker';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import axios from 'axios';
+import ReactDom from 'react-dom';
+import { useHistory } from 'react-router-dom';
+import { ArrowBackIos } from '@mui/icons-material';
+import Swal from 'sweetalert2'
+import withReactContent from 'sweetalert2-react-content'    
+import jwtDecode from 'jwt-decode';
+import AuthContext from '../authAndConnections/auth';
+import WhatsApp from '../../assets/whatsapp.png';
+import WhatsAppBW from '../../assets/whatsappB&W.png';
+import DateMenu from './dateMenu';
+import MiladiDatePicker from '../../tools/inputs/datePickerMiladi';
+import HejriDatePicker from '../../tools/inputs/datePickerHejri';
+import { CircularProgress } from '@mui/material';
 
-
-const NewCustomer = () =>{
+const NewCustomerPortal = (props) =>{
     //hooks
-    const authCtx = useContext(AxiosGlobal);
-
-
+    const axiosCtx = useContext(AxiosGlobal);
+    const authCtx = useContext(AuthContext);
+    const history = useHistory();
+    var decoded = jwtDecode(authCtx.token);
+    const MySwal = withReactContent(Swal)
     //personal information states
-    const [firstName , setFirstName] = useState('');
-    const [lastName , setLastName] = useState('');
-    const [personCountry , setPersonCountry] = useState('');
-    const [personTitle , setPersonTitle] = useState('');
-    const [customerType , setCustomerType] = useState('');
-    const [customerOrigin , setCustomerOrigin] = useState('');
-    const [dateOfBrith , setDateOfBrith] = useState('');
+    const [firstName , setFirstName] = useState(null);
+    const [lastName , setLastName] = useState(null);
+    const [personCountry , setPersonCountry] = useState(null);
+    const [personTitle , setPersonTitle] = useState(null);
+    const [customerType , setCustomerType] = useState(null);
+    const [customerOrigin , setCustomerOrigin] = useState(null);
+    const [dateOfBrith , setDateOfBrith] = useState(null);
     const [customerFavoriteProducts , setCustomerFavoriteProducts] = useState([]);
-
+    const [calenderType , setCalenderType] = useState('shamsi');
+    const [loading , setLoading] = useState(false);
     //phone numbers information states
 
-    const [phoneNumbers , setPhoneNumbers] = useState([{title:'' , countryCode:'' , number:''}]);
+    const [phoneNumbers , setPhoneNumbers] = useState([{title:'' , countryCode:'' , number:'' , whatsApp:true}]);
 
     //emails information states
     const [emails , setEmails] = useState([{email:''}]);
@@ -55,21 +70,21 @@ const NewCustomer = () =>{
         var tempAr = [...phoneNumbers];
         tempAr[j.name].title = e.id;
         setPhoneNumbers([...tempAr]);
-        console.log(phoneNumbers)
+       
     }
 
     const getCountryCode = (e , j) =>{
         var tempAr = [...phoneNumbers];
         tempAr[j.name].countryCode = e.phone;
         setPhoneNumbers([...tempAr]);
-        console.log(phoneNumbers)
+        
     }
 
     const getPhoneNumber = (e) =>{
         var tempAr = [...phoneNumbers];
         tempAr[e.target.name].number = e.target.value;
         setPhoneNumbers([...tempAr]);
-        console.log(phoneNumbers)
+       
     }
 
 
@@ -79,7 +94,7 @@ const NewCustomer = () =>{
         var tempAr = [...emails];
         tempAr[e.target.name].email = e.target.value;
         setEmails([...tempAr]);
-        console.log(emails)
+        
     }
 
 
@@ -89,7 +104,7 @@ const NewCustomer = () =>{
         var tempAr = [...addresses];
         tempAr[j.name].country = e.code;
         setAddresses([...tempAr]);
-        console.log(addresses)
+       
     }
 
 
@@ -97,7 +112,7 @@ const NewCustomer = () =>{
         var tempAr = [...addresses];
         tempAr[e.target.name].province = e.target.value;
         setAddresses([...tempAr]);
-        console.log(addresses)
+        
     }
 
     
@@ -105,48 +120,49 @@ const NewCustomer = () =>{
         var tempAr = [...addresses];
         tempAr[e.target.name].city = e.target.value;
         setAddresses([...tempAr]);
-        console.log(addresses)
+       
     }
 
     const getNeighbourhood = (e) =>{
         var tempAr = [...addresses];
         tempAr[e.target.name].neighbourhood = e.target.value;
         setAddresses([...tempAr]);
-        console.log(addresses)
+        
     }
     const getStreet = (e) =>{
         var tempAr = [...addresses];
         tempAr[e.target.name].street = e.target.value;
         setAddresses([...tempAr]);
-        console.log(addresses)
+        
     }
     const getPlate = (e) =>{
         var tempAr = [...addresses];
         tempAr[e.target.name].plate = e.target.value;
         setAddresses([...tempAr]);
-        console.log(addresses)
+        
     }
     const getPostalCode = (e) =>{
         var tempAr = [...addresses];
         tempAr[e.target.name].postalCode = e.target.value;
         setAddresses([...tempAr]);
-        console.log(addresses)
+        
     }
     const getMapLink = (e) =>{
         var tempAr = [...addresses];
         tempAr[e.target.name].mapLink = e.target.value;
         setAddresses([...tempAr]);
-        console.log(addresses)
+        
     }
     const getAddressExplanations = (e) =>{
         var tempAr = [...addresses];
         tempAr[e.target.name].addressExplanations = e.target.value;
         setAddresses([...tempAr]);
-        console.log(addresses)
+        
     }
 
 
     const saveData = async() =>{
+        setLoading(true)
         const dataToSend = {
             personalInformation:{
                 firstName : firstName,
@@ -155,60 +171,96 @@ const NewCustomer = () =>{
                 personTitle:personTitle,
                 customerType : customerType,
                 customerOrigin:customerOrigin,
-                dateOfBrith:dateOfBrith
+                dateOfBrith:dateOfBrith,
+                calenderType:calenderType
             },
             phoneNumberInformation : phoneNumbers,
-            email:emails,
-            address:addresses
+            email:emails[0].email === '' ? null : emails,
+            address: addresses,
+            generatedBy:decoded.id
         }
-        try{
-            const response = await axios({
-                method:"post",
-                data:dataToSend,
-                url:`${authCtx.defaultTargetApi}/crm/getTheBlogForMain`,
-                config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
-            })
-            const dataRes = response.data;
-            console.log(dataRes);
-    }catch(err){
-        console.log(err);
-    }       
+     
+        if(firstName === '' || lastName === '' || phoneNumbers[0].number ==='' || phoneNumbers[0].countryCode ==='' || phoneNumbers[0].title ===''){
+            Swal.fire({
+                icon: 'error',
+                title: 'خطا',
+                text: 'برای اضافه کردن مشتری جدید، باید حداقل نام و نام خانوادگی شماره تماس را وارد کنید',
+              })
+              setLoading(false)
+        }else{
+            try{
+                const response = await authCtx.jwtInst({
+                    method:"post",
+                    data:dataToSend,
+                    url:`${axiosCtx.defaultTargetApi}/crm/getTheBlogForMain`,
+                    config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
+                })
+                setTimeout(()=>{
+                    const dataRes = response.data;
+                    props.setSuccessToast({status:true , msg:'مشتری جدید ایجاد شد'});
+                    props.setNewCustomer(false)
+                    props.setRefresh(Math.random())
+                    setLoading(false)
+                    
+                    const closingSuccessMsgTimeOut = setTimeout(()=>{props.setSuccessToast({status:false , msg:'مشتری جدید ایجاد شد'})}, 3000);
+                }, 800)
+                }catch(err){
+                    setLoading(false)
+                    console.log(err);
+            } 
+        }      
     }
     return(
         <Fragment>
-            
-                <div className={Style.ovDiv}  dir='rtl'  style={{maxWidth:'1600px'}}>
+            <div style={props.newCustomer === true?{display:'block'}:{display:'none'}}  className={props.newCustomer === true? `${Style.newInvoice} ${Style.fadeIn}` : props.newCustomer === false?`${Style.newInvoice} ${Style.fadeOut}`:null}>
+                <div className={Style.topSection}>
+                    <div onClick={()=>{props.setNewCustomer(false);}} className={Style.backBtn}><ArrowBackIos className={Style.arrowIcon} sx={{color:'#000' , fontSize:'30px'}}></ArrowBackIos></div>
+                    <div className={Style.topTitle}>مشتری جدید</div>
+                </div>
+                <div className={Style.ovDiv}  dir='rtl'  style={{maxWidth:'700px' , overflowY:'scroll' , height:'95vh' , padding:"0px 15px 60px 15px"}}>
                     <div className={Style.titlePaddign}>
                         <BigOneWithDot text="مشخصات فردی"></BigOneWithDot>
                     </div>
                     <div className={Style.personalInformationFirstOne}>
                         <Row className="g-0">
-                            <Col style={{padding:'0px 5px 0px 5px'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={2}>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={2} xl={4} xxl={4} xs={6}>
                                 <CustomSelect onChange={(e)=>{setPersonCountry(e.code)}} selectType='countryWithFlag' placeholder="کشور"></CustomSelect>
                             </Col>
-                            <Col style={{padding:'0px 5px 0px 5px'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={2}>
-                                <CustomSelect  onChange={(e)=>{setPersonTitle(e.id)}} selectType='personTitle' placeholder="عنوان"></CustomSelect>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={6}>
+                                <CustomSelect   onChange={(e)=>{setPersonTitle(e.id)}} selectType='personTitle' placeholder="عنوان"></CustomSelect>
                             </Col>
-                            <Col style={{padding:'0px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={4} xxl={4} xs={4}>
+                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={3} xxl={3} xs={6}>
                                 <TextInputNormal onChange={(e)=>{setFirstName(e.target.value)}}  placeholder="نام"></TextInputNormal>
                             </Col>
-                            <Col style={{padding:'0px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={4} xxl={4} xs={4}>
+                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={3} xxl={3} xs={6}>
                                 <TextInputNormal onChange={(e)=>{setLastName(e.target.value)}} placeholder="نام خانوادگی"></TextInputNormal>
                             </Col>
                         </Row>
-                        <Row className="g-0" style={{padding:'15px 0px 5px 0px'}}>
-                            <Col style={{padding:'0px 5px 0px 5px'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={2}>
-                                <CustomSelect selectType='personTitle' placeholder="نوع مشتری"></CustomSelect>
+                        <Row className="g-0" style={{padding:'0px 0px 5px 0px'}}>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'999'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
+                                <CustomSelect disable={true} selectType='personTitle' placeholder="نوع مشتری"></CustomSelect>
                             </Col>
-                            <Col style={{padding:'0px 5px 0px 5px'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={2}>
-                                <CustomSelect onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="جذب شده از طریق"></CustomSelect>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'2000'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
+                                <div style={{zIndex:'2000'}}>
+
+                                    <CustomSelect  onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="جذب شده از طریق"></CustomSelect>
+                                </div>
                             </Col>
-                            <Col style={{padding:'0px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={4} xxl={4} xs={4}>
-                                <Datep onChange={setDateOfBrith}></Datep>
+                            <Col dir='rtl' style={{padding:'4px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                <div style={{display:'flex' , alignItems:'center' , padding:'10px 5px 2px 5px'}}>
+                                    <label style={{marginBottom:'5px' , fontSize:'13px'}}>تاریخ تولد</label>
+                                    <div style={{margin:'0px auto 0px 0px' , display:'flex'}}>
+                                        <div onClick={()=>{setCalenderType('shamsi')}} style={calenderType==='shamsi'?{padding:'2px 12px 2px 12px' , borderRadius:'5px' , backgroundColor:'rgb(209, 209, 209)' , fontSize:'13px' , cursor:'pointer'}:{padding:'0px 12px 0px 12px' , fontSize:'13px' , cursor:'pointer'}}>شمسی</div>
+                                        <div onClick={()=>{setCalenderType('miladi')}} style={calenderType==='miladi'?{padding:'2px 12px 2px 12px' , borderRadius:'5px', backgroundColor:'rgb(209, 209, 209)' , fontSize:'13px' , cursor:'pointer'}:{padding:'0px 12px 0px 12px' , fontSize:'13px' , cursor:'pointer'}}>میلادی</div>
+                                    </div>
+                                </div>
+                                {calenderType === 'shamsi'?
+                                    <Datep value={dateOfBrith} onChange={(e)=>{setDateOfBrith(e)}}></Datep>    
+                                :calenderType === 'miladi'?
+                                    <MiladiDatePicker value={dateOfBrith} onChange={(e)=>{setDateOfBrith(e)}}></MiladiDatePicker>                               
+                                :null}
                             </Col>
-                            <Col style={{padding:'0px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={4} xxl={4} xs={4}>
-                                <MultiSelect placeholder='محصولات مورد علاقه'></MultiSelect>
-                            </Col>
+
                         </Row>
                     </div>
                     <hr className={Style.dashLine}></hr>
@@ -217,24 +269,29 @@ const NewCustomer = () =>{
                             <BigOneWithDot text="اطلاعات تماس"></BigOneWithDot>
                         </div>
 
-                        <Row className="g-0" dir='rtl' style={{padding:'30px 0px 0px 0px'}}>
+                        <Row className="g-0" dir='rtl' style={{padding:'2px 0px 0px 0px'}}>
                             <div className={Style.littleTitleDiv}>
                                 <LittleOneNormal text='شماره تماس'></LittleOneNormal>
                                 <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
-
                             </div>
 
                             <Col sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
-                                    <IconBotton  onClick={()=>{var a = [...phoneNumbers]; a.push({title:'' , countryCode:'' , number:''}); setPhoneNumbers([...a])}} color='black' name='شماره تماس جدید' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                                <IconBotton  onClick={()=>{var a = [...phoneNumbers]; a.push({title:'' , countryCode:'' , number:'' , whatsApp:false}); setPhoneNumbers([...a])}} color='black' name='شماره تماس جدید' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
                             </Col>
                         </Row>
-                        <hr className={Style.dashLineVer}></hr>
                             {phoneNumbers.map((data , i)=>{
                                 return(
-                                    <Row key={i} className="g-0" dir='rtl' style={{padding:'5px  0px 5px 0px'}}>
-                                        <Col sm={12} md={12} lg={4} xl={4} xxl={4} xs={4}>
+                                    <Row key={i} className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px' , marginTop:'5px'}}>
+                                        <Col style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={8} xl={8} xxl={8} >
                                             <div className={Style.phoneNumberMainDiv}>
-                                                <div className={Style.dot}></div>
+                                                <div>
+                                                    {data.whatsApp === true?
+                                                        <img onClick={()=>{var temp = [...phoneNumbers]; temp[i].whatsApp = false; setPhoneNumbers([...temp])}} style={{width:'40px' , height:'40px' , objectFit:'cover', marginLeft:'5px'}} src={WhatsApp}></img>
+                                                    :data.whatsApp === false?
+                                                        <img onClick={()=>{var temp = [...phoneNumbers]; temp[i].whatsApp = true; setPhoneNumbers([...temp])}} style={{width:'40px' , height:'40px' , objectFit:'cover', marginLeft:'5px'}} src={WhatsAppBW}></img>
+                                                    :null}
+                                                </div>
+                                                <div style={{padding:'4px 10px 0px 10px'}} className={Style.dot}>{i+1}</div>
                                                     <IconBotton onClick={()=>{var temp = [...phoneNumbers]; temp.splice(i,1); setPhoneNumbers([...temp]) }}  text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
                                                 <div className={Style.phoneNumberCountry}>
                                                     <CustomSelect name={i} onChange={getPrTitle} selectType='personTitle' placeholder="عنوان"></CustomSelect>
@@ -244,7 +301,7 @@ const NewCustomer = () =>{
                                                 </div>
                                             </div>
                                         </Col>
-                                        <Col  style={{padding:'0px'}} sm={12} md={12} lg={3} xl={3} xxl={3} xs={3}>
+                                        <Col  style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={4} xl={4} xxl={4} >
                                             <TextInputNormal name={i} onChange={getPhoneNumber} placeholder="شماره تماس"></TextInputNormal>
                                         </Col>
                                     </Row>
@@ -260,16 +317,15 @@ const NewCustomer = () =>{
 
                             </div>
 
-                            <Col sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                            <Col style={{marginBottom:'5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                     <IconBotton onClick={()=>{var a = [...emails]; a.push({email:''}); setEmails([...a])}} color='black' name='ایمیل جدید'  text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
                             </Col>
                         </Row>
-                        <hr className={Style.dashLineVer}></hr>
                         {emails.map((data , i)=>{
                             return(
-                                <Col key={i} sm={12} md={12} lg={4} xl={4} xxl={4} xs={4}>
+                                <Col style={{padding:'5px  0px 5px 0px'}} key={i} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                     <div className={Style.phoneNumberMainDiv}>
-                                        <div className={Style.dot}></div>
+                                        <div className={Style.dot}>{i+1}</div>
                                         <IconBotton onClick={()=>{var temp = [...emails]; temp.splice(i,1); setEmails([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
                                         <div className={Style.phoneNumberCountry}>
                                         <TextInputNormal name={i} onChange={getEmail} placeholder='ایمیل'></TextInputNormal>
@@ -289,24 +345,29 @@ const NewCustomer = () =>{
                                 <LittleOneNormal text='آدرس ها'></LittleOneNormal>
                                 <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
                             </div>
-                            <Col sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
-                                <IconBotton onClick={()=>{var a = [...addresses]; a.push({country:'' , province:'' , city:'' , neighbourhood:'' , street:'' , plate:'' , postalCode:'' , mapLink:'' , addressExplanations:''}); setAddresses([...a])}} color='black' name='آدرس جدید' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                            <Col style={{marginBottom:'10px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                <IconBotton  onClick={()=>{var a = [...addresses]; a.push({country:'' , province:'' , city:'' , neighbourhood:'' , street:'' , plate:'' , postalCode:'' , mapLink:'' , addressExplanations:''}); setAddresses([...a])}} color='black' name='آدرس جدید' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
                             </Col>
                         </Row>
-                        <hr className={Style.dashLineVer}></hr>
+                        
                         {addresses.map((data , i)=>{
                             return(
-                                <Row key={i} className="g-0">
-                                    <Col style={{padding:'0px'}} sm={12} md={12} lg={1} xl={1} xxl={1} xs={1}>
-                                        <div className={Style.addressDeleteBtnWithIcon} >
-                                            <IconBotton onClick={()=>{var temp = [...addresses]; temp.splice(i,1); setAddresses([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
+                                <Row style={{marginTop:'30px'}} key={i} className="g-0">
+                                    <Col  xs={12} sm={12} md={12} lg={12} xl={12} xxl={12}>
+                                        <div style={{width:'100%'}}>
                                         </div>
                                     </Col>
-                                    <Col style={{padding:'0px'}} sm={12} md={12} lg={11} xl={11} xxl={11} xs={11}>
-                                        <Row className="g-0" dir='rtl' style={{padding:'5px  0px 5px 0px'}}>
-                                            <Col style={{padding:'0px'}} sm={12} md={12} lg={5} xl={5} xxl={5} xs={5}>
+                                    <Col style={{padding:'0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
+                                        <Row style={{padding:'0px 0px 0px 0px'}}>
+                                            <Col  xs={12} sm={12} md={12} lg={12} xl={12} xxl={12}>
+                                                <div style={{width:'100%' , fontSize:'12px' , borderRadius:'11px' , padding:'10px 0px 10px 0px' , marginBottom:'5px' , display:'flex' , justifyContent:'center' , color:'#fff' , backgroundColor:'rgb(60, 60, 60)'}}>
+                                                آدرس {i+1}
+                                                </div>
+                                            </Col>
+                                        </Row>
+                                        <Row className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px'}}>
+                                            <Col style={{padding:'0px 0px 10px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div className={Style.phoneNumberMainDiv}>
-                                    
                                                     <div className={Style.phoneNumberCountry}>
                                                         <CustomSelect onChange={getAddressCountry} name={i} selectType='countryWithFlag' placeholder="کشور"></CustomSelect>
                                                     </div>
@@ -315,7 +376,7 @@ const NewCustomer = () =>{
                                                     </div>
                                                 </div>
                                             </Col>
-                                            <Col style={{padding:'0px'}} sm={12} md={12} lg={5} xl={5} xxl={5} xs={5}>
+                                            <Col style={{padding:'0px 0px 10px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div className={Style.phoneNumberMainDiv}>                 
                                                     <div className={Style.phoneNumberCountry}>
                                                         <TextInputNormal onChange={getCity} name={i} placeholder='شهر'></TextInputNormal>
@@ -323,32 +384,33 @@ const NewCustomer = () =>{
                                                     <div className={Style.phoneNumberCountry}>
                                                         <TextInputNormal onChange={getNeighbourhood} name={i} placeholder='منطقه(محله)'></TextInputNormal>
                                                     </div>
+
                                                 </div>
+
                                             </Col>
-                                            <Col style={{padding:'0px'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={2}>
-                                                <div className={Style.phoneNumberMainDiv}>                 
+                                            <Col style={{padding:'0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                     <div className={Style.phoneNumberCountry}>
                                                         <TextInputNormal onChange={getStreet} name={i} placeholder='خیابان'></TextInputNormal>
                                                     </div>
-                                                </div>
                                             </Col>
                                         </Row>
-                                        <Row className="g-0" dir='rtl' style={{padding:'5px  0px 5px 0px'}}>
-                                            <Col style={{padding:'0px'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
+                                        <Row className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px'}}>
+                                            <Col style={{padding:'0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div className={Style.phoneNumberMainDiv}>                 
-                                                    <div style={{maxWidth:'15%'}} className={Style.phoneNumberCountry}>
+                                                    <div style={{maxWidth:'50%'}} className={Style.phoneNumberCountry}>
                                                         <TextInputNormal onChange={getPlate} name={i} placeholder='پلاک'></TextInputNormal>
                                                     </div>
-                                                    <div style={{maxWidth:'25%'}} className={Style.phoneNumberCountry}>
+                                                    <div style={{maxWidth:'50%'}} className={Style.phoneNumberCountry}>
                                                         <TextInputNormal onChange={getPostalCode} name={i} placeholder='کد پستی'></TextInputNormal>
                                                     </div>
-                                                    <div style={{maxWidth:'60%'}} className={Style.phoneNumberCountry}>
-                                                        <TextInputNormal onChange={getMapLink} name={i} placeholder='لینک نقشه'></TextInputNormal>
-                                                    </div>
-
                                                 </div>
                                             </Col>
-                                            <Col style={{padding:'0px'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
+                                            <Col style={{padding:'10px 0px 10px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
+                                                <div style={{maxWidth:'100%'}} className={Style.phoneNumberCountry}>
+                                                    <TextInputNormal onChange={getMapLink} name={i} placeholder='لینک نقشه'></TextInputNormal>
+                                                </div>
+                                            </Col>
+                                            <Col style={{padding:'0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div className={Style.phoneNumberMainDiv}>                 
 
                                                     <div className={Style.phoneNumberCountry}>
@@ -358,6 +420,11 @@ const NewCustomer = () =>{
                                             </Col>
                                         </Row>
                                     </Col>
+                                    <Col style={{padding:'5px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
+                                        <div className={Style.addressDeleteBtnWithIcon} >
+                                            <IconBotton onClick={()=>{var temp = [...addresses]; temp.splice(i,1); setAddresses([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
+                                        </div>
+                                    </Col>
                                 </Row>
                             )
                         })}
@@ -366,13 +433,32 @@ const NewCustomer = () =>{
                         <Row className="g-0" style={{padding:'0px'}}>
                             <Col style={{padding:'0px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                 <div style={{width:'100%'}}>
-                                    <button onClick={saveData} className={Style.NormalBtn}>ذخیره</button>
+                                    <button disabled={loading} onClick={saveData} className={Style.NormalBtn}>{loading === true ?<CircularProgress size='30px' color='inherit'></CircularProgress> :'ذخیره'}</button>
                                 </div>
                             </Col>
                         </Row>
                     </div>
                 </div>
+            </div>
         </Fragment>
     )
 }
+
+
+const NewCustomer = (props)=>{
+    
+    return(
+      <Fragment>
+          {ReactDom.createPortal(
+              <NewCustomerPortal setRefresh={props.setRefresh} setSuccessToast={props.setSuccessToast} newCustomer={props.newCustomer} setNewCustomer={props.setNewCustomer}></NewCustomerPortal>
+          ,
+          document.getElementById('ovForms')
+          
+          )}
+
+      </Fragment>
+  );
+}
+
+
 export default NewCustomer;

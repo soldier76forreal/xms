@@ -27,18 +27,18 @@ export default function Persons(props) {
         props.setIsSent(false)
     }else if(newChecked.length > 0){
         props.setIsSent(true)
+        console.log(true)
     }
-
+   
     props.setChecked(newChecked);
   };
 
 
   return (
     <List dense sx={{ width: '100%', maxWidth: '100%', bgcolor: 'background.paper' , marginTop:'0px' }}>
-      
+     
       {props.userData.map((value) => {
         const labelId = `checkbox-list-secondary-label-${value._id}`;
-        if(value.access.includes('inv')){
         return (
           <ListItem
             dir='rtl'
@@ -61,7 +61,7 @@ export default function Persons(props) {
                 />
               </ListItemAvatar>
               <div dir='rtl' style={{textAlign:'right'}}>
-                <ListItemText  id={labelId} primary={`${value.lastName} ${value.firstName}`} />
+                <ListItemText  id={labelId} primary={`${value.firstName} ${value.lastName}`} />
                 <ListItemText sx={{color:'rgb(134, 134, 134)'}}  id={labelId} 
                 primary={`نقش ها:${value.access.map(data=>{
                   for(var i=0 ; webSection.listOfSections.length >i; i++){
@@ -78,7 +78,7 @@ export default function Persons(props) {
             </ListItemButton>
           </ListItem>
         );
-}})}
+})}
     </List>
   );
 }

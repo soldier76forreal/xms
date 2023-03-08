@@ -10,7 +10,9 @@ import {Pagination,Navbar,Row,  Nav ,NavDropdown , Container ,Form ,FormControl 
 import DropDownMenu from '../../tools/inputs/dropDownMenu';
 import SearchBarV2 from '../../tools/crm/searchBarV2';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { useHistory } from 'react-router-dom';
 const NormalTopFilterSection =(props)=>{
+    const history = useHistory();
     return(
         <Fragment>
             <Row>
@@ -38,7 +40,7 @@ const NormalTopFilterSection =(props)=>{
                                 <SearchBarV2></SearchBarV2>
                             </div>
                             <div style={{display:'inline-block'}}>
-                                <button>مشتری جدید<AddCircleIcon sx={{fontSize:'30px' , marginRight:'8px'}}></AddCircleIcon></button>
+                                <button onClick={()=>{history.push('/newCustomer')}}>مشتری جدید<AddCircleIcon sx={{fontSize:'30px' , marginRight:'8px'}}></AddCircleIcon></button>
                             </div>
                         </div>
                 </Col>

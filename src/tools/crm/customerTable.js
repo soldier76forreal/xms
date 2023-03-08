@@ -74,7 +74,7 @@ const CustomerTable = (props) =>{
                                         <div className={Style.whatsAppIconDiv}><button onClick={props.openEditModal}  value='' style={{border:'none' , background:'none' ,display:'flex' , justifyContent :'center' , alignItems:'center'}} ><WhatsApp  className={Style.editIcon} sx={{ fontSize: 22 ,color: '#707070' ,iconHover:'#FFF' }}></WhatsApp></button></div>
                                     </td>
                                     <td>
-                                        <div className={Style.callIconDiv}><button onClick={props.openEditModal}  value='' style={{border:'none' , background:'none' ,display:'flex' , justifyContent :'center' , alignItems:'center'}} ><CallIcon  className={Style.editIcon} sx={{ fontSize: 22,color: '#707070' ,iconHover:'#FFF' }}></CallIcon></button></div>
+                                        <div onClick={()=>{props.setNewCallStatus({status:true , id:''})}} className={Style.callIconDiv}><button onClick={props.openEditModal}  value='' style={{border:'none' , background:'none' ,display:'flex' , justifyContent :'center' , alignItems:'center'}} ><CallIcon  className={Style.editIcon} sx={{ fontSize: 22,color: '#707070' ,iconHover:'#FFF' }}></CallIcon></button></div>
                                     </td>
                                     {/* <td>
                                     <div className={Style.dashLine}></div>

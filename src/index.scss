@@ -1,23 +1,19 @@
 @import "./overalStyle/colors";
 @font-face {
   font-family: "YekanBold";
-  src: url("./fonts/YekanBakhBold.woff") format("woff");
+  src: url("./fonts/dana-bold.woff") format("woff");
   font-weight: 700;
 }
 @font-face {
   font-family: "YekanRegular";
-  src:   url("./fonts/YekanBakhRegular.woff") format("woff");
+  src:   url("./fonts/dana-regular.woff") format("woff");
   font-weight: 400;
   
   }
-  @font-face {
-    font-family: "YekanMedium";
-    src:   url("./fonts/YekanBakhMedium.woff") format("woff");
-    font-weight: 500;
-  }
+
 @font-face {
   font-family: "YekanLight";
-  src:url("./fonts/YekanBakhLight.woff") format("woff");
+  src:url("./fonts/dana-light.woff") format("woff");
   font-weight: 200; 
 }
 body {
@@ -45,4 +41,26 @@ h3
 h3{
   margin: 0px !important;
   padding: 0px !important;
+}
+#speedDial{
+
+  position: fixed;
+  right: 0px;
+  bottom: 0px;
+}
+
+
+#toast{
+  position: fixed;
+  top: 0px;
+  z-index: 100000;
+}
+#modal{
+  z-index: 13000;
+}
+
+::-webkit-scrollbar {
+  width: 0px !important;
+  display: none;
+  background: transparent !important; /* make scrollbar transparent */
 }

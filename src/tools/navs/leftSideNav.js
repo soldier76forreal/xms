@@ -15,6 +15,8 @@ import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import { Link } from 'react-router-dom';
 import AuthContext from '../../components/authAndConnections/auth';
+import jwtDecode from 'jwt-decode';
+import Cookies from 'js-cookie';
 
 export default function LeftSideNav(props) {
 const authContext = useContext(AuthContext);
@@ -22,7 +24,7 @@ const authContext = useContext(AuthContext);
 
   const list = (anchor) => (
     <Box
-      sx={{ width: anchor === 'top' || anchor === 'bottom' ? 'auto' : 250 }}
+      sx={{ width: anchor === 'top' || anchor === 'bottom' ? 'auto' : 250   }}
       role="presentation"
       onClick={props.toggleDrawer(anchor, false)}
       onKeyDown={props.toggleDrawer(anchor, false)}
@@ -34,18 +36,27 @@ const authContext = useContext(AuthContext);
                     <div className={Style.topTitle}>ابزارها</div>
                 </div>
           </ListItem>
-          <Link style={{textDecoration:'none' , color:'black'}} to='/users'>
-                {authContext.access.includes('sa') ? 
-                    <ListItem dir='rtl'  disablePadding>
-                        <ListItemButton >
-                        <ListItemIcon >
-                            <PeopleAltIcon></PeopleAltIcon>
-                        </ListItemIcon>
-                            <ListItemText style={{textAlign:'right'}} primary='افراد' />
-                        </ListItemButton>
-                    </ListItem>
-                :null}
-          </Link>
+            {jwtDecode(JSON.stringify(localStorage.getItem('accessToken'))).access.includes('sa') ? 
+                <Link style={{textDecoration:'none' , color:'black'}} to='/users'>
+                  <ListItem dir='rtl'  disablePadding>
+                      <ListItemButton>
+                      <ListItemIcon >
+                          <PeopleAltIcon></PeopleAltIcon>
+                      </ListItemIcon>
+                          <ListItemText style={{textAlign:'right'}} primary='افراد' />
+                      </ListItemButton>
+                  </ListItem>
+                </Link>
+            :
+                <ListItem dir='rtl'  disablePadding>
+                    <ListItemButton disabled={true}>
+                    <ListItemIcon >
+                        <PeopleAltIcon></PeopleAltIcon>
+                    </ListItemIcon>
+                        <ListItemText style={{textAlign:'right'}} primary='افراد' />
+                    </ListItemButton>
+                </ListItem>
+            }
       </List>
       {/* <Divider /> */}
 

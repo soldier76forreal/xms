@@ -2,7 +2,7 @@
 .titleDiv{
     display: inline-block;
     h3{
-        font-size: 32px;
+        font-size: 25px;
         font-family: YekanBold;
         
     }
@@ -15,3 +15,43 @@
         background-color: $primaryColor;
     }
 }
+
+@media only screen and (max-width: 1200.98px) {
+    .titleDiv{
+        display: inline-block;
+        h3{
+            font-size: 19px;
+            font-family: YekanBold;
+            
+        }
+        span{
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            margin-left: 6px;
+            border-radius: 80px;
+            background-color: $primaryColor;
+        }
+    }
+}
+
+
+@media only screen and (max-width: 992.98px) {
+
+    
+}
+
+@media only screen and (max-width: 768.98px) {
+
+ }
+ @media only screen and (max-width: 576.98px) {
+
+
+    
+ }
+
+ @media only screen and (max-width: 356.98px) {
+
+    
+
+ }

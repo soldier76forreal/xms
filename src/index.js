@@ -9,15 +9,14 @@ import { AxiosGlobalProvider } from './components/authAndConnections/axiosGlobal
 import {BrowserRouter} from "react-router-dom";
 
 import './App.scss';
-import allReducers from './redux/reducers';
-import { createStore } from 'redux';
-import { Provider } from 'react-redux';
+
 import { createTheme, ThemeProvider } from '@mui/material';
 import { WebSectionsProvider } from './contextApi/webSection';
-import { GetDatasProvider } from './contextApi/getDatas';
 import { AuthContextProvider } from './components/authAndConnections/auth';
+import { SocketContextProvider } from './components/authAndConnections/socketReq';
 
-const store = createStore(allReducers);
+
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 const THEME = createTheme({
   typography: {
@@ -26,27 +25,23 @@ const THEME = createTheme({
 });
 root.render(
   <React.StrictMode>
-          <BrowserRouter>
-            <AxiosGlobalProvider>
-    <ThemeProvider theme={THEME}>
-      <AuthContextProvider>
-
-      <GetDatasProvider>
-
-      <WebSectionsProvider>
-  
-      
-          <Provider store={store}>
-                <App />
-            </Provider>
-
-        </WebSectionsProvider>
-      </GetDatasProvider>
-      </AuthContextProvider>
-
+    <BrowserRouter>
+      <AxiosGlobalProvider>
+        <ThemeProvider theme={THEME}>
+          <AuthContextProvider>
+            
+              <WebSectionsProvider>
+               
+                  <SocketContextProvider>
+                    <App />
+                  </SocketContextProvider>
+            
+              </WebSectionsProvider>
+           
+          </AuthContextProvider>
         </ThemeProvider>
-            </AxiosGlobalProvider>
-          </BrowserRouter>
+      </AxiosGlobalProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );
 

@@ -7,10 +7,50 @@
  .usersDiv {
     max-width: 700px;
     margin: 0px auto 0px auto;
+    padding: 0px 20px 30px 20px;
+    position: relative;
+    overflow-y: none !important;
+    overflow-x: none;
  }
  .usersDiv h2{
     width: 100%;
+    
     text-align: right;
     padding: 20px 20px 10px 20px !important;
     font-family:YekanBold ;
  }
+
+ 
+
+ .topSection{
+   width: 100%;
+   max-width: 662px; 
+
+
+   margin-top: 5px;
+   display: flex;
+   z-index: 10;
+   padding-left: 10px;
+   align-items: center;
+}
+.backBtn{
+   padding: 15px 20px 15px 29px;
+   transition: 0.2s all ease-in-out;
+ 
+}
+.backBtn:hover{
+
+   background-color: rgb(182, 182, 182);
+}
+.topTitle{
+   position: absolute;
+   right: 10px;
+   margin-right: 45px;
+   font-family: YekanBold;
+   font-size: 23px;
+
+   
+}
+@media only screen and (max-width: 768.98px) {
+
+}

@@ -68,16 +68,18 @@ const LogIn =(props)=>{
               const response = await axios({
                   withCredentials:true,
                   method:'post',
-                  url:`${axiosGlobal.defaultTargetApi}/auth/login`,
+                  url:`${axiosGlobal.authTargetApi}/auth/login`,
                   data : formData,
                   config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
               })
               const data = await response.data;
             //   const expirationAuth = new Date(new Date().getTime() + (3600 * 1000));
-              AuthCtx.login(data.accessToken);
-              AuthCtx.access = jwtDecode(data.accessToken).access;
-              setLoadingStatus(false);
-              history.replace('/');
+              if(data.accessToken !== undefined){
+                AuthCtx.login(data.accessToken);
+                AuthCtx.access = jwtDecode(data.accessToken).access;
+                setLoadingStatus(false);
+                history.replace('/');
+              }
           }catch(err){
             let error = 'خطایی رخ داده است!'
             if(err && err.response.data !== ''){
@@ -91,11 +93,11 @@ const LogIn =(props)=>{
     return(
         <Fragment>
 
-            <div className={Style.overDiv}>
+            <div  className={Style.overDiv}>
 
-                <div className={Style.background}>
+                <div  className={Style.background}>
                     <Row>
-                        <Col xs={12} md={12} lg={12} xl={12} xxl={12}>
+                        <Col style={{padding:'0px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                             <div className={Style.keySiv}>
                                 <h2>XCAPITAL</h2>
                             </div>
@@ -136,8 +138,8 @@ const LogIn =(props)=>{
                         </Col>
                         <Col xs={12} md={12} lg={12} xl={12} xxl={12}>
                             <div className={Style.logInBtnDiv}>
-                                <div style={{color:'red' ,fontSize:'13px' , height:'20px' , marginBottom:'10px'}}>{signUpErrorMsg}</div>
-                                <Button onClick={sendLogIn} style={{margin:'0px auto 0px auto' , paddingTop:'10px' ,width:'100%'}} variant="contained" disableElevation>
+                                <div style={{color:'red' ,fontSize:'16px' , height:'20px' , marginBottom:'10px'}}>{signUpErrorMsg}</div>
+                                <Button onClick={sendLogIn} style={{margin:'0px auto 0px auto' , paddingTop:'10px' , paddingBottom:'10px' ,width:'100%'}} variant="contained" disableElevation>
                                 {loadingStatus ===true ? <CircularProgress size='25px' color='inherit'></CircularProgress> : loadingStatus ===false ?'ورود':null}
                                 </Button>
                             </div>

@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useContext, useState  , useEffect} from 'react';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 
 import { Redirect , useHistory } from 'react-router-dom';
 import AxiosGlobal from './axiosGlobalUrl';
+import { io } from 'socket.io-client';
 axios.defaults.withCredentials = true
 
 const AuthContext = React.createContext({
-    token:'',
+    token:null,
     userId:'',
+    decoded:{},
     access:[],
     isLoggedIn : false,
     login:(token)=>{},
@@ -19,44 +21,52 @@ const AuthContext = React.createContext({
 })
 
 export const AuthContextProvider = (props) =>{
-    const savedToken = Cookies.get('accessToken');
+    const savedToken = localStorage.getItem('accessToken');
+    const axiosGlobal = useContext(AxiosGlobal)
     const [accessSection , setAccessSection] = useState([]);
     const [userId , setUserId] = useState('');
+    const [socket, setSocket] = useState(null);
     const [token , setToken] = useState(savedToken);
+    const [notifications, setNotifications] = useState([]);
     const userIsLoggedIn = !!token;
     const history = useHistory();
-    
+    var dwtdc
     const logOutHandler = () =>{
         setToken(null)
-        Cookies.remove('accessToken');
+        localStorage.removeItem('accessToken');
         deleteRefreshToken()
         history.push('/logIn');
     }
     const logInHandler = async(token) =>{
-        Cookies.set('accessToken' , token ,{sameSite: 'strict', secure: true});
+        localStorage.setItem('accessToken' , token);
         setToken(token);
-        const dwtdc = jwtDecode(token);
+         dwtdc = jwtDecode(token);
         setUserId(dwtdc.id);
         setAccessSection([...dwtdc.access]);
     }
     const jwt = axios.create(
         ({
-            baseURL:'http://localhost:3001',
+            baseURL:`${axiosGlobal.authTargetApi}`,
             withCredentials:true,
             headers:{
                 Authorization : `Bearer ${token}`
             }
         })
     );
+
+
+
+      
     const contextValue = {
         token :token,
+        decode:dwtdc,
         access:accessSection,
         userId:userId,
         isLoggedIn: userIsLoggedIn,
         login:logInHandler,
         logout:logOutHandler,
         jwtInst:jwt,
-        defaultTargetApi:'http://localhost:3001'
+        socket:socket
     };
 
     jwt.interceptors.request.use(async (config)=>{
@@ -64,22 +74,20 @@ export const AuthContextProvider = (props) =>{
         const decodedToken = jwtDecode(token);
         if(decodedToken.exp * 1000 < currentDate.getTime()){
             const toke = await postRefreshToken();
-            Cookies.set('accessToken' , toke.accessToken ,{sameSite: 'strict', secure: true});
+            localStorage.setItem('accessToken' , toke.accessToken);
             setToken(toke.accessToken);
             config.headers["Authorization"] = `Bearer ${toke.accessToken}`;
         }
         return config;
     },(error)=>{
-        return Promise.reject(error);      
-              logOutHandler();
-
+        logOutHandler();
     })
     const postRefreshToken = async() =>{
         try{
             const response = await axios({
                 withCredentials:true,
                 method:"post",
-                url:"http://localhost:3001/auth/refreshToken",
+                url:`${axiosGlobal.authTargetApi}/auth/refreshToken`,
             })
             const data =  response.data; 
             return data;
@@ -87,17 +95,26 @@ export const AuthContextProvider = (props) =>{
             console.log(error);
             logOutHandler();
         }
+
+        
     }
+    useEffect(() => {
+    setSocket(io(`${axiosGlobal.defaultTargetApi}`));
+    }, []);
+    useEffect(() => {   
+        if(token){
+            socket?.emit("newUser", jwtDecode(token).id);
+        }
+      }, [socket, token]);
 
     const deleteRefreshToken =  async () =>{
         try{
             const response = await axios({
                 withCredentials:true,
                 method:"post",
-                url:"http://localhost:3001/auth/deleteRefreshToken",
+                url:`${axiosGlobal.authTargetApi}/auth/deleteRefreshToken`,
             })
             const data =  response.data; 
-
         }catch(error){
             console.log(error);
         }

@@ -12,15 +12,20 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import NormalMenuForProfile from './normalMenuForProfile';
 
-import ProfImg from '../../assets/imagePlaceHolder.png';
+
 import EmailIcon from '@mui/icons-material/Email';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Search } from "@mui/icons-material";
 import { Badge, Button } from "@mui/material";
 import MenuIcon from '@mui/icons-material/Menu';
+import jwtDecode from 'jwt-decode';
 import LeftSideNav from "./leftSideNav";
+import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import AuthContext from "../../components/authAndConnections/auth";
+import Notfications from "../../components/mis/notfications";
 const MainNavPortal = (props) =>{
+    const [showNotfication , setShowNotfication] = useState(false);
+    const [notifCount , setNotifCount] = useState();
     const authContext = useContext(AuthContext);
     const [leftSideNav , setLeftSideNav] = useState({
         left: false,
@@ -51,6 +56,7 @@ const MainNavPortal = (props) =>{
       };
     return(
         <Fragment>
+            <Notfications notifCount={(e)=>{setNotifCount(e)}}  setShowNotfication={setShowNotfication} showNotfication={showNotfication}></Notfications>
             <NormalMenuForProfile logOut={logOut} handleClick={handleClick} handleClose={handleClose} open={open} anchorEl={anchorEl} setAnchorEl={setAnchorEl}></NormalMenuForProfile>
             <LeftSideNav toggleDrawer={toggleDrawer} setLeftSideNav={setLeftSideNav} leftSideNav={leftSideNav}></LeftSideNav>
             <div  className={Style.navDiv}>
@@ -59,34 +65,18 @@ const MainNavPortal = (props) =>{
                         <Button onClick={toggleDrawer('left', true)} variant="contained" endIcon={<MenuIcon />}>
                         ابزارها
                         </Button>
-                        <Navbar.Toggle className={Style.navbarBtn}  aria-controls="basic-navbar-nav">
-                            <div>
-                                <Hamburger  style={{height:'10px !importain'}}  color="#000" size={29}></Hamburger>
-                            </div>
-                        </Navbar.Toggle>
-                        <Navbar.Collapse  style={{ width:'100%' , margin:'0'  , padding:'0px'}} id="basic-navbar-nav">
-                        <Nav  dir="rtl" style={{ width:'100%' , justifyContent:'center' , alignContent:'center' , margin:'0px auto 0px auto'}}  className="me-auto my-2 my-lg-0">
-                            <div className={Style.searchBar}> 
-                                <div className={Style.searchDiv}>
-                                    <Search sx={{color:'rgb(82, 82, 82)'}}></Search>
-                                    <input placeholder="جستجو..." type='search'></input>
-                                </div>
-                            </div>
-                        </Nav>
-                        </Navbar.Collapse>
-                    </Container>
                     <div className={Style.rightSideDiv}>
-                        <div className={Style.searchBtn}>
-                            <buttom>
-                                <Badge badgeContent={0} color="primary">
-                                    <NotificationsIcon sx={{color:'#000' , fontSize:'22px' , marginTop:'-6px'}}></NotificationsIcon>
+                        <div onClick={()=>{showNotfication?setShowNotfication(false):setShowNotfication(true)}} className={Style.searchBtn}>
+                            <buttom >
+                                <Badge badgeContent={notifCount} color="primary">
+                                    <NotificationsIcon sx={{color:'#000' , fontSize:'22px' , marginTop:'1px'}}></NotificationsIcon>
                                 </Badge>
                             </buttom>
                         </div>
                         <div className={Style.userBtn}>
                             <buttom>
                                 <Badge badgeContent={0} color="primary">
-                                    <EmailIcon sx={{color:'#000' , fontSize:'22px' , marginTop:'-6px'}}></EmailIcon>
+                                    <EmailIcon sx={{color:'#000' , fontSize:'22px' , marginTop:'1px'}}></EmailIcon>
                                 </Badge>
 
                             </buttom>
@@ -98,9 +88,14 @@ const MainNavPortal = (props) =>{
                             aria-expanded={open ? 'true' : undefined}
                             onClick={handleClick}
                         className={Style.profImageDiv}>
-                            <img src={ProfImg}></img>
+                            <Avatar
+                                alt="Remy Sharp"
+                                src={jwtDecode(authContext.token).profileImage  === undefined && authContext.login === false ?ProfilePhoto:jwtDecode(authContext.token).profileImage !== undefined && authContext.login === true ? `${authContext.defaultTargetApi}/uploads/${jwtDecode(authContext.token).profileImage.filename}`:null}
+                                sx={{ width: 40, height: 40 }}
+                            />
                         </div>
                     </div>
+                    </Container>
                 </Navbar>
                 <div className={Style.bottomLine}></div>
 
@@ -112,7 +107,7 @@ const MainNav = (props)=>{
     return(
         <Fragment>
             {ReactDom.createPortal(
-                <MainNavPortal>
+                <MainNavPortal notifCount={props.notifCount} showNotfication={props.showNotfication} setShowNotfication={props.setShowNotfication}>
 
                 </MainNavPortal>
                 ,

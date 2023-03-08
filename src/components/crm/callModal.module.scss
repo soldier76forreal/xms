@@ -1,0 +1,21 @@
+.btm{
+    background-color: rgb(0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    padding: 4px;
+    color: rgb(247, 247, 247);
+}
+.btm button{
+    border: none;
+    padding: 5px 5px 5px 5px !important;
+    height: 100%;
+    transition: 0.2s all ease-in-out;
+    font-family: YekanBold;
+    font-size: 14px !important;
+}
+
+.btm button:hover{
+    background-color: rgb(210, 210, 210);
+}

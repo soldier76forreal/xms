@@ -31,3 +31,39 @@
     border-radius: 12px;
     font-size: 15px;
 }
+
+@media only screen and (max-width: 768.98px) {
+    .iconButtonWithText{
+        padding: 6px 6px 6px 12px;
+        background-color:$inputColor ;
+        border: none;
+        box-shadow: none;
+        border-radius: 12px;
+        font-size: 11px;
+    }
+    
+    
+    
+    .iconButtonWithTextBlack{
+        padding: 6px 6px 6px 12px;
+        background-color:$primaryColor ;
+        border: none;
+        color: $darkBackText;
+        box-shadow: none;
+        border-radius: 12px;
+        font-size: 11px;
+    }
+}
+@media only screen and (max-width: 576.98px) {
+
+
+
+}
+
+@media only screen and (max-width: 356.98px) {
+
+
+
+}
+
+

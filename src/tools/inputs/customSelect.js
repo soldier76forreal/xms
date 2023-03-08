@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Select, { components } from "react-select";
-import  "./customSelect.scss";
+import Style from "./customSelect.scss";
 
 import '../../assets/flags/flag.min.css';
 import '../../assets/flags/flag.css';
@@ -27,15 +27,18 @@ export default function CustomSelect(props) {
         <i className={`${(props.data.code).toLowerCase()} flag`}></i>
     </Option>
   );
+
   return (
-    <div>
+    <div style={{zIndex:'1000'}}>
       {props.selectType === 'personTitle' ?
           <Select
           defaultValue={selectedOption}
           // onChange={(e)=>{props.onChange(e.id)}}
           onChange={props.onChange}
+          isDisabled={props.disable === true ? true : false}
           name={props.name}
-          options={prTitles}
+          options={prTitles} 
+          value={prTitles.filter(e=>{return e.id === props.value})[0]}
           styles={colorStyles}
           getOptionLabel={option => option.text}
           getOptionValue={option => option.id}
@@ -49,7 +52,9 @@ export default function CustomSelect(props) {
           name={props.name}
           options={countries}
           styles={colorStyles}
+          value={countries.filter(e=>{return e.code === props.value || e.phone === props.value })[0]}
           components={{ Option: IconOption }}
+          isDisabled={props.disable === true ? true : false}
           getOptionLabel={option => option.name}
           getOptionValue={option => option.code}
           placeholder={props.placeholder}
@@ -61,7 +66,9 @@ export default function CustomSelect(props) {
           onChange={props.onChange}
           name={props.name}
           options={countries}
+          value={countries.filter(e=>{return parseInt(e.phone) === parseInt(props.value)})[0]}
           styles={colorStyles}
+          isDisabled={props.disable === true ? true : false}
           components={{ Option: IconOptionWithCountryCode }}
           getOptionLabel={option => option.name}
           getOptionValue={option => option.code}
@@ -73,10 +80,26 @@ export default function CustomSelect(props) {
             // onChange={(e)=>{props.onChange(e.id);}} 
             name={props.name}
             onChange={props.onChange}
+            isDisabled={props.disable === true ? true : false}
             options={customerOrigin}
             styles={colorStyles}
+            value={customerOrigin.filter(e=>{return e.id === props.value})[0]}
             getOptionLabel={option => option.text}
             getOptionValue={option => option.id}
+            placeholder={props.placeholder}
+          ></Select>
+          :props.selectType === 'selectCustomer' ?
+          <Select
+            defaultValue={selectedOption}
+            // onChange={(e)=>{props.onChange(e.id);}} 
+            name={props.name}
+            onChange={props.onChange}
+            isDisabled={props.disable === true ? true : false}
+            options={props.options}
+            styles={colorStyles}
+            value={props.options.filter(e=>{return e.value === props.value})[0]}
+            getOptionLabel={option => option.name}
+            getOptionValue={option => option.value}
             placeholder={props.placeholder}
           ></Select>
       :null}
@@ -93,7 +116,9 @@ const colorStyles = {
   placeholder: defaultStyles => {
     return {
       ...defaultStyles,
-      color: "rgb(73, 73, 73)"
+      color: "rgb(73, 73, 73)",
+      fontSize:'12px',
+      zIndex:'10000'
     };
   }
 };
@@ -389,3 +414,7 @@ var countries = [
   {"name":"Zambia","code":"ZM","phone":260},
   {"name":"Zimbabwe","code":"ZW","phone":263}
 ];
+
+
+
+

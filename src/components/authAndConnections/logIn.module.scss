@@ -2,7 +2,9 @@
     background-color: rgb(231, 231, 231);
     max-width: 400px;
     width: 100%;
-    border-radius: 10px;
+    border-radius: 0px;
+    
+    
 }
 .overDiv{
     width: 100%;
@@ -12,6 +14,8 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow-y: none;
+    padding: 0px 20px 0px 20px;
 }
 .keySiv{
     display: flex;
@@ -37,8 +41,9 @@
 .logInBtnDiv{
     width: 100%;
     text-align: center;
-    padding: 10px 20px 60px 20px;
+    padding: 10px 20px 40px 20px;
 }
 .keySiv h2{
     font-size: 30px;
+    font-family: YekanBold;
 }

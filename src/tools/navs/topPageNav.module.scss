@@ -1,0 +1,49 @@
+.topSection{
+    width: 100%;
+    
+    top: 0px;
+
+    position: fixed;
+    border-bottom:2px solid rgb(138, 138, 138) ;
+    display: flex;
+    align-items: center;
+}
+.backBtn{
+    padding: 20px 25px 20px 34px;
+    border-right:2px solid rgb(138, 138, 138) ;
+    transition: 0.2s all ease-in-out;
+}
+.backBtn:hover{
+
+    background-color: rgb(182, 182, 182);
+}
+.topTitle{
+    position: absolute;
+    right: 20px;
+    font-size: 25px;
+}
+@media only screen and (max-width: 768.98px) {
+    .topSection{
+        width: 100%;
+        top: 0px;
+        position: fixed;
+        border-bottom:2px solid rgb(138, 138, 138) ;
+        display: flex;
+        align-items: center;
+    }
+    .backBtn{
+        padding: 12px 25px 12px 34px;
+        border-right:2px solid rgb(138, 138, 138) ;
+        transition: 0.2s all ease-in-out;
+    }
+    .backBtn:hover{
+        background-color: rgb(182, 182, 182);
+    }
+    .topTitle{
+        position: absolute;
+        right: 20px;
+        font-size: 23px;
+        font-family: YekanBold;
+        
+    }
+}
