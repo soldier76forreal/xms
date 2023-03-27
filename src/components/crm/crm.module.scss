@@ -2,6 +2,7 @@
 .ovDiv{
     background-color: none !important;
     width: 100%;
+    overflow-y: none !important;
     margin:5px auto 0px auto;
 }
 .dashLine{
@@ -14,10 +15,12 @@
 
 
 
+
+
 .invoiceCard{
     width: 100%;
     height: 100%;
-    max-height: 120px;
+    max-height: 65px;
     border-radius: 10px;
     display: flex;
 }
@@ -26,7 +29,7 @@
 
 
 .titleProfile{
-    font-size: 20px;
+    font-size: 15px;
     margin-top: 5px;
     display: inline-block;
     color: #fff;
@@ -35,7 +38,7 @@
 
 
 .disProfAccess{
-  font-size: 14px;
+  font-size: 11px;
   color: rgb(175, 175, 175);
   margin-top: -3px;
 }
@@ -57,11 +60,11 @@
 }
 .editBtn{
   background-color: rgb(77, 77, 77);
-  width: 40px;
+  width: 30px;
   align-items: center;
   justify-content: center;
   display: flex;
-  height: 40px;
+  height: 30px;
   transition: 0.2s all ease-in-out;
   border-radius: 80px;
 }

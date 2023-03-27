@@ -60,7 +60,7 @@ const NewCustomerPortal = (props) =>{
     const [emails , setEmails] = useState([{email:''}]);
 
     //address information states
-    const [addresses  , setAddresses] = useState([{country:'' , province:'' , city:'' , neighbourhood:'' , street:'' , plate:'' , postalCode:'' , mapLink:'' , addressExplanations:''}]);
+    const [addresses  , setAddresses] = useState([]);
 
 
 
@@ -226,7 +226,7 @@ const NewCustomerPortal = (props) =>{
                             <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={2} xl={4} xxl={4} xs={6}>
                                 <CustomSelect onChange={(e)=>{setPersonCountry(e.code)}} selectType='countryWithFlag' placeholder="کشور"></CustomSelect>
                             </Col>
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={6}>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'2000'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={6}>
                                 <CustomSelect   onChange={(e)=>{setPersonTitle(e.id)}} selectType='personTitle' placeholder="عنوان"></CustomSelect>
                             </Col>
                             <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={3} xxl={3} xs={6}>
@@ -240,10 +240,9 @@ const NewCustomerPortal = (props) =>{
                             <Col style={{padding:'10px 5px 0px 5px' , zIndex:'999'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
                                 <CustomSelect disable={true} selectType='personTitle' placeholder="نوع مشتری"></CustomSelect>
                             </Col>
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'2000'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
-                                <div style={{zIndex:'2000'}}>
-
-                                    <CustomSelect  onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="جذب شده از طریق"></CustomSelect>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1999'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
+                                <div>
+                                    <CustomSelect   onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="جذب شده از طریق"></CustomSelect>
                                 </div>
                             </Col>
                             <Col dir='rtl' style={{padding:'4px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>

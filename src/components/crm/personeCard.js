@@ -16,7 +16,8 @@ import Flag from 'react-country-flag';
 import withReactContent from 'sweetalert2-react-content'    
 import AxiosGlobal from "../authAndConnections/axiosGlobalUrl";
 import AuthContext from "../authAndConnections/auth";
-
+import FlagPlaceholder from '../../assets/country.png';
+import CallType from '../functions/callType';
 
 const options = [
     'حذف',
@@ -51,18 +52,25 @@ const PersoneCard = (props) =>{
             <div onClick={(e)=>{props.setShowCustomer({status:true , id:props.data.customer._id});e.stopPropagation()}} dir="rtl" className={Style.divCard}>
                 <div  className={Style.prof}>
                     <div  className={Style.profFlagDiv}>
-                        <div style={{width:'48px' , borderRadius:'15px' , height:'48px'}}>
-                            <Flag countryCode={props.data.customer.personalInformation.country} style={{height:'100%'  , width:'100%', position:'center', objectFit:"cover"}} svg/>
-                        </div>
+                        {props.data.customer.personalInformation.country === null?
+                            <div style={{width:'48px' , borderRadius:'15px' , height:'48px'}}>
+                                <img src={FlagPlaceholder}></img>
+                            </div>                        
+                            :
+                            <div style={{width:'48px' , borderRadius:'15px' , height:'48px'}}>
+                                <Flag countryCode={props.data.customer.personalInformation.country} style={{height:'100%'  , width:'100%', position:'center', objectFit:"cover"}} svg/>
+                            </div>
+                        }
+
                         <div style={{margin:'0px auto 0px 0px'}}>
                             <CardMenu data={props.data.customer} editCustomer={props.editCustomer} setEditCustomer={props.setEditCustomer} deleteModal={props.deleteModal} id={props.data.customer._id}></CardMenu>
                         </div>
                     </div>
                     <div className={Style.profName}>
-                        {props.data.customer.personalInformation.firstName}
+                        {props.data.customer.personalInformation.lastName}
                     </div>
                     <div className={Style.profSub}>
-                        {props.data.customer.personalInformation.lastName}
+                        {props.data.customer.personalInformation.firstName}
                     </div>
                 </div>
                 <div style={{marginTop:'10px'}}>
@@ -106,7 +114,7 @@ const PersoneCard = (props) =>{
                                 {props.data.customer.phoneCalls.length ===0?
                                     'تماسی برقرار نشده است'
                                 :
-                                    last_Call.phoneNumber
+                                    `${last_Call.phoneNumber}-${CallType(last_Call.callReason)}-${last_Call.callStatus === true ? 'پاسخ داده شد':last_Call.callStatus === false ?'پاسخ داده نشد':null}`
                                 }
                             </div>     
                         </Col>

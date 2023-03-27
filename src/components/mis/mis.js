@@ -36,6 +36,7 @@ import Fuse from 'fuse.js';
 import Notfications from './notfications';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import NoData from '../../tools/navs/noData';
+import RetryError from '../../tools/buttons/retryError';
 
 const Mis = () =>{
     const urlContext = useContext(AuthContext);
@@ -162,7 +163,6 @@ const Mis = () =>{
                 params:{id:jwtDecode(localStorage.getItem('accessToken')).id},
                 config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
             })
-            console.log(response.data)
             var filterd = response.data.rs.filter(e=>{return e.doc !==null})
             setInvoice([...filterd])
                 var temp = [];
@@ -373,11 +373,17 @@ useEffect(() => {
                             <EditIcon className={Style.editIcon} sx={{color:'#fff' , fontSize:"22px"}}></EditIcon>
                         </div>
                     </div>
-                    {loadingStatus.loading === true?
+                    {loadingStatus.loading === false && loadingStatus.retry === true?
+                        <Fragment>
+                            <div style={{display:'flex' , justifyContent:'center' , alignItems:'center' , textAlign:'center' , minHeight:'50vh' }}>
+                                <RetryError onClick={getInvoiceData}></RetryError>
+                            </div>       
+                        </Fragment>
+                    :loadingStatus.loading === true && loadingStatus.retry === false?
                         <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'60vh' }}>
                             <CircularProgress size='44px' color='inherit'></CircularProgress>
                         </div>
-                    :loadingStatus.loading === false?
+                    :loadingStatus.loading === false && loadingStatus.retry === false?
                         
                    
                     <div>

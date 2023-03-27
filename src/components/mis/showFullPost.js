@@ -220,7 +220,6 @@ const ShowFullPostPortal = (props) =>{
                                             </div>
                                         </div>
                                     </Col>
-
                             </Row>
                        
                             <div>

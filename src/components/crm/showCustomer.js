@@ -125,8 +125,10 @@ const ShowCustomerPortal = (props) =>{
                 
                 if(result[0].customer.address !==null){
                     setAddresses([...result[0].customer.address])
+                    console.log(result[0].customer.address)
                 }else if(result[0].customer.address ===null){
                     setAddresses(null)
+                    console.log(result[0].customer.address)
                 }
                 if(result[0].customer.contactInfo.emails !==null){
                     setEmails([...result[0].customer.contactInfo.emails])
@@ -314,30 +316,40 @@ const ShowCustomerPortal = (props) =>{
                                 </div>
                                 <div className={Style.personalInformationFirstOne}>
                                     <Row className="g-0">
-                                        <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
-                                            <div style={{display:'flex', backgroundColor:'#EFEFEF', borderRadius:'100px' , alignItems:'center'}}>
-                                                {personCountry !== null?
-                                                    <Fragment>
-                                                        <div style={{width:'40px' , borderRadius:'100px' , height:'40px'}}>
-                                                                <Flag countryCode={personCountry} style={{height:'100%'  , borderRadius:'100px' , width:'100%', position:'center', objectFit:"cover"}} svg/>
-                                                        </div>
-                                                    </Fragment>
-                                                :null}
-                                                {personTitle !== null?
-                                                    <span style={{marginRight:'8px'}}>{PrTitle(personTitle)}</span>
-                                                :null}
-                                                
-                                                <span style={{padding:'8px 10px 8px 10px' , borderRadius:'8px' , marginRight:'10px' , backgroundColor:'white'}}>{firstName} {lastName}</span>
-                                                {personCountry !== null?
-                                                    <Fragment>
-                                                        <span style={{padding:'8px 10px 8px 10px' , borderRadius:'8px' }}>
-                                                            <span style={{color:'rgb(109, 109, 109)' , fontSize:'13px'}}>از </span>
-                                                            <span>{CountriesInFarsi(personCountry)}</span>
-                                                        </span>
-                                                    </Fragment>
-                                                :null}
-                                            </div>
-                                        </Col>
+                                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                                <div style={{display:'flex', alignItems:'center'}}>
+                                                    <Grid style={{display:'flex'}} container spacing={0}>
+                                                        <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                            {personCountry !== null?
+                                                                <Fragment>
+                                                                    <div style={{width:'40px' , borderRadius:'100px' , height:'40px'}}>
+                                                                            <Flag countryCode={personCountry} style={{height:'100%'  , borderRadius:'100px' , width:'100%', position:'center', objectFit:"cover"}} svg/>
+                                                                    </div>
+                                                                </Fragment>
+                                                            :null}
+                                                        </Grid>
+                                                        <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                            {personTitle !== null?
+                                                                <span style={{marginRight:'8px'}}>{PrTitle(personTitle)}</span>
+                                                            :null}
+                                                        </Grid>
+                                                        <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                            <span style={{padding:'8px 10px 8px 10px' , borderRadius:'8px' , marginRight:'10px' , backgroundColor:'white'}}>{firstName} {lastName}</span>
+                                                        </Grid>
+                                                        <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                            {personCountry !== null?
+                                                                <Fragment>
+                                                                    <span style={{padding:'8px 10px 8px 10px' , borderRadius:'8px' }}>
+                                                                        <span style={{color:'rgb(109, 109, 109)' , fontSize:'13px'}}>از </span>
+                                                                        <span>{CountriesInFarsi(personCountry)}</span>
+                                                                    </span>
+                                                                </Fragment>
+                                                            :null}
+                                                        </Grid>
+                                                    </Grid>
+                                                </div>
+                                            </Col>
+                                     
                                         <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                             <div style={{display:'flex', backgroundColor:'#EFEFEF', borderRadius:'100px' , alignItems:'center'}}>
                                                 {/* {dateOfBrith !== undefined ?
@@ -382,26 +394,38 @@ const ShowCustomerPortal = (props) =>{
                                         <Col sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                             {phoneNumbers.map(e=>{
                                                 return(
-                                                    <div style={{display:'flex', backgroundColor:'#EFEFEF', marginBottom:'10px',borderRadius:'100px' , alignItems:'center'}}>
-                                                        <span style={{marginLeft:'5px'}}>
-                                                            <a  href={`tel:${e.number}${e.countryCode}}`}>
-                                                                <IconBotton  backgroundColor='#0076FF' text={false} icon={<Call sx={{color:'#EFEFEF'}}/>}></IconBotton>
-                                                            </a>
-                                                        </span>
-                                                        {e.whatsApp === true ?
-                                                            <a href={`https://api.whatsapp.com/send?phone=${e.number}${e.countryCode}`}>
-                                                                <IconBotton backgroundColor='#13990a' text={false} icon={<WhatsAppIcon sx={{color:'#EFEFEF'}}/>}></IconBotton>
-                                                            </a>
-                                                        :e.whatsApp === false ?
-                                                            <IconBotton disable={true} backgroundColor='rgb(115, 115, 115)' text={false} icon={<WhatsAppIcon sx={{color:'#EFEFEF'}}/>}></IconBotton>
-                                                        :null}
-                                                        {personTitle !== null?
-                                                            <span style={{marginRight:'8px'}}>{PrTitle(personTitle)}</span>
-                                                        :null}
-                                                        <span style={{padding:'9px 10px 9px 10px' , borderRadius:'8px' , textAlign:'right' , marginRight:'10px' , backgroundColor:'white'}}>{firstName} {lastName}</span>
-                                                        <span style={{marginRight:'10px'}}>
-                                                            {e.number}-{e.countryCode}
-                                                        </span>
+                                                    <div style={{ marginBottom:'10px', alignItems:'center'}}>
+                                                        <Grid style={{display:'flex'}} container spacing={0}>
+                                                            <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                                <span style={{marginLeft:'5px'}}>
+                                                                    <a  href={`tel:${e.number}${e.countryCode}}`}>
+                                                                        <IconBotton  backgroundColor='#0076FF' text={false} icon={<Call sx={{color:'#EFEFEF'}}/>}></IconBotton>
+                                                                    </a>
+                                                                </span>
+                                                            </Grid>
+                                                            <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                                {e.whatsApp === true ?
+                                                                    <a href={`https://api.whatsapp.com/send?phone=${e.number}${e.countryCode}`}>
+                                                                        <IconBotton backgroundColor='#13990a' text={false} icon={<WhatsAppIcon sx={{color:'#EFEFEF'}}/>}></IconBotton>
+                                                                    </a>
+                                                                :e.whatsApp === false ?
+                                                                    <IconBotton disable={true} backgroundColor='rgb(115, 115, 115)' text={false} icon={<WhatsAppIcon sx={{color:'#EFEFEF'}}/>}></IconBotton>
+                                                                :null}
+                                                            </Grid>
+                                                            <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                                {personTitle !== null?
+                                                                    <span style={{marginRight:'8px'}}>{PrTitle(personTitle)}</span>
+                                                                :null}
+                                                            </Grid>
+                                                            <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                                <span style={{padding:'9px 10px 9px 10px' , borderRadius:'8px' , textAlign:'right' , marginRight:'10px' , backgroundColor:'white'}}>{firstName} {lastName}</span>
+                                                            </Grid>
+                                                            <Grid  style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                                <span style={{ padding:'10px'}}>
+                                                                    {e.countryCode}-{e.number}
+                                                                </span>
+                                                            </Grid>
+                                                        </Grid>
                                                     </div>
                                                 )
                                             })}
@@ -529,7 +553,7 @@ const ShowCustomerPortal = (props) =>{
                                                                         <Grid style={{padding:'0px 0px 5px 0px' , display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto"  >
 
                                                                             {data.street !== null?
-                                                                                <span style={{ display:'flex', alignItems:'center', justifyContent:'center'}}>
+                                                                                <span style={{ display:'flex', alignItems:'center', justifyContent:'center' ,padding:'0px 10px 0px 0px'}}>
                                                                                     <span style={{color:'rgb(109, 109, 109)' , fontSize:'13px'}}>خیابان:</span>
                                                                                     {data.street}
                                                                                 </span>
@@ -545,18 +569,13 @@ const ShowCustomerPortal = (props) =>{
                                                                         </Grid>
                                                                         <Grid style={{padding:'0px 0px 5px 0px' , display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto"  >
                                                                             {data.postalCode !== null?
-                                                                                <span style={{padding:'9px 10px 9px 10px' , borderRadius:'8px' , textAlign:'right' , marginRight:'10px' , backgroundColor:'white'}}>
+                                                                                <span style={{padding:'9px 10px 9px 10px'  , borderRadius:'8px' , textAlign:'right'  , backgroundColor:'white'}}>
                                                                                     <span style={{color:'rgb(109, 109, 109)' , fontSize:'13px'}}>کد پستی:</span>
                                                                                     {data.postalCode}
                                                                                 </span>
                                                                             :null}
                                                                         </Grid>
                                                                     </Grid>
-
-
-                                                                    
-
-
                                                                 </div>
                                                             </Col>
 
@@ -571,8 +590,8 @@ const ShowCustomerPortal = (props) =>{
                         :listType === 'prCalls' ?
                         <div style={{marginTop:'20px'}}>
                                 {calls.length === 0?
-                                    <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'50vh' }}>
-                                        <NoData caption='درخواستی برای نمایش وجود ندارد'></NoData>
+                                    <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'75vh' }}>
+                                        <NoData caption='تماسی برای نمایش وجود ندارد'></NoData>
                                     </div>
                                 :calls.length !== 0?
                                     calls.map((e , i)=>{
@@ -589,9 +608,9 @@ const ShowCustomerPortal = (props) =>{
                                                             <div style={{float:'right' ,display:'flex' , justifyContent:'center' , margin:'0px 0px 0px auto' , textAlign:'right'}}>
                                                                 <div style={{float:'right', margin:'0px 0px 0px 10px' , textAlign:'right'}}>
                                                                     {e.callStatus === true?
-                                                                        <span style={{backgroundColor:'#F0F0F0', padding:'5px 10px 5px 10px', borderRadius:"10px"}}><CallMadeIcon sx={{color:'#01E583'}}></CallMadeIcon><span style={{fontSize:'11px'}}>پاسخ داده شد</span></span>
+                                                                        <span className={Style.callStatus}><CallMadeIcon sx={{color:'#01E583'}}></CallMadeIcon><span className={Style.callStatusText}>پاسخ داده شد</span></span>
                                                                     :e.callStatus === false?   
-                                                                        <span style={{backgroundColor:'#F0F0F0', padding:'5px 10px 5px 10px', borderRadius:"10px"}}><CallMissedOutgoingIcon sx={{color:'red'}}></CallMissedOutgoingIcon><span style={{fontSize:'11px'}}>پاسخ داده نشد</span></span>
+                                                                        <span className={Style.callStatus}><CallMissedOutgoingIcon sx={{color:'red'}}></CallMissedOutgoingIcon><span className={Style.callStatusText}>پاسخ داده نشد</span></span>
                                                                     :null}
                                                                 </div>
                                                                 <div className={Style.callDropDownCallType}  >
@@ -617,8 +636,10 @@ const ShowCustomerPortal = (props) =>{
                                 :null}
                         </div>             
                         :listType === 'prRequests' ?
-                            <div>
-
+                            <div style={{marginTop:'20px'}}>
+                                <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'75vh' }}>
+                                    <NoData caption='درخواستی برای نمایش وجود ندارد'></NoData>
+                                </div>
                             </div> 
                         :null}
                     </div>

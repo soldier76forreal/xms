@@ -32,6 +32,7 @@ import FilterCrm from '../../tools/navs/filterCrm';
 import ShowCustomer from './showCustomer';
 import prFlag from '../../assets/per.png';
 import NoData from '../../tools/navs/noData';
+import RetryError from '../../tools/buttons/retryError';
 
 const Crm = (props) =>{
     const authCtx = useContext(AuthContext);
@@ -97,8 +98,8 @@ const Crm = (props) =>{
                         setPersons([...temp])
                     }
                 }
+                setLoadingStatus({loading:false , retry:false})
 
-            setLoadingStatus({loading:false , retry:false})
         }catch(err){
             setTimeout(()=>{
                 setLoadingStatus({loading:false , retry:true})
@@ -199,12 +200,12 @@ const Crm = (props) =>{
                 <div>
                     <Row style={{padding:'0px 10px 5px 10px'}}>
                         <Col style={{padding:'5px'}} xs={12} sm={12} md={6} lg={6} xl={6} xxl={6}>
-                            <div  dir='rtl' style={{backgroundColor:'#000' , marginBottom:'10px' , display:'flex' , alignItems:'center'}} className={`${Style.invoiceCard} ${Style.fadeIn}` }>
+                            <div  dir='rtl' style={{backgroundColor:'#000' , marginBottom:'0px' , display:'flex' , alignItems:'center'}} className={`${Style.invoiceCard} ${Style.fadeIn}` }>
                                 <div  style={{ padding:'10px 10px 10px 10px' ,  alignItems:'center' , display:'flex' , height:'100%'}}>
                                     <Avatar
                                         alt="Remy Sharp"
                                         src={jwtDecode(authCtx.token).profileImage  === undefined && authCtx.login === false ?ProfilePhoto:jwtDecode(authCtx.token).profileImage !== undefined && authCtx.login === true ? `${authCtx.defaultTargetApi}/uploads/${jwtDecode(authCtx.token).profileImage.filename}`:null}
-                                        sx={{ width: 46, height: 46 }}
+                                        sx={{ width: 38, height: 38 }}
                                     />
                                         <div style={{padding:'2px 8px 5px 0px' , display:'inline-block'}}>
                                             <div className={Style.titleProfile}>
@@ -227,7 +228,7 @@ const Crm = (props) =>{
                                 </div>
                                 <div style={{float:'left' , margin:'0px auto 0px 10px'}}>
                                     <div className={Style.editBtn}>
-                                        <EditIcon className={Style.editIcon} sx={{color:'#fff' , fontSize:"22px"}}></EditIcon>
+                                        <EditIcon className={Style.editIcon} sx={{color:'#fff' , fontSize:"16px"}}></EditIcon>
                                     </div>
                                 </div>
                             </div>
@@ -239,7 +240,7 @@ const Crm = (props) =>{
 
                 </div>
                 <div style={{padding:'0px 0px 0px 0px' }} dir='ltr'>
-                {persons.length === 0?
+                {persons.length === 0 && loadingStatus.loading === false && loadingStatus.retry === false?
                     <div style={{height:'70vh' , display:'flex' , justifyContent:'center' , alignItems:'center'}}>
                         <NoData caption='مشتری ای برای نمایش وجود ندارد'></NoData>
                     </div>
@@ -252,11 +253,11 @@ const Crm = (props) =>{
                     >
                         {loadingStatus.loading === false
                         && searchForPerson.searching === ''?
-                        <Row style={{padding:'0px 10px 0px 10px' }}>
+                        <Row style={{padding:'0px 10px 0px 10px'}}>
                             {persons.map((data , i) =>{
                                 if(data !==undefined){
                                     return(
-                                        <Col style={{padding:'5px' }} xs={12} sm={6} md={6} lg={4} xl={3} xxl={3}>
+                                        <Col style={{padding:'5px'}} xs={12} sm={6} md={6} lg={4} xl={3} xxl={3}>
                                             <PersoneCard  setShowCustomer={setShowCustomer} showCustomer={showCustomer} editCustomer={editCustomer} setEditCustomer={setEditCustomer} setOpenCallModal={setOpenCallModal} setWhatsAppMsgList={setWhatsAppMsgList} setOpenWhatsAppModal={setOpenWhatsAppModal} deleteModal={deleteModal}  data={data} key={i} setTargetDocForCall={setTargetDocForCall}  targetDocForCall={targetDocForCall}></PersoneCard>   
                                         </Col>
                                     )
@@ -272,12 +273,17 @@ const Crm = (props) =>{
                         :null
                         }
                     </InfiniteScroll>
-                :loadingStatus.loading === false && loadingStatus.retry === true?
-                    <Button variant="outlined" color="error">
-                        نلاش مجدد
-                    </Button>
-                :null}
-                    {/* <CustomerTable newCallStatus={newCallStatus} setNewCallStatus={setNewCallStatus}></CustomerTable> */}
+                    :loadingStatus.loading === false && loadingStatus.retry === true?
+                        <Fragment>
+                            <div style={{display:'flex' , justifyContent:'center' , alignItems:'center' , textAlign:'center' , minHeight:'50vh' }}>
+                                <RetryError></RetryError>
+                            </div>       
+                        </Fragment>
+                    : loadingStatus.loading === true && loadingStatus.retry === false ?
+                        <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'65vh' }}>
+                            <CircularProgress size='44px' color='inherit'></CircularProgress>
+                        </div>       
+                    :null}
                 </div>
             </div>
 
