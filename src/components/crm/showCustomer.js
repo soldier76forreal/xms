@@ -58,6 +58,7 @@ import CallMadeIcon from '@mui/icons-material/CallMade';
 import FeedIcon from '@mui/icons-material/Feed';
 import CallIcon from '@mui/icons-material/Call';
 import ContactEmergencyIcon from '@mui/icons-material/ContactEmergency';
+import SortDayByDay from '../functions/sortDayByDay';
 const ShowCustomerPortal = (props) =>{
     //hooks
     const axiosCtx = useContext(AxiosGlobal);
@@ -138,10 +139,11 @@ const ShowCustomerPortal = (props) =>{
                 
 
                 if(result[0].customer.phoneCalls.length !==0){
-                    setCalls([...result[0].customer.phoneCalls])
+                    var dayByDayArr = Object.keys(SortDayByDay(result[0].customer.phoneCalls)).map((key) => [key, SortDayByDay(result[0].customer.phoneCalls)[key]]);
+                    setCalls([...dayByDayArr])
+                    
                 }
-                
-        }
+            }
     }, [props.showCustomer])
     
 
@@ -296,6 +298,8 @@ const ShowCustomerPortal = (props) =>{
         }
       };
 
+    
+
     return(
         <Fragment>
             
@@ -314,6 +318,7 @@ const ShowCustomerPortal = (props) =>{
                                     </div>
                                     <div style={{textAlign:'left' , width:'50%' , display:'felex', alignContent:'center'}}><Button style={{color:'rgb(162, 162, 162)'}} variant="outlined" >ویرایش</Button></div>
                                 </div>
+                                
                                 <div className={Style.personalInformationFirstOne}>
                                     <Row className="g-0">
                                             <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
@@ -412,11 +417,11 @@ const ShowCustomerPortal = (props) =>{
                                                                     <IconBotton disable={true} backgroundColor='rgb(115, 115, 115)' text={false} icon={<WhatsAppIcon sx={{color:'#EFEFEF'}}/>}></IconBotton>
                                                                 :null}
                                                             </Grid>
-                                                            <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
+                                                            {/* <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
                                                                 {personTitle !== null?
                                                                     <span style={{marginRight:'8px'}}>{PrTitle(personTitle)}</span>
                                                                 :null}
-                                                            </Grid>
+                                                            </Grid> */}
                                                             <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
                                                                 <span style={{padding:'9px 10px 9px 10px' , borderRadius:'8px' , textAlign:'right' , marginRight:'10px' , backgroundColor:'white'}}>{firstName} {lastName}</span>
                                                             </Grid>
@@ -432,6 +437,7 @@ const ShowCustomerPortal = (props) =>{
                                         </Col>
                                     </Row>
                                 </div>
+                                
                                 {emails !== null?
                                     <div> 
                                         <Row className="g-0" dir='rtl' style={{padding:'30px 0px 0px 0px'}}>
@@ -588,53 +594,110 @@ const ShowCustomerPortal = (props) =>{
                                 :null}
                             </div>
                         :listType === 'prCalls' ?
-                        <div style={{marginTop:'20px'}}>
-                                {calls.length === 0?
-                                    <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'75vh' }}>
-                                        <NoData caption='تماسی برای نمایش وجود ندارد'></NoData>
-                                    </div>
-                                :calls.length !== 0?
-                                    calls.map((e , i)=>{
-                                        return(
-                                            <div style={{marginBottom:'10px'}} key={i}>
-                                                <Accordion>
-                                                    <AccordionSummary
-                                                    expandIcon={<ExpandMoreIcon />}
-                                                    aria-controls="panel1a-content"
-                                                    id="panel1a-header"
-                                                    >
-                                                    <Typography sx={{width:'100%'}}>
-                                                        <div className={Style.callDropDownDiv}>
-                                                            <div style={{float:'right' ,display:'flex' , justifyContent:'center' , margin:'0px 0px 0px auto' , textAlign:'right'}}>
-                                                                <div style={{float:'right', margin:'0px 0px 0px 10px' , textAlign:'right'}}>
-                                                                    {e.callStatus === true?
-                                                                        <span className={Style.callStatus}><CallMadeIcon sx={{color:'#01E583'}}></CallMadeIcon><span className={Style.callStatusText}>پاسخ داده شد</span></span>
-                                                                    :e.callStatus === false?   
-                                                                        <span className={Style.callStatus}><CallMissedOutgoingIcon sx={{color:'red'}}></CallMissedOutgoingIcon><span className={Style.callStatusText}>پاسخ داده نشد</span></span>
-                                                                    :null}
-                                                                </div>
-                                                                <div className={Style.callDropDownCallType}  >
-                                                                <span>دلیل تماس:</span>{callType.filter(w=>{return w.value === e.callReason})[0].pr}
-                                                                </div>
-                                                            </div>
-                                                            <div  style={{float:"left" , display:'flex' , marginLeft:'10px' }}>
-                                                                
-                                                                {e.countryCode}-{e.phoneNumber}
-                                                            </div>
-                                                        </div>
-                                                    </Typography>
-                                                    </AccordionSummary>
-                                                    <AccordionDetails>
-                                                    <Typography>
+                            <div style={{marginTop:'20px'}}>
+                                    {calls.length === 0?
+                                        <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'75vh' }}>
+                                            <NoData caption='تماسی برای نمایش وجود ندارد'></NoData>
+                                        </div>
+                                    :calls.length !== 0?
+                                        <div style={{marginBottom:'30px'}}>
+                                            {calls.map((f , j)=>{
+                                                return(
+                                                    <Fragment>
+                                                    <span style={{padding:'0px 10px 10px 0px'}}>{f[0]}</span>
+                                                        {f[1].map((e , i)=>{                                           
+                                                            return(
+                                                                <div style={{marginBottom:'10px'}} key={i}>
+                                                                    <Accordion>
+                                                                        <AccordionSummary
+                                                                        expandIcon={<ExpandMoreIcon />}
+                                                                        aria-controls="panel1a-content"
+                                                                        id="panel1a-header"
+                                                                        >
+                                                                        <Typography sx={{width:'100%'}}>
+                                                                            <div className={Style.callDropDownDiv}>
+                                                                                <div style={{float:'right' ,display:'flex' , justifyContent:'center' , margin:'0px 0px 0px auto' , textAlign:'right'}}>
+                                                                                    <div style={{float:'right', margin:'0px 0px 0px 10px' , textAlign:'right'}}>
+                                                                                        {e.callStatus === true?
+                                                                                            <span className={Style.callStatus}><CallMadeIcon sx={{color:'#009a4a'}}></CallMadeIcon><span className={Style.callStatusText}>{new Date(e.callDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' , hour12: false})}</span></span>
+                                                                                        :e.callStatus === false?   
+                                                                                            <span className={Style.callStatus}><CallMissedOutgoingIcon sx={{color:'red'}}></CallMissedOutgoingIcon><span className={Style.callStatusText}>{new Date(e.callDate).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' , hour12: false})}</span></span>
+                                                                                        :null}
+                                                                                    </div>
+                                                                                    <div className={Style.callDropDownCallType}  >
+                                                                                        <span>دلیل تماس:</span>{callType.filter(w=>{return w.value === e.callReason})[0].pr}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className={Style.phoneNum} >
+                                                                                    {e.countryCode}-{e.phoneNumber}
+                                                                                </div>
+                                                                            </div>
+                                                                        </Typography>
+                                                                        </AccordionSummary>
+                                                                        <AccordionDetails>
+                                                                        <Typography>
+                                                                            <div className={Style.subToolsForCall}>
 
-                                                    </Typography>
-                                                    </AccordionDetails>
-                                                </Accordion>
-                                            </div>
-                                        )
-                                    })
-                                :null}
-                        </div>             
+                                                                                {e.callStatus === true?
+                                                                                    <div style={{color:'#009a4a'}} className={Style.rightTools}>
+                                                                                        تماس برقرار شد
+                                                                                    </div>
+                                                                                :e.callStatus === false?   
+                                                                                    <div style={{color:'red'}} className={Style.rightTools}>
+                                                                                        تماس برقرار نشد
+                                                                                    </div>
+                                                                                :null}
+                                                                                <div dir='ltr' className={Style.leftTools}>
+                                                                                    <div className={Style.callBtn}>
+                                                                                        <div className={Style.btm}>     
+                                                                                            <a onClick={()=>{props.setTargetDocForCall({status:true , docId : props.targetDocForCall.docId , phoneNumber:`${e.phoneNumber}` , countryCode:`${e.countryCode}`}); }} href={`tel:${e.countryCode}${e.phoneNumber}`}>
+                                                                                            <button>
+                                                                                                <Call sx={{fontSize:'20px'}}></Call>
+                                                                                            </button>
+                                                                                            </a>
+                                                                                            <div className={Style.number}>
+                                                                                            {e.countryCode}-{e.phoneNumber}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div> 
+                                                                                </div>
+                                                                            </div>     
+                                                                            <hr className={Style.dashLine}></hr> 
+                                                                            <div className={Style.chosenInvoiceDiv}>
+                                                                                <span>
+                                                                                    درخواست هدف
+                                                                                </span>    
+                                                                                <div className={Style.callChosenInvoice}>
+                                                                                    <span>درخواستی انتخاب نشده است</span>  
+                                                                                </div>                                                                
+                                                                            </div>
+                                                                            <hr className={Style.dashLine}></hr>                
+                                                                            <div className={Style.discriptionDiv}>
+                                                                                <span>
+                                                                                    توضیحات مختصر
+                                                                                </span> 
+                                                                                {e.description === ""?
+                                                                                    <div className={Style.callDiscription}>
+                                                                                        توضیحاتی نوشته نشده است 
+                                                                                    </div>                                                                
+                                                                                :
+                                                                                    <div className={Style.callDiscriptionItSelf}>
+                                                                                        {e.description}
+                                                                                    </div>   
+                                                                                }   
+                                                                            </div>              
+                                                                        </Typography>
+                                                                        </AccordionDetails>
+                                                                    </Accordion>
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </Fragment>
+                                                )
+                                            })}
+                                        </div>
+                                    :null}
+                            </div>             
                         :listType === 'prRequests' ?
                             <div style={{marginTop:'20px'}}>
                                 <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'75vh' }}>

@@ -6,7 +6,9 @@ import Fade from '@mui/material/Fade';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import { WhatsApp } from '@mui/icons-material';
-import Style from './whatsAppModal.module.scss'
+import Style from './whatsAppModal.module.scss';
+import CloseIcon from '@mui/icons-material/Close';
+
 const style = {
   position: 'absolute',
   top: '50%',
@@ -37,30 +39,32 @@ export default function WhatsAppModal(props) {
         }}
       >
         <Fade in={props.openWhatsAppModal}>
-          <Box sx={style}>
-            <div style={{width:'100%' , display:'flex' , justifyContent:'center'}}>
-                <WhatsApp sx={{fontSize:'120px'}}></WhatsApp>
-            </div>
-            <div style={{padding:'10px 0px 0px 0px'}}>
-              <div style={{fontFamily:'YekanBold' , display:'flex' , justifyContent:'center'  , marginBottom:'10px'}}>لیست شماره های واتساپ</div>
-              {props.whatsAppMsgList.map(e=>{
-                return(
-                  <div style={{ marginBottom:'10px' , display:'flex' , justifyContent:'center'}}>
-                    <div className={Style.btm}>     
-                      
-                      <a href={`https://api.whatsapp.com/send?phone=${e.countryCode}${e.number}`}>
-                        <button>
-                        ارسال پیام
-                        </button>
-                      </a>
-                      <div style={{marginLeft:'5px' , display:'flex' ,width:'150px' , fontSize:'18px' , padding:'5px 10px 0px 10px'}}>
-                        {e.countryCode}-{e.number}
+          <Box className={Style.container} sx={style}>
+            <div onClick={handleClose} style={{marginTop:'0px' , position:'absolute' , right:'0px' , backgroundColor:'black' , padding:'10px' , borderBottomLeftRadius:'10px'}}><CloseIcon sx={{color:'white'}}></CloseIcon></div>
+            <div style={{padding:'40px 30px 40px 30px'}}>           
+              <div className={Style.callIconDiv}>
+                  <WhatsApp className={Style.callIcon}></WhatsApp>
+              </div>
+              <div style={{padding:'5px 0px 0px 0px'}}>
+                <div className={Style.callNumberListTitle}>لیست شماره های واتساپ</div>
+                {props.whatsAppMsgList.map(e=>{
+                  return(
+                    <div className={Style.callBtn}>
+                      <div className={Style.btm}>     
+                        <a href={`https://api.whatsapp.com/send?phone=${e.countryCode}${e.number}`}>
+                          <button>
+                          ارسال پیام
+                          </button>
+                        </a>
+                        <div className={Style.number}>
+                          {e.countryCode}-{e.number}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            </div> 
           </Box>
         </Fade>
       </Modal>

@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import { WhatsApp } from '@mui/icons-material';
 import Style from './callModal.module.scss'
 import Call from '@mui/icons-material/Call';
+import CloseIcon from '@mui/icons-material/Close';
 const style = {
   position: 'absolute',
   top: '50%',
@@ -37,29 +38,32 @@ export default function CallModal(props) {
           timeout: 500,
         }}
       >
-        <Fade in={props.openCallModal.status}>
-          <Box sx={style}>
-            <div style={{width:'100%' , display:'flex' , justifyContent:'center'}}>
-                <Call sx={{fontSize:'120px'}}></Call>
-            </div>
-            <div style={{padding:'5px 0px 0px 0px'}}>
-              <div style={{fontFamily:'YekanBold' , display:'flex' , justifyContent:'center'  , marginBottom:'10px'}}>لیست شماره های تماس</div>
-              {props.openCallModal.list.map(e=>{
-                return(
-                  <div style={{ marginBottom:'10px' , display:'flex' , justifyContent:'center'}}>
-                    <div className={Style.btm}>     
-                      <a onClick={()=>{props.setTargetDocForCall({status:true , docId : props.targetDocForCall.docId , phoneNumber:`${e.number}` , countryCode:`${e.countryCode}`}); handleClose() }} href={`tel:${e.countryCode}${e.number}`}>
-                        <button>
-                            <Call></Call>
-                        </button>
-                      </a>
-                      <div style={{marginLeft:'5px' , display:'flex' , fontSize:'18px' , padding:'5px 10px 0px 10px'}}>
-                        {e.countryCode}-{e.number}
+        <Fade  in={props.openCallModal.status}>
+          <Box className={Style.container} sx={style}>
+            <div onClick={handleClose} style={{marginTop:'0px' , position:'absolute' , right:'0px' , backgroundColor:'black' , padding:'10px' , borderBottomLeftRadius:'10px'}}><CloseIcon sx={{color:'white'}}></CloseIcon></div>
+            <div style={{padding:'40px 30px 40px 30px'}}>
+              <div className={Style.callIconDiv}>
+                  <Call className={Style.callIcon}></Call>
+              </div>
+              <div style={{padding:'5px 0px 0px 0px'}}>
+                <div className={Style.callNumberListTitle}>لیست شماره های تماس</div>
+                {props.openCallModal.list.map(e=>{
+                  return(
+                    <div className={Style.callBtn}>
+                      <div className={Style.btm}>     
+                        <a onClick={()=>{props.setTargetDocForCall({status:true , docId : props.targetDocForCall.docId , phoneNumber:`${e.number}` , countryCode:`${e.countryCode}`}); handleClose() }} href={`tel:${e.countryCode}${e.number}`}>
+                          <button>
+                              <Call></Call>
+                          </button>
+                        </a>
+                        <div className={Style.number}>
+                          {e.countryCode}-{e.number}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
           </Box>
         </Fade>

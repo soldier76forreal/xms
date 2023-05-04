@@ -94,7 +94,7 @@ const EditCustomerPortal = (props) =>{
                 if(result.address !==null){
                     setAddresses([...result.address])
                 }else if(result.address ===null){
-                    setAddresses([{country:'' , province:'' , city:'' , neighbourhood:'' , street:'' , plate:'' , postalCode:'' , mapLink:'' , addressExplanations:''}])
+                    setAddresses([])
                 }
                 if(result.contactInfo.emails !==null){
                     setEmails([...result.contactInfo.emails])
@@ -107,13 +107,6 @@ const EditCustomerPortal = (props) =>{
 
    
     //numbers phone call onChange
-    const getPrTitle = (e , j) =>{
-        var tempAr = [...phoneNumbers];
-        tempAr[j.name].title = e.id;
-        setPhoneNumbers([...tempAr]);
-       
-    }
-
     const getCountryCode = (e , j) =>{
         var tempAr = [...phoneNumbers];
         tempAr[j.name].countryCode = e.phone;
@@ -222,7 +215,7 @@ const EditCustomerPortal = (props) =>{
             id:props.editCustomer.theCustomer._id
         }
      
-        if(firstName === '' || lastName === '' || phoneNumbers[0].number ==='' || phoneNumbers[0].countryCode ==='' || phoneNumbers[0].title ===''){
+        if(firstName === '' || lastName === '' || phoneNumbers[0].number ==='' || phoneNumbers[0].countryCode ===''){
             Swal.fire({
                 icon: 'error',
                 title: 'خطا',
@@ -263,27 +256,28 @@ const EditCustomerPortal = (props) =>{
                     </div>
                     <div className={Style.personalInformationFirstOne}>
                         <Row className="g-0">
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={2} xl={4} xxl={4} xs={6}>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
                                 <CustomSelect value={personCountry} onChange={(e)=>{setPersonCountry(e.code)}} selectType='countryWithFlag' placeholder="کشور"></CustomSelect>
                             </Col>
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={6}>
-                                <CustomSelect value={personCountry}  onChange={(e)=>{setPersonTitle(e.id)}} selectType='personTitle' placeholder="عنوان"></CustomSelect>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1999'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
+                                <CustomSelect value={customerOrigin} onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="جذب شده از طریق"></CustomSelect>
                             </Col>
-                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={3} xxl={3} xs={6}>
+                            {/* <Col style={{padding:'10px 5px 0px 5px' , zIndex:'2000'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={6}>
+                                <CustomSelect value={personCountry}  onChange={(e)=>{setPersonTitle(e.id)}} selectType='personTitle' placeholder="عنوان"></CustomSelect>
+                            </Col> */}
+                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
                                 <TextInputNormal value={firstName} onChange={(e)=>{setFirstName(e.target.value)}}  placeholder="نام"></TextInputNormal>
                             </Col>
-                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={3} xxl={3} xs={6}>
+                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
                                 <TextInputNormal value={lastName} onChange={(e)=>{setLastName(e.target.value)}} placeholder="نام خانوادگی"></TextInputNormal>
                             </Col>
                         </Row>
                         <Row className="g-0" style={{padding:'0px 0px 5px 0px'}}>
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'999'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
+                            {/* <Col style={{padding:'10px 5px 0px 5px' , zIndex:'999'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
                                 <CustomSelect disable={true} selectType='personTitle' placeholder="نوع مشتری"></CustomSelect>
-                            </Col>
-                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
-                                <CustomSelect value={customerOrigin} onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="جذب شده از طریق"></CustomSelect>
-                            </Col>
-                            <Col dir='rtl' style={{padding:'4px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                            </Col> */}
+
+                            {/* <Col dir='rtl' style={{padding:'4px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                 <div style={{display:'flex' , alignItems:'center' , padding:'10px 5px 2px 5px'}}>
                                     <label style={{marginBottom:'5px' , fontSize:'13px'}}>تاریخ تولد</label>
                                     <div style={{margin:'0px auto 0px 0px' , display:'flex'}}>
@@ -299,7 +293,7 @@ const EditCustomerPortal = (props) =>{
                             </Col>
                             <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                 <MultiSelect disable={true} placeholder='محصولات مورد علاقه'></MultiSelect>
-                            </Col>
+                            </Col> */}
                         </Row>
                     </div>
                     <hr className={Style.dashLine}></hr>
@@ -322,7 +316,7 @@ const EditCustomerPortal = (props) =>{
                               console.log(data)
                                 return(
                                     <Row key={i} className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px' , marginTop:'5px'}}>
-                                        <Col style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={8} xl={8} xxl={8} >
+                                        <Col style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={7} xl={7} xxl={7} >
                                             <div className={Style.phoneNumberMainDiv}>
                                                 <div>
                                                     {data.whatsApp === true?
@@ -334,14 +328,11 @@ const EditCustomerPortal = (props) =>{
                                                 <div style={{padding:'4px 10px 0px 10px'}} className={Style.dot}>{i+1}</div>
                                                     <IconBotton onClick={()=>{var temp = [...phoneNumbers]; temp.splice(i,1); setPhoneNumbers([...temp]) }}  text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
                                                 <div className={Style.phoneNumberCountry}>
-                                                    <CustomSelect value={data.personTitle} name={i} onChange={getPrTitle} selectType='personTitle' placeholder="عنوان"></CustomSelect>
-                                                </div>
-                                                <div className={Style.phoneNumberCountry}>
                                                     <CustomSelect value={data.countryCode} name={i} onChange={getCountryCode} selectType='countryWithFlagAndCountryCode' placeholder="کد کشور"></CustomSelect>
                                                 </div>
                                             </div>
                                         </Col>
-                                        <Col  style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={4} xl={4} xxl={4} >
+                                        <Col  style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={5} xl={5} xxl={5} >
                                             <TextInputNormal value={data.number} name={i} onChange={getPhoneNumber} placeholder="شماره تماس"></TextInputNormal>
                                         </Col>
                                     </Row>

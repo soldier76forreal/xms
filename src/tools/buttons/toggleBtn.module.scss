@@ -1,0 +1,17 @@
+.toggleBtn{
+    padding:6px 10px 5px 10px !important;
+    font-size:13px !important;
+    border-color:#000 !important;
+    color:#000 !important;
+}
+
+
+@media only screen and (max-width: 576.98px) {
+    .toggleBtn{
+        padding:6px 10px 5px 10px !important;
+        font-size:10px !important;
+        border-color:#000 !important;
+        color:#000 !important;
+    }
+    
+}

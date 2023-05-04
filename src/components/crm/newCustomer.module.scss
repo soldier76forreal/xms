@@ -19,7 +19,8 @@
 
 
 .dashLine {
-   border-top: 1px line  $dimText;
+    
+  border-top: 2px line  $dimText !important;
 }
 .dashLineVer {
    border-top: 2px dashed  $dimText;

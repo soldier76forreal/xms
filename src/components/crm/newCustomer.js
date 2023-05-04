@@ -54,7 +54,7 @@ const NewCustomerPortal = (props) =>{
     const [loading , setLoading] = useState(false);
     //phone numbers information states
 
-    const [phoneNumbers , setPhoneNumbers] = useState([{title:'' , countryCode:'' , number:'' , whatsApp:true}]);
+    const [phoneNumbers , setPhoneNumbers] = useState([{ countryCode:'' , number:'' , whatsApp:true}]);
 
     //emails information states
     const [emails , setEmails] = useState([{email:''}]);
@@ -66,12 +66,7 @@ const NewCustomerPortal = (props) =>{
 
 
     //numbers phone call onChange
-    const getPrTitle = (e , j) =>{
-        var tempAr = [...phoneNumbers];
-        tempAr[j.name].title = e.id;
-        setPhoneNumbers([...tempAr]);
-       
-    }
+
 
     const getCountryCode = (e , j) =>{
         var tempAr = [...phoneNumbers];
@@ -180,7 +175,7 @@ const NewCustomerPortal = (props) =>{
             generatedBy:decoded.id
         }
      
-        if(firstName === '' || lastName === '' || phoneNumbers[0].number ==='' || phoneNumbers[0].countryCode ==='' || phoneNumbers[0].title ===''){
+        if(firstName === '' || lastName === '' || phoneNumbers[0].number ==='' || phoneNumbers[0].countryCode ===''){
             Swal.fire({
                 icon: 'error',
                 title: 'خطا',
@@ -195,11 +190,11 @@ const NewCustomerPortal = (props) =>{
                     url:`${axiosCtx.defaultTargetApi}/crm/getTheBlogForMain`,
                     config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
                 })
+                props.setRefresh(Math.random())
                 setTimeout(()=>{
                     const dataRes = response.data;
                     props.setSuccessToast({status:true , msg:'مشتری جدید ایجاد شد'});
                     props.setNewCustomer(false)
-                    props.setRefresh(Math.random())
                     setLoading(false)
                     
                     const closingSuccessMsgTimeOut = setTimeout(()=>{props.setSuccessToast({status:false , msg:'مشتری جدید ایجاد شد'})}, 3000);
@@ -223,29 +218,27 @@ const NewCustomerPortal = (props) =>{
                     </div>
                     <div className={Style.personalInformationFirstOne}>
                         <Row className="g-0">
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={2} xl={4} xxl={4} xs={6}>
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'} } sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
                                 <CustomSelect onChange={(e)=>{setPersonCountry(e.code)}} selectType='countryWithFlag' placeholder="کشور"></CustomSelect>
                             </Col>
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'2000'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={6}>
+                            {/* <Col style={{padding:'10px 5px 0px 5px' , zIndex:'2000'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={6}>
                                 <CustomSelect   onChange={(e)=>{setPersonTitle(e.id)}} selectType='personTitle' placeholder="عنوان"></CustomSelect>
-                            </Col>
-                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={3} xxl={3} xs={6}>
-                                <TextInputNormal onChange={(e)=>{setFirstName(e.target.value)}}  placeholder="نام"></TextInputNormal>
-                            </Col>
-                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={4} xl={3} xxl={3} xs={6}>
-                                <TextInputNormal onChange={(e)=>{setLastName(e.target.value)}} placeholder="نام خانوادگی"></TextInputNormal>
-                            </Col>
-                        </Row>
-                        <Row className="g-0" style={{padding:'0px 0px 5px 0px'}}>
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'999'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
-                                <CustomSelect disable={true} selectType='personTitle' placeholder="نوع مشتری"></CustomSelect>
-                            </Col>
-                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1999'}} sm={12} md={12} lg={6} xl={6} xxl={6} xs={6}>
+                            </Col> */}
+                            <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1999'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6} >
                                 <div>
                                     <CustomSelect   onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="جذب شده از طریق"></CustomSelect>
                                 </div>
                             </Col>
-                            <Col dir='rtl' style={{padding:'4px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
+                                <TextInputNormal onChange={(e)=>{setFirstName(e.target.value)}}  placeholder="نام"></TextInputNormal>
+                            </Col>
+                            <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6} >
+                                <TextInputNormal onChange={(e)=>{setLastName(e.target.value)}} placeholder="نام خانوادگی"></TextInputNormal>
+                            </Col>
+                        </Row>
+                        <Row className="g-0" style={{padding:'0px 0px 5px 0px'}}>
+
+                            {/* <Col dir='rtl' style={{padding:'4px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                 <div style={{display:'flex' , alignItems:'center' , padding:'10px 5px 2px 5px'}}>
                                     <label style={{marginBottom:'5px' , fontSize:'13px'}}>تاریخ تولد</label>
                                     <div style={{margin:'0px auto 0px 0px' , display:'flex'}}>
@@ -258,8 +251,10 @@ const NewCustomerPortal = (props) =>{
                                 :calenderType === 'miladi'?
                                     <MiladiDatePicker value={dateOfBrith} onChange={(e)=>{setDateOfBrith(e)}}></MiladiDatePicker>                               
                                 :null}
-                            </Col>
-
+                            </Col> */}
+                            {/* <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                <MultiSelect disable={true} placeholder='محصولات مورد علاقه'></MultiSelect>
+                            </Col> */}
                         </Row>
                     </div>
                     <hr className={Style.dashLine}></hr>
@@ -275,13 +270,13 @@ const NewCustomerPortal = (props) =>{
                             </div>
 
                             <Col sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
-                                <IconBotton  onClick={()=>{var a = [...phoneNumbers]; a.push({title:'' , countryCode:'' , number:'' , whatsApp:false}); setPhoneNumbers([...a])}} color='black' name='شماره تماس جدید' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                                <IconBotton  onClick={()=>{var a = [...phoneNumbers]; a.push({ countryCode:'' , number:'' , whatsApp:false}); setPhoneNumbers([...a])}} color='black' name='شماره تماس جدید' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
                             </Col>
                         </Row>
                             {phoneNumbers.map((data , i)=>{
                                 return(
                                     <Row key={i} className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px' , marginTop:'5px'}}>
-                                        <Col style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={8} xl={8} xxl={8} >
+                                        <Col style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={7} xl={7} xxl={7} >
                                             <div className={Style.phoneNumberMainDiv}>
                                                 <div>
                                                     {data.whatsApp === true?
@@ -293,31 +288,26 @@ const NewCustomerPortal = (props) =>{
                                                 <div style={{padding:'4px 10px 0px 10px'}} className={Style.dot}>{i+1}</div>
                                                     <IconBotton onClick={()=>{var temp = [...phoneNumbers]; temp.splice(i,1); setPhoneNumbers([...temp]) }}  text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
                                                 <div className={Style.phoneNumberCountry}>
-                                                    <CustomSelect name={i} onChange={getPrTitle} selectType='personTitle' placeholder="عنوان"></CustomSelect>
-                                                </div>
-                                                <div className={Style.phoneNumberCountry}>
                                                     <CustomSelect name={i} onChange={getCountryCode} selectType='countryWithFlagAndCountryCode' placeholder="کد کشور"></CustomSelect>
                                                 </div>
                                             </div>
                                         </Col>
-                                        <Col  style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={4} xl={4} xxl={4} >
+                                        <Col  style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={5} xl={5} xxl={5} >
                                             <TextInputNormal name={i} onChange={getPhoneNumber} placeholder="شماره تماس"></TextInputNormal>
                                         </Col>
                                     </Row>
                                 )
                             })}
                     </div>
-                    
+
                     <div> 
                         <Row className="g-0" dir='rtl' style={{padding:'30px 0px 0px 0px'}}>
                             <div className={Style.littleTitleDiv}>
                                 <LittleOneNormal  text='ایمیل'></LittleOneNormal>
                                 <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
-
                             </div>
-
                             <Col style={{marginBottom:'5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
-                                    <IconBotton onClick={()=>{var a = [...emails]; a.push({email:''}); setEmails([...a])}} color='black' name='ایمیل جدید'  text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                                <IconBotton onClick={()=>{var a = [...emails]; a.push({email:''}); setEmails([...a])}} color='black' name='ایمیل جدید'  text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
                             </Col>
                         </Row>
                         {emails.map((data , i)=>{
@@ -325,11 +315,10 @@ const NewCustomerPortal = (props) =>{
                                 <Col style={{padding:'5px  0px 5px 0px'}} key={i} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                     <div className={Style.phoneNumberMainDiv}>
                                         <div className={Style.dot}>{i+1}</div>
-                                        <IconBotton onClick={()=>{var temp = [...emails]; temp.splice(i,1); setEmails([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
+                                            <IconBotton onClick={()=>{var temp = [...emails]; temp.splice(i,1); setEmails([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
                                         <div className={Style.phoneNumberCountry}>
-                                        <TextInputNormal name={i} onChange={getEmail} placeholder='ایمیل'></TextInputNormal>
+                                            <TextInputNormal name={i} onChange={getEmail} placeholder='ایمیل'></TextInputNormal>
                                         </div>
-
                                     </div>
                                 </Col>
                             )
@@ -432,7 +421,7 @@ const NewCustomerPortal = (props) =>{
                         <Row className="g-0" style={{padding:'0px'}}>
                             <Col style={{padding:'0px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                 <div style={{width:'100%'}}>
-                                    <button disabled={loading} onClick={saveData} className={Style.NormalBtn}>{loading === true ?<CircularProgress size='30px' color='inherit'></CircularProgress> :'ذخیره'}</button>
+                                    <button disabled={loading} onClick={saveData} className={Style.NormalBtn}>{loading === true ?<CircularProgress size='24px' color='inherit'></CircularProgress> :'ذخیره'}</button>
                                 </div>
                             </Col>
                         </Row>

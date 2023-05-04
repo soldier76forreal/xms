@@ -26,6 +26,7 @@ import Swal from 'sweetalert2';
 import SendIcon from '@mui/icons-material/Send';
 import Button from '@mui/material/Button';
 import SuccessMsg from '../../tools/navs/successMsg';
+import UserEdit from './userEdit';
 export default function ExpendUserAc(props) {
   const webSections = useContext(WebSections);
   const authCtx = useContext(AuthContext)
@@ -116,7 +117,7 @@ export default function ExpendUserAc(props) {
     if(props.data !== undefined){
       return (
         <div>
-          
+          <UserEdit ></UserEdit>
           <SuccessMsg openMsg={successToast.status} msg={successToast.msg}></SuccessMsg>
           <Accordion dir='rtl'>
             <AccordionSummary
@@ -130,10 +131,9 @@ export default function ExpendUserAc(props) {
                     <Avatar
                     sx={{width:'60px', height:'60px'}}
                     alt={`Avatar n°${1 + 1}`} 
-                    src={props.data.profileImage === undefined ? Prof :`${axiosGlobal.defaultTargetApi}/uploads/${props.data.profileImage.filename}`}
+                    src={props.data.profileImage === undefined ? Prof :`${axiosGlobal.authTargetApi}/uploads/${props.data.profileImage.filename}`}
                     />
                     <div>
-                      
                         <div style={{fontSize:'18px' , marginRight:'8px' , padding:'0px'}}>{`${props.data.firstName} ${props.data.lastName}`}</div>
                         <div style={{fontSize:'13px' , color:'rgb(69, 69, 69)' , marginRight:'8px' , padding:'0px'}}>{`نقش ها:${props.data.access.map(data=>{
                           for(var i=0 ; webSections.listOfSections.length >i; i++){
@@ -153,7 +153,7 @@ export default function ExpendUserAc(props) {
             <Row>
                   <Col style={{padding:'0px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                     <div style={{display:'flex' , width:'100%' ,alignItems:'center'}}>
-                      <Row>
+                      <Row style={{width:'100%'}}>
                         <Col style={{padding:'0px'}} xs={12} md={6} lg={6} xl={6} xxl={6}>
                           <div className={Style.validationDiv} >
                             <FormControlLabel
@@ -170,7 +170,7 @@ export default function ExpendUserAc(props) {
                         </Col>
                         <Col style={{padding:'0px'}} xs={12} md={6} lg={6} xl={6} xxl={6}>
                           <div className={Style.taskBtn} dir='ltr'>
-                            <Button onClick={()=>{props.setEditUser({status:true , id:props.data._id})}}  variant="contained" endIcon={<EditIcon />}>
+                            <Button onClick={()=>{props.setTargetedEditData(props.data);  props.setOpenEditUser(true)}}  variant="contained" endIcon={<EditIcon />}>
                               ویرایش  
                             </Button>
                             <Button onClick={deleteModal} sx={{color:"red"   , marginLeft:'5px'  , borderColor:'red'}} variant="outlined" >

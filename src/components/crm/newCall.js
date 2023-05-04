@@ -67,6 +67,7 @@ const NewCallPortal = (props) =>{
                         data:data,
                         config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
                     })
+                    props.setRefresh(Math.random());
                     setTimeout(()=>{
                         setLoading(false)
                         props.setSuccessToast({status:true , msg:'تماس جدید ثبت شد'});
@@ -122,9 +123,9 @@ const NewCallPortal = (props) =>{
                         <div style={{padding:'10px 25px 0px 25px'}}  className={Style.formDiv}>
                             <Row>
                                 <Col  xs={12} md={12} lg={12} xl={12} xxl={12}>
-                                    <div style={{display:'flex' , margin:'10px 10px 10px 0px' , justifyContent:'center' , alignItems:'center' }}>
-                                        <div style={{display:'flex' , justifyContent:'center' , padding:'0px 10px 10px 0px' , alignContent:'center' , alignItems:'center'}}>ثبت تماس برای شماره:</div>
-                                        <div style={{ marginBottom:'10px' , display:'flex' , justifyContent:'center'}}>
+                                    <div className={Style.callBtnDiv} >
+                                        <div className={Style.callBtnTitle}>:ثبت تماس برای شماره</div>
+                                        <div style={{ marginBottom:'10px' , marginRight:'8px' , display:'flex' , justifyContent:'center'}}>
                                             <div className={Style.btm}>     
                                                 <a href={`tel:${props.targetDocForCall.countryCode}-${props.targetDocForCall.phoneNumber}`}>
                                                     <button>

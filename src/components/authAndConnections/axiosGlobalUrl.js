@@ -10,4 +10,5 @@ export const AxiosGlobalProvider = (props) =>{
     }
     return <AxiosGlobal.Provider value={contextValue}>{props.children}</AxiosGlobal.Provider>
 }
+
 export default AxiosGlobal;

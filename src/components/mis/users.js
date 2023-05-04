@@ -23,15 +23,12 @@ const Users = (props) =>{
     const urlContext = useContext(AxiosGlobal);
     const authContext = useContext(AuthContext);
     const [hasMore , setHasMore] = useState(true);
-    const [editUser , setEditUser] = useState({status:false , id:''});
+    const [targetedEditData , setTargetedEditData] = useState({});
+    const [openEditUser , setOpenEditUser] = useState(false)
     const [contectRefresh , setContectRefresh] = useState(2);
     const [limit , setLimit] = useState(10);
     const [dataForShow , setDataForShow] = useState([])
     const history = useHistory()
-
-
-
-
 
 
     var userList = {sa:[],inv:[],req:[] , all:[] , allAll:[] , lenght:0};
@@ -82,6 +79,7 @@ const Users = (props) =>{
     useEffect(() => {
         getUserData()
     }, [contectRefresh]);
+
     const notifMore = () =>{
         setTimeout(()=>{
         
@@ -111,16 +109,13 @@ const Users = (props) =>{
                 }
             }
         }, 1000);
-        
       }
-    //   useEffect(() => {
-    //     console.log(dataForShow.filter((e)=>{return e._id === editUser.id})[0])
-    //   }, []);
+      
     return(
         <Fragment>
             <SuccessMsg openMsg={successToast.status} msg={successToast.msg}></SuccessMsg>
             <MainNav></MainNav>
-            {/* <UserEdit setEditUser={setEditUser}  editUser={editUser}></UserEdit> */}
+            <UserEdit  openEditUser={openEditUser} setOpenEditUser={setOpenEditUser}   setSuccessToast={setSuccessToast} setTargetedEditData={setTargetedEditData}   targetedEditData={targetedEditData}></UserEdit>
             <NewUser setRefresh={setContectRefresh} setSuccessToast={setSuccessToast} newUserStatus = {newUserStatus} setNewUserStatus={setNewUserStatus}></NewUser>
             <OpenIconSpeedDial onClick={()=>{setNewUserStatus(true)}}></OpenIconSpeedDial>
             <div className={Style.usersDiv}>
@@ -133,7 +128,6 @@ const Users = (props) =>{
                             dataLength={dataForShow.length}
                             next={notifMore}
                             hasMore={hasMore}
-                                                
                             loader={<div style={{display:'flex', marginTop:'10px', justifyContent:'center', alignItem:'center'}}><CircularProgress size='35px' color='inherit'></CircularProgress></div>}
                             >
 
@@ -142,7 +136,7 @@ const Users = (props) =>{
                             return(
                                 <div className={Style.expendDiv}>
                                     
-                                    <ExpendUserAc  editUser={editUser} setEditUser={setEditUser} setContectRefresh={setContectRefresh} datass={data} key={i}  setData={setData} data={datas} /> 
+                                    <ExpendUserAc setOpenEditUser={setOpenEditUser}   targetedEditData={targetedEditData} setTargetedEditData={setTargetedEditData} setContectRefresh={setContectRefresh} datass={data} key={i}  setData={setData} data={datas} /> 
                                 </div>
                             )
                         })}

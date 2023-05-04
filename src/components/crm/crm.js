@@ -64,7 +64,7 @@ const Crm = (props) =>{
 
     const [searchForCustomer , setSearchForCustomer] = useState({searching:'' , loading:false , retry:false});
 
-    const getInvoiceData = async() =>{
+    const getCustomerData = async() =>{
         setLoadingStatus({loading:true , retry:false})
         try{
             const response = await authCtx.jwtInst({
@@ -72,27 +72,33 @@ const Crm = (props) =>{
                 url:`${axiosGlobal.defaultTargetApi}/crm/getAllCustomer`,
                 config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
             })
-            
-            setAllPersons([...response.data])
+            var arr;
+            if(decoded.access.includes("inv") || decoded.access.includes("sa")){
+                setAllPersons([...response.data])
+                arr=response.data
+            }else if(!decoded.access.includes("inv") && !decoded.access.includes("sa") && decoded.access.includes("req")){
+                setAllPersons([...response.data.filter((e)=>{return JSON.stringify(e.customer.inisialInsert) === JSON.stringify(decoded.id)})])
+                arr = response.data.filter((e)=>{return JSON.stringify(e.customer.inisialInsert) === JSON.stringify(decoded.id)})
+            }
                 var temp = [];
-                if(response.data.length !==0){
-                    if(limit>response.data.length){
-                        setLimit(response.data.length);
+                if(arr.length !==0){
+                    if(limit>arr.length){
+                        setLimit(arr.length);
                         temp.length =0
                         for(var i = 0 ; i < limit; i++){
-                            if(response.data !== undefined){
-                                temp.push(response.data[i]);
+                            if(arr !== undefined){
+                                temp.push(arr[i]);
                             }
                         }
                         setPersons([...temp])
                         setHasMore(false)
-                    }else if(limit<=response.data.length){
+                    }else if(limit<=arr.length){
                         setHasMore(true)
                         setLimit(limit+20);
                         temp.length =0
                         for(var j = 0 ; j < limit; j++){
-                            if(response.data[j] !== undefined){
-                                temp.push(response.data[j]);
+                            if(arr[j] !== undefined){
+                                temp.push(arr[j]);
                             }
                         }
                         setPersons([...temp])
@@ -139,7 +145,7 @@ const Crm = (props) =>{
         
       }
     useEffect(() => {
-        getInvoiceData()
+        getCustomerData()
     }, [refresh]);
 
 
@@ -176,7 +182,6 @@ const Crm = (props) =>{
                 data:{id:id},
                 config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
             })
-            setRefresh(Math.random())
             setSuccessToast({status:true , msg:'فرد مورد نظر شما با موفقیت حذف شد'});
             setRefresh(Math.random())
             const closingSuccessMsgTimeOut = setTimeout(()=>{setSuccessToast({status:false , msg:'فرد مورد نظر شما با موفقیت حذف شد'})}, 3000);
@@ -189,7 +194,7 @@ const Crm = (props) =>{
         <Fragment>
             {/* overal components */}
             <ShowCustomer persons={persons}  showCustomer={showCustomer} setShowCustomer={setShowCustomer}></ShowCustomer>
-            <NewCall successToast={successToast} setSuccessToast={setSuccessToast} setRefresh={setRefresh} targetDocForCall={targetDocForCall} newCallStatus={targetDocForCall} setNewCallStatus={setTargetDocForCall}></NewCall>
+            <NewCall  successToast={successToast} setSuccessToast={setSuccessToast} setRefresh={setRefresh} targetDocForCall={targetDocForCall} newCallStatus={targetDocForCall} setNewCallStatus={setTargetDocForCall}></NewCall>
             <OpenIconSpeedDial  onClick={()=>{setNewCustomer(true); history.push('#newCustomer')}}></OpenIconSpeedDial>
             <NewCustomer setRefresh={setRefresh} successToast={successToast} setSuccessToast={setSuccessToast} newCustomer={newCustomer} setNewCustomer={setNewCustomer}></NewCustomer>
             <EditCustomer setRefresh={setRefresh} successToast={successToast} setSuccessToast={setSuccessToast} editCustomer={editCustomer} setEditCustomer={setEditCustomer}></EditCustomer>

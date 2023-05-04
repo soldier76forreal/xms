@@ -30,6 +30,7 @@ const PersoneCard = (props) =>{
     const MySwal = withReactContent(Swal)
     const authCtx = useContext(AuthContext);
     const axiosGlobal = useContext(AxiosGlobal);
+    
     var newestItem
     if(props.data.invoice.length !==0){
          newestItem = props.data.invoice.reduce(function(prev, current) {
@@ -61,17 +62,19 @@ const PersoneCard = (props) =>{
                                 <Flag countryCode={props.data.customer.personalInformation.country} style={{height:'100%'  , width:'100%', position:'center', objectFit:"cover"}} svg/>
                             </div>
                         }
-
+                        <div style={{margin:'0px 10px 0px 0px' , display:'flex', justifyContent:'center'}}>
+                            <div style={{display:'flex', justifyContent:'center' , alignItems:'center'}} className={Style.profName}>
+                                {props.data.customer.personalInformation.firstName}
+                            </div>
+                            <div style={{display:'flex', justifyContent:'center' , alignItems:'center'}} className={Style.profName}>
+                                {props.data.customer.personalInformation.lastName}
+                            </div>
+                        </div>
                         <div style={{margin:'0px auto 0px 0px'}}>
                             <CardMenu data={props.data.customer} editCustomer={props.editCustomer} setEditCustomer={props.setEditCustomer} deleteModal={props.deleteModal} id={props.data.customer._id}></CardMenu>
                         </div>
                     </div>
-                    <div className={Style.profName}>
-                        {props.data.customer.personalInformation.lastName}
-                    </div>
-                    <div className={Style.profSub}>
-                        {props.data.customer.personalInformation.firstName}
-                    </div>
+
                 </div>
                 <div style={{marginTop:'10px'}}>
                     <Row>
@@ -151,7 +154,7 @@ const PersoneCard = (props) =>{
                 </div>
                 <div style={{width:'100%' , marginTop:'8px' , height:'2px' , backgroundColor:'rgb(180, 180, 180)'}}></div>
                 <div className={Style.insertDate}>
-                    {`ثبت شده توسط ${props.data.customer.personalInformation.firstName} ${props.data.customer.personalInformation.lastName}  در تاریخ ${moment(props.data.customer.insertDate, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}`}
+                    {`ثبت شده توسط ${props.data.generatedBy.firstName} ${props.data.generatedBy.lastName}  در تاریخ ${moment(props.data.customer.insertDate, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}`}
                 </div>
             </div>
         </Fragment>

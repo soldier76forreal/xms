@@ -108,7 +108,6 @@ const Mis = () =>{
     const deleteModal = () =>{
         handleClose()
         Swal.fire({
-            
             title: 'مطمئن هستید؟',
             text: "این درخواست از لیست درخواست های شما حذف می شود",
             icon: 'warning',
@@ -120,7 +119,6 @@ const Mis = () =>{
           }).then((result) => {
             if (result.isConfirmed) {
                 deleteDocRec()
-
             }
           })
     }
@@ -189,13 +187,12 @@ const Mis = () =>{
                         setInvoiceForShow([...temp])
                     }
                 }
-          
-            setLoadingStatus({loading:false , retry:false})
+                setLoadingStatus({loading:false , retry:false})
+
         }catch(err){
             setTimeout(()=>{
                 setLoadingStatus({loading:false , retry:true})
             }, 10000);
-            
             console.log(err);
         }
     }
@@ -289,7 +286,7 @@ const Mis = () =>{
                         setInvoiceForShow([...temp])
                     }
                 }
-            }, 1000);
+            }, 2000);
             
           }
 
@@ -373,115 +370,28 @@ useEffect(() => {
                             <EditIcon className={Style.editIcon} sx={{color:'#fff' , fontSize:"22px"}}></EditIcon>
                         </div>
                     </div>
-                    {loadingStatus.loading === false && loadingStatus.retry === true?
-                        <Fragment>
-                            <div style={{display:'flex' , justifyContent:'center' , alignItems:'center' , textAlign:'center' , minHeight:'50vh' }}>
-                                <RetryError onClick={getInvoiceData}></RetryError>
-                            </div>       
-                        </Fragment>
-                    :loadingStatus.loading === true && loadingStatus.retry === false?
-                        <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'60vh' }}>
-                            <CircularProgress size='44px' color='inherit'></CircularProgress>
-                        </div>
-                    :loadingStatus.loading === false && loadingStatus.retry === false?
-                        
-                   
-                    <div>
-                        {invoice.length === 0?
-                            <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'50vh' }}>
-                                <NoData caption='درخواستی برای نمایش وجود ندارد'></NoData>
-                            </div>
-                            
-                        :invoice.length !== 0?
-                            
-                            <InfiniteScroll
-                                dataLength={invoiceForShow.length}
-                                next={notifMore}
-                                hasMore={hasMore}
-                                                    
-                                loader={<div style={{display:'flex', marginTop:'10px', justifyContent:'center', alignItem:'center'}}><CircularProgress size='35px' color='inherit'></CircularProgress></div>}
+                        {loadingStatus.loading === false && loadingStatus.retry === true?
+                            <Fragment>
+                                <div style={{display:'flex' , justifyContent:'center' , alignItems:'center' , textAlign:'center' , minHeight:'50vh' }}>
+                                    <RetryError onClick={getInvoiceData}></RetryError>
+                                </div>       
+                            </Fragment>
+                        :loadingStatus.loading === false && loadingStatus.retry === false?
+                            <div>                           
+                                <InfiniteScroll
+                                    dataLength={invoiceForShow.length}
+                                    next={notifMore}
+                                    hasMore={hasMore}          
+                                    loader={<div style={{display:'flex', marginTop:'10px', justifyContent:'center', alignItem:'center'}}><CircularProgress size='35px' color='inherit'></CircularProgress></div>}
                                 >
-                            
-                            {loadingStatus.loading === false
-                            && searchForInvoices.searching === ''?
-                                invoiceForShow.map((data , i)=>{
-                                    if(data !== undefined){
-                                        return(
-                                            <div  key={i} dir='rtl' style={{backgroundColor:data.doc.status === 0?'#fff': data.doc.status === 1?'rgb(239, 156, 78)' :data.doc.status === 2?'rgb(112, 236, 139)':null , marginBottom:'10px'}} className={postOpen.status === true && postOpen.id === i ?`${Style.invoiceCard} ${Style.fadeOut}`:`${Style.invoiceCard} ${Style.fadeIn}` }>
-                                                <div
-                                                id={data.doc._id}
-                                                aria-controls={open ? 'demo-customized-menu' : undefined}
-                                                aria-haspopup="true"
-                                                aria-expanded={open ? 'true' : undefined}
-                                                variant="contained"
-                                                disableElevation
-                                                onClick={(e)=>{
-                                                    setTargetToSend(e.currentTarget.id);  
-                                                    setAnchorEl(e.currentTarget);
-                                                    setOpenEditInvoice({status:false , id:i})
-                                                }}
-                                                endIcon={<KeyboardArrowDownIcon />}
-                                                className={Style.sideBtn}>
-                                                    <MoreVertIcon ></MoreVertIcon>
-                                                </div>
-                                                <div onClick={()=>{setPostOpen({status:true , id:i}); setShowPost(true); history.push('#showFullPost')}} style={{width:'95%' , padding:'10px 10px 10px 10px' , height:'100%'}}>
-                                                    <Row>
-                                                        <Col xs={12} md={12} lg={12} xl={12} xxl={12}>
-                                                            <div className={Style.top}>
-                                                                {data.user !== null ?
-                                                                    <div dir='rtl' className={Style.effectBy}>
-                                                                        ارسال شده توسط : <span>{data.user.firstName} {data.user.lastName}</span>
-                                                                    </div>
-                                                                :null}
-                                                                {data.user !== null ?
-                                                                    <div className={Style.date}>
-                                                                        تاریخ ارسال:<span>{moment(data.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
-                                                                    </div>
-                                                                :data.user === null ?
-                                                                    <div className={Style.date}>
-                                                                        تاریخ ثبت:<span>{moment(data.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
-                                                                    </div>
-                                                                :null}
-                                                            </div>
-                                                            <div style={{padding:'5px 0px 5px 0px'}}>
-                                                                <div className={Style.title}>
-                                                                    <span>
-                                                                        {data.doc.preInvoice.productName}
-                                                                    </span>
-                                                                    <span>-</span>
-                                                                    <span dir='rtl' className={Style.meter}>{data.doc.preInvoice.meterage === null ? "متراژ:نامشخص":data.doc.preInvoice.meterage !== null? `${data.doc.preInvoice.meterage} متر`:null}</span>
-                                                                    {data.doc.preInvoice.dimentions !== undefined?<span>-</span>:null}
-                                                                    <span dir='rtl' className={Style.meter}>{data.doc.preInvoice.dimentions !== undefined?`${data.doc.preInvoice.dimentions.width}*${data.doc.preInvoice.dimentions.height}*${data.doc.preInvoice.dimentions.diameter}`:null}</span>
-                                                                </div>
-                                                                <div className={Style.dis}>
-                                                                    آدرس مقصد:<span>{data.doc.preInvoice.destination}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className={Style.top}>
-                                                                {data.user !== null ?
-                                                                    <div className={Style.date2}>
-                                                                        تاریخ ارسال:<span>{moment(data.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
-                                                                    </div>
-                                                                :data.user === null ?
-                                                                    <div className={Style.date2}>
-                                                                        تاریخ ثبت:<span>{moment(data.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
-                                                                    </div>
-                                                                :null}
-                                                            </div>
-                                                        </Col>
-                                                    </Row>
-                                                </div>
-                                            </div>
-                                        )
-                                    }
-                                })  
-                            : searchForInvoices.searching !== ''?
-                                searchedData.map((data , i)=>{
-                                    if(data.item.doc){    
-                                        return(
-                                                <div  key={i} dir='rtl' style={{backgroundColor:data.item.doc.status === 0?'#fff': data.item.doc.status === 1?'rgb(239, 156, 78)' :data.item.doc.status === 2?'rgb(112, 236, 139)':null , marginBottom:'10px'}} className={postOpen.status === true && postOpen.id === i ?`${Style.invoiceCard} ${Style.fadeOut}`:`${Style.invoiceCard} ${Style.fadeIn}` }>
+                                {loadingStatus.loading === false
+                                && searchForInvoices.searching === ''?
+                                    invoiceForShow.map((data , i)=>{
+                                        if(data !== undefined){
+                                            return(
+                                                <div  key={i} dir='rtl' style={{backgroundColor:data.doc.status === 0?'#fff': data.doc.status === 1?'rgb(239, 156, 78)' :data.doc.status === 2?'rgb(112, 236, 139)':null , marginBottom:'10px'}} className={postOpen.status === true && postOpen.id === i ?`${Style.invoiceCard} ${Style.fadeOut}`:`${Style.invoiceCard} ${Style.fadeIn}` }>
                                                     <div
-                                                    id={data.item.doc._id}
+                                                    id={data.doc._id}
                                                     aria-controls={open ? 'demo-customized-menu' : undefined}
                                                     aria-haspopup="true"
                                                     aria-expanded={open ? 'true' : undefined}
@@ -500,43 +410,43 @@ useEffect(() => {
                                                         <Row>
                                                             <Col xs={12} md={12} lg={12} xl={12} xxl={12}>
                                                                 <div className={Style.top}>
-                                                                    {data.item.user !== null ?
+                                                                    {data.user !== null ?
                                                                         <div dir='rtl' className={Style.effectBy}>
-                                                                            ارسال شده توسط : <span>{data.item.user.firstName} {data.item.user.lastName}</span>
+                                                                            ارسال شده توسط : <span>{data.user.firstName} {data.user.lastName}</span>
                                                                         </div>
                                                                     :null}
-                                                                    {data.item.user !== null ?
+                                                                    {data.user !== null ?
                                                                         <div className={Style.date}>
-                                                                            تاریخ ارسال:<span>{moment(data.item.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
+                                                                            تاریخ ارسال:<span>{moment(data.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
                                                                         </div>
-                                                                    :data.item.user === null ?
+                                                                    :data.user === null ?
                                                                         <div className={Style.date}>
-                                                                            تاریخ ثبت:<span>{moment(data.item.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
+                                                                            تاریخ ثبت:<span>{moment(data.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
                                                                         </div>
                                                                     :null}
                                                                 </div>
                                                                 <div style={{padding:'5px 0px 5px 0px'}}>
                                                                     <div className={Style.title}>
                                                                         <span>
-                                                                            {data.item.doc.preInvoice.productName}
+                                                                            {data.doc.preInvoice.productName}
                                                                         </span>
                                                                         <span>-</span>
-                                                                        <span dir='rtl' className={Style.meter}>{data.item.doc.preInvoice.meterage === null ? "متراژ:نامشخص":data.item.doc.preInvoice.meterage !== null? `متر ${data.item.doc.preInvoice.meterage}`:null}</span>
-                                                                        {data.item.doc.preInvoice.dimentions !== undefined?<span>-</span>:null}
-                                                                        <span dir='rtl' className={Style.meter}>{data.item.doc.preInvoice.dimentions !== undefined?`${data.item.doc.preInvoice.dimentions.width}*${data.item.doc.preInvoice.dimentions.height}*${data.item.doc.preInvoice.dimentions.diameter}`:null}</span>
+                                                                        <span dir='rtl' className={Style.meter}>{data.doc.preInvoice.meterage === null ? "متراژ:نامشخص":data.doc.preInvoice.meterage !== null? `${data.doc.preInvoice.meterage} متر`:null}</span>
+                                                                        {data.doc.preInvoice.dimentions !== undefined?<span>-</span>:null}
+                                                                        <span dir='rtl' className={Style.meter}>{data.doc.preInvoice.dimentions !== undefined?`${data.doc.preInvoice.dimentions.width}*${data.doc.preInvoice.dimentions.height}*${data.doc.preInvoice.dimentions.diameter}`:null}</span>
                                                                     </div>
                                                                     <div className={Style.dis}>
-                                                                        آدرس مقصد:<span>{data.item.doc.preInvoice.destination}</span>
+                                                                        آدرس مقصد:<span>{data.doc.preInvoice.destination}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div className={Style.top}>
-                                                                    {data.item.user !== null ?
+                                                                    {data.user !== null ?
                                                                         <div className={Style.date2}>
-                                                                            تاریخ ارسال:<span>{moment(data.item.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
+                                                                            تاریخ ارسال:<span>{moment(data.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
                                                                         </div>
-                                                                    :data.item.user === null ?
+                                                                    :data.user === null ?
                                                                         <div className={Style.date2}>
-                                                                            تاریخ ثبت:<span>{moment(data.item.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
+                                                                            تاریخ ثبت:<span>{moment(data.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
                                                                         </div>
                                                                     :null}
                                                                 </div>
@@ -545,14 +455,92 @@ useEffect(() => {
                                                     </div>
                                                 </div>
                                             )
-                                    }
-                                })
-                            :null
-                        }
-                            </InfiniteScroll>
+                                        }
+                                    })  
+                                : searchForInvoices.searching !== ''?
+                                    searchedData.map((data , i)=>{
+                                        if(data.item.doc){    
+                                            return(
+                                                    <div  key={i} dir='rtl' style={{backgroundColor:data.item.doc.status === 0?'#fff': data.item.doc.status === 1?'rgb(239, 156, 78)' :data.item.doc.status === 2?'rgb(112, 236, 139)':null , marginBottom:'10px'}} className={postOpen.status === true && postOpen.id === i ?`${Style.invoiceCard} ${Style.fadeOut}`:`${Style.invoiceCard} ${Style.fadeIn}` }>
+                                                        <div
+                                                        id={data.item.doc._id}
+                                                        aria-controls={open ? 'demo-customized-menu' : undefined}
+                                                        aria-haspopup="true"
+                                                        aria-expanded={open ? 'true' : undefined}
+                                                        variant="contained"
+                                                        disableElevation
+                                                        onClick={(e)=>{
+                                                            setTargetToSend(e.currentTarget.id);  
+                                                            setAnchorEl(e.currentTarget);
+                                                            setOpenEditInvoice({status:false , id:i})
+                                                        }}
+                                                        endIcon={<KeyboardArrowDownIcon />}
+                                                        className={Style.sideBtn}>
+                                                            <MoreVertIcon ></MoreVertIcon>
+                                                        </div>
+                                                        <div onClick={()=>{setPostOpen({status:true , id:i}); setShowPost(true); history.push('#showFullPost')}} style={{width:'95%' , padding:'10px 10px 10px 10px' , height:'100%'}}>
+                                                            <Row>
+                                                                <Col xs={12} md={12} lg={12} xl={12} xxl={12}>
+                                                                    <div className={Style.top}>
+                                                                        {data.item.user !== null ?
+                                                                            <div dir='rtl' className={Style.effectBy}>
+                                                                                ارسال شده توسط : <span>{data.item.user.firstName} {data.item.user.lastName}</span>
+                                                                            </div>
+                                                                        :null}
+                                                                        {data.item.user !== null ?
+                                                                            <div className={Style.date}>
+                                                                                تاریخ ارسال:<span>{moment(data.item.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
+                                                                            </div>
+                                                                        :data.item.user === null ?
+                                                                            <div className={Style.date}>
+                                                                                تاریخ ثبت:<span>{moment(data.item.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
+                                                                            </div>
+                                                                        :null}
+                                                                    </div>
+                                                                    <div style={{padding:'5px 0px 5px 0px'}}>
+                                                                        <div className={Style.title}>
+                                                                            <span>
+                                                                                {data.item.doc.preInvoice.productName}
+                                                                            </span>
+                                                                            <span>-</span>
+                                                                            <span dir='rtl' className={Style.meter}>{data.item.doc.preInvoice.meterage === null ? "متراژ:نامشخص":data.item.doc.preInvoice.meterage !== null? `متر ${data.item.doc.preInvoice.meterage}`:null}</span>
+                                                                            {data.item.doc.preInvoice.dimentions !== undefined?<span>-</span>:null}
+                                                                            <span dir='rtl' className={Style.meter}>{data.item.doc.preInvoice.dimentions !== undefined?`${data.item.doc.preInvoice.dimentions.width}*${data.item.doc.preInvoice.dimentions.height}*${data.item.doc.preInvoice.dimentions.diameter}`:null}</span>
+                                                                        </div>
+                                                                        <div className={Style.dis}>
+                                                                            آدرس مقصد:<span>{data.item.doc.preInvoice.destination}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className={Style.top}>
+                                                                        {data.item.user !== null ?
+                                                                            <div className={Style.date2}>
+                                                                                تاریخ ارسال:<span>{moment(data.item.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
+                                                                            </div>
+                                                                        :data.item.user === null ?
+                                                                            <div className={Style.date2}>
+                                                                                تاریخ ثبت:<span>{moment(data.item.date, 'YYYY/MM/DD').locale('fa').format('YYYY/MM/DD')}</span>
+                                                                            </div>
+                                                                        :null}
+                                                                    </div>
+                                                                </Col>
+                                                            </Row>
+                                                        </div>
+                                                    </div>
+                                                )
+                                        }
+                                    })
+                                :null
+                            }
+                                </InfiniteScroll>
+                        
+                            </div>
+                        :loadingStatus.loading === false && loadingStatus.retry === false?   
+                            <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'50vh' }}>
+                                <NoData caption='درخواستی برای نمایش وجود ندارد'></NoData>
+                            </div>
                         :null}
-                    </div>
-                     :null}
+
+                     
                 </div>
 
         </Fragment>

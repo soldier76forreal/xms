@@ -64,7 +64,9 @@ const Main = () =>{
   const authCtx =useContext(AuthContext);
   const axiosGlobal =useContext(AxiosGlobal);
   const [pageState , setPageState] = useState('');
-
+  
+  const theme = useTheme();
+  const [value, setValue] = useState(0);
   useEffect(() => {
     if (localStorage.getItem("pageState") !== null) {
       
@@ -74,8 +76,6 @@ const Main = () =>{
     }
   }, [])
   
-    const theme = useTheme();
-    const [value, setValue] = useState();
 
 
 

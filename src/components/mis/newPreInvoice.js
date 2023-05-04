@@ -353,11 +353,17 @@ const NewPreInvoicePortal = (props) =>{
                                     <Row style={{marginBottom:'10px'}}>
                                         <Col style={{padding:'0px 10px 0px 10px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div  style={{display:'flex' , justifyContent:'center' , alignItems:'center'}} ref={destRef}>
-                                                <MuiInput value={dimentions.width===null?'':dimentions.width} onChange={(e)=>{setDimentions({width:e.target.value ,diameter:dimentions.diameter , height:dimentions.height}); setMeterErr({status:false , msg:''})}} err={meterErr} name='طول' type='cm' width='95%'></MuiInput>
+                                                <div style={{padding:'0px 5px 0px 0px'}}>
+                                                    <MuiInput value={dimentions.width===null?'':dimentions.width} onChange={(e)=>{setDimentions({width:e.target.value ,diameter:dimentions.diameter , height:dimentions.height}); setMeterErr({status:false , msg:''})}} err={meterErr} name='طول' type='cm' width='100%'></MuiInput>
+                                                </div>
+                                                <div style={{padding:'0px 5px 0px 5px'}}>
+                                                    <MuiInput value={dimentions.height ===null?'': dimentions.height} onChange={(e)=>{setDimentions({width:dimentions.width , diameter:dimentions.diameter , height:e.target.value}); setMeterErr({status:false , msg:''})}} err={meterErr} name='عرض' type='cm' width='100%'></MuiInput>
+                                                </div>
+                                                <div style={{padding:'0px 0px 0px 5px'}}>
+                                                    <MuiInput value={dimentions.diameter ===null?'':dimentions.diameter} onChange={(e)=>{setDimentions({width:dimentions.width , height:dimentions.height , diameter:e.target.value}); setMeterErr({status:false , msg:''})}} err={meterErr} name='قطر' type='cm' width='100%'></MuiInput>
+                                                </div>
                                             
-                                                <MuiInput value={dimentions.height ===null?'': dimentions.height} onChange={(e)=>{setDimentions({width:dimentions.width , diameter:dimentions.diameter , height:e.target.value}); setMeterErr({status:false , msg:''})}} err={meterErr} name='عرض' type='cm' width='95%'></MuiInput>
                                                 
-                                                <MuiInput value={dimentions.diameter ===null?'':dimentions.diameter} onChange={(e)=>{setDimentions({width:dimentions.width , height:dimentions.height , diameter:e.target.value}); setMeterErr({status:false , msg:''})}} err={meterErr} name='قطر' type='cm' width='95%'></MuiInput>
                               
                                             </div>      
                                         </Col>
@@ -386,8 +392,8 @@ const NewPreInvoicePortal = (props) =>{
                                             </div>       */}
                                         {/* </Col>
                                     </Row> */}
-                                    <Row style={{marginBottom:'10px' , padding:'0px 0px 0px 0px'}}>
-                                        <Col  xs={12} md={12} lg={12} xl={12} xxl={12}>
+                                    <Row style={{marginBottom:'10px'}}>
+                                        <Col style={{padding:'0px 10px 0px 10px'}}  xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div dir='rtl' ref={companyNameRef}>
                                                 <MuiInput onChange={(e)=>{setCompanyName(e.target.value)}} value={companyName}  name='نام شرکت/مشتری' type='normal' width='100%'></MuiInput>
                                             </div>      
@@ -412,39 +418,40 @@ const NewPreInvoicePortal = (props) =>{
                                         </div>
                                             <div style={{marginTop:'20px'}}>
 
-                                        
-                                                <Row style={{marginBottom:'10px' ,  padding:'0px 10px 0px 10px'}}>
-                                                    <Col style={{ padding:'0px 10px 0px 0px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
-                                                        <div ref={factoryPriceRef}>
-                                                            <MuiInput insertFactor={insertFactor} value={factoryPrice} err={factoryPriceErr} onChange={(e)=>{setFactoryPrice(e.target.value); setFactoryPriceErr({status:false , msg:''})}} name='قیمت درب کارخانه' type='normal' width='100%'></MuiInput>
-                                                        </div>
-                                                    </Col>
-                                                    <Col style={{ padding:'0px 0px 0px 10px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
+                                                <Row style={{marginBottom:'10px'}}>
+                                                    <Col style={{ padding:'0px 10px 0px 10px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                                                         <div ref={invoiceDateRef}>
                                                             <label style={{marginBottom:'5px' , fontSize:'13px'}}>تاریخ فاکتور</label>
                                                             <Datep insertFactor={insertFactor} onChange={(e)=>{setInvoiceDate(e)}}></Datep>                            
                                                         </div>
                                                     </Col>
                                                 </Row>
+                                                <Row style={{marginBottom:'10px'}}>
+                                                    <Col style={{ padding:'0px 10px 0px 10px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
+                                                        <div ref={factoryPriceRef}>
+                                                            <MuiInput insertFactor={insertFactor} value={factoryPrice} err={factoryPriceErr} onChange={(e)=>{setFactoryPrice(e.target.value); setFactoryPriceErr({status:false , msg:''})}} name='قیمت درب کارخانه' type='normal' width='100%'></MuiInput>
+                                                        </div>
+                                                    </Col>
+                                                </Row>
                                                 <Row style={{marginBottom:'10px' , padding:'0px 10px 0px 10px'}}>
-                                                    <Col style={{ padding:'0px 10px 0px 0px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
+                                                    <Col style={{ padding:'0px 5px 0px 0px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
                                                         <div ref={costFobRef}>
                                                             <MuiInput insertFactor={insertFactor} err={costFobErr} value={costFob} onChange={(e)=>{setCostFob(e.target.value); setCostFobErr({status:false , msg:''})}} name='(fob)هزینه' type='normal' width='100%'></MuiInput>
                                                         </div>
                                                     </Col>
-                                                    <Col style={{ padding:'0px 0px 0px 10px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
+                                                    <Col style={{ padding:'0px 0px 0px 5px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
                                                         <div ref={costCnfRef}>
                                                             <MuiInput insertFactor={insertFactor} err={costCnfErr} value={costCnf} onChange={(e)=>{setCostCnf(e.target.value); setCostCnfErr({status:false , msg:''});}} name='(cnf)هزینه' type='normal' width='100%'></MuiInput>
                                                         </div>
                                                     </Col>
                                                 </Row>
                                                 <Row style={{marginBottom:'10px', padding:'0px 10px 0px 10px'}}>
-                                                        <Col style={{ padding:'0px 10px 0px 0px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
+                                                        <Col style={{ padding:'0px 5px 0px 0px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
                                                             <div ref={stoneRateRef}>
                                                                 <MuiInput insertFactor={insertFactor} err={stoneRateErr} value={stoneRate} onChange={(e)=>{setStoneRate(e.target.value); setStoneRateErr({status:false , msg:''})}} name='درجه سنگ' type='normal' width='100%'></MuiInput>
                                                             </div>
                                                         </Col>
-                                                        <Col style={{ padding:'0px 0px 0px 10px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
+                                                        <Col style={{ padding:'0px 0px 0px 5px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
                                                             <div ref={stoneThicknessRef}>
                                                                 <MuiInput insertFactor={insertFactor} err={stoneThicknessErr} value={stoneThickness} onChange={(e)=>{setStoneThickness(e.target.value); setStoneThicknessErr({status:false , msg:''})}} name='قطر سنگ - سایز' type='normal' width='100%'></MuiInput>
                                                             </div>
@@ -473,34 +480,37 @@ const NewPreInvoicePortal = (props) =>{
                             <div className={Style.formDiv}>
                                 <div className={Style.secTitle}>پیش فاکتور</div>
                                 <div>
-                                    <Row style={{marginBottom:'10px' , padding:'0px 5px 0px 10px'}}>
-                                        <Col   xs={12} md={12} lg={12} xl={12} xxl={12}>
+                                    <Row style={{marginBottom:'10px'}}>
+                                        <Col style={{padding:'0px 10px 0px 10px'}}  xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div  ref={stoneNameRef}>
                                                 <MuiInput value={name} onChange={(e)=>{setName(e.target.value); setNameErr({status:false , msg:''})}} err={nameErr} name='نام سنگ' type='normal' width='100%'></MuiInput>
                                             </div>
                                         </Col>
                                     </Row>
                                     <Row style={{marginBottom:'10px'}}>
-                                        <Col style={{padding:'0px 15px 0px 22px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
+                                        <Col style={{padding:'0px 10px 0px 10px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div ref={meterageRef}>
                                                 <MuiInput value={meter} onChange={(e)=>{setMeter(e.target.value); setMeterErr({status:false , msg:''})}} err={meterErr} name='متراژ مورد نظر' type='meter' width='100%'></MuiInput>
                                             </div>  
                                         </Col>
                                     </Row>
-                                    <Row style={{marginBottom:'10px' , padding:'0px 5px 0px 10px'}}>
-                                        <Col xs={12} md={12} lg={12} xl={12} xxl={12}>
+                                    <Row style={{marginBottom:'10px'}}>
+                                        <Col style={{padding:'0px 10px 0px 10px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div  style={{display:'flex' , justifyContent:'center' , alignItems:'center'}} ref={destRef}>
-                                                <MuiInput value={dimentions.width===null?'':dimentions.width} onChange={(e)=>{setDimentions({width:e.target.value ,diameter:dimentions.diameter , height:dimentions.height}); setMeterErr({status:false , msg:''})}} err={meterErr} name='طول' type='cm' width='95%'></MuiInput>
-                                                
-                                                <MuiInput value={dimentions.height ===null?'': dimentions.height} onChange={(e)=>{setDimentions({width:dimentions.width , diameter:dimentions.diameter , height:e.target.value}); setMeterErr({status:false , msg:''})}} err={meterErr} name='عرض' type='cm' width='95%'></MuiInput>
-                                                
-                                                <MuiInput value={dimentions.diameter ===null?'':dimentions.diameter} onChange={(e)=>{setDimentions({width:dimentions.width , height:dimentions.height , diameter:e.target.value}); setMeterErr({status:false , msg:''})}} err={meterErr} name='قطر' type='cm' width='95%'></MuiInput>
-                              
+                                                <div style={{padding:'0px 5px 0px 0px'}}>
+                                                    <MuiInput value={dimentions.width===null?'':dimentions.width} onChange={(e)=>{setDimentions({width:e.target.value ,diameter:dimentions.diameter , height:dimentions.height}); setMeterErr({status:false , msg:''})}} err={meterErr} name='طول' type='cm' width='100%'></MuiInput>
+                                                </div>
+                                                <div style={{padding:'0px 5px 0px 5px'}}>
+                                                    <MuiInput value={dimentions.height ===null?'': dimentions.height} onChange={(e)=>{setDimentions({width:dimentions.width , diameter:dimentions.diameter , height:e.target.value}); setMeterErr({status:false , msg:''})}} err={meterErr} name='عرض' type='cm' width='100%'></MuiInput>
+                                                </div>
+                                                <div style={{padding:'0px 0px 0px 5px'}}>
+                                                    <MuiInput value={dimentions.diameter ===null?'':dimentions.diameter} onChange={(e)=>{setDimentions({width:dimentions.width , height:dimentions.height , diameter:e.target.value}); setMeterErr({status:false , msg:''})}} err={meterErr} name='قطر' type='cm' width='100%'></MuiInput>
+                                                </div>
                                             </div>      
                                         </Col>
                                     </Row>
-                                    <Row style={{marginBottom:'10px' , padding:'0px 5px 0px 10px'}}>
-                                        <Col  xs={12} md={12} lg={12} xl={12} xxl={12}>
+                                    <Row style={{marginBottom:'10px'}}>
+                                        <Col style={{padding:'0px 10px 0px 10px'}}  xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div ref={destRef}>
                                                 <MuiInput value={destination} onChange={(e)=>{setDestination(e.target.value); setDestinationErr({status:false , msg:''})}} err={destinationErr} name='مقصد' type='normal' width='100%'></MuiInput>
                                             </div>      
@@ -523,8 +533,8 @@ const NewPreInvoicePortal = (props) =>{
                                             {/* </div>       */}
                                         {/* </Col> */}
                                     {/* </Row> */}
-                                    <Row style={{marginBottom:'10px' , padding:'0px 5px 0px 10px'}}>
-                                        <Col  xs={12} md={12} lg={12} xl={12} xxl={12}>
+                                    <Row style={{marginBottom:'10px'}}>
+                                        <Col style={{padding:'0px 10px 0px 10px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div dir='rtl' ref={companyNameRef}>
                                                 <MuiInput onChange={(e)=>{setCompanyName(e.target.value)}} value={companyName}  name='نام شرکت/مشتری' type='normal' width='100%'></MuiInput>
                                             </div>      

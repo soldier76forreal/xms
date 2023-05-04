@@ -103,24 +103,28 @@ const NewUser =(props)=>{
                 data:formData,
                 //progress bar precentage
                 onUploadProgress: data => {                           
+                    console.log(Math.round((100 * data.loaded) / data.total))
                     setProgressBar(Math.round((100 * data.loaded) / data.total));
-                    },
+                    if(Math.round((100 * data.loaded) / data.total) === 100){
+                        
+                    }
+                },
                 config: { headers: {'Content-Type': 'multipart/form-data' }}
             })
             
-            setRefresh(Math.random())
-            history.push('#');
-            props.setSuccessToast({status:true , msg:'کاربر جدید ایجاد شد'});
-            props.setRefresh(Math.random())
-            const closingSuccessMsgTimeOut = setTimeout(()=>{props.setSuccessToast({status:false , msg:'کاربر جدید ایجاد شد'})}, 3000);
-            const closingSuccessMsgTimeOutModal2 = setTimeout(()=>{
-                setFile({});
-                uploadInputRef.current.value = "";
-                setProgressBar('');
-            }, 500);
-            const closingSuccessMsgTimeOutModal = setTimeout(()=>{    
-                props.setNewUserStatus(false);
-            }, 300);
+            // setRefresh(Math.random())
+            // history.push('#');
+            // props.setSuccessToast({status:true , msg:'کاربر جدید ایجاد شد'});
+            // props.setRefresh(Math.random())
+            // const closingSuccessMsgTimeOut = setTimeout(()=>{props.setSuccessToast({status:false , msg:'کاربر جدید ایجاد شد'})}, 3000);
+            // const closingSuccessMsgTimeOutModal2 = setTimeout(()=>{
+            //     setFile({});
+            //     uploadInputRef.current.value = "";
+            //     // setProgressBar('');
+            // }, 500);
+            // const closingSuccessMsgTimeOutModal = setTimeout(()=>{    
+            //     // props.setNewUserStatus(false);
+            // }, 300);
         }catch(err){
             console.log(err)
 

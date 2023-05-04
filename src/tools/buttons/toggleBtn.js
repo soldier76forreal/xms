@@ -39,10 +39,10 @@ export default function ToggleBtn (props) {
             onChange={handleChangeType}
             aria-label="Platform"
           >
-            <ToggleButton  style={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000' , color:'#000'}}  value="edited">ویرایش شده ها</ToggleButton>
-            <ToggleButton  style={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000' , color:'#000'}}  value="sendRequest">دریافتی ها</ToggleButton>
-            <ToggleButton  style={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000' , color:'#000'}}  value="newInvoice">تکمیل شده ها</ToggleButton>
-            <ToggleButton  style={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000' , color:'#000'}}  value="all">همه</ToggleButton>
+            <ToggleButton className={Style.toggleBtn}    value="edited">ویرایش شده ها</ToggleButton>
+            <ToggleButton className={Style.toggleBtn}    value="sendRequest">دریافتی ها</ToggleButton>
+            <ToggleButton className={Style.toggleBtn}    value="newInvoice">تکمیل شده ها</ToggleButton>
+            <ToggleButton className={Style.toggleBtn}    value="all">همه</ToggleButton>
           </ToggleButtonGroup>
         :props.type === 'sort'?
           <ToggleButtonGroup
@@ -53,9 +53,9 @@ export default function ToggleBtn (props) {
             onChange={handleChangeSort}
             aria-label="Platform"
           >
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value="notVisited">اعلان های مشاهده نشده</ToggleButton>
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value="visited">اعلان های مشاهده شده</ToggleButton>
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000' , color:'#000'}} value="all">همه</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value="notVisited">اعلان های مشاهده نشده</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value="visited">اعلان های مشاهده شده</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value="all">همه</ToggleButton>
 
           </ToggleButtonGroup>    
         :props.type === 'callType'?
@@ -67,10 +67,10 @@ export default function ToggleBtn (props) {
               onChange={handleChangeCallType}
               aria-label="Platform"
             >
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value="sales">فروش</ToggleButton>
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value="requestFollowUp">پی گیری درخواست</ToggleButton>
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000' , color:'#000'}} value="invoiceFollowUp">پی گیری فاکتور</ToggleButton>
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000' , color:'#000'}} value="customerSatisfaction">رضایت مشتری</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value="sales">فروش</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value="requestFollowUp">پی گیری درخواست</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value="invoiceFollowUp">پی گیری فاکتور</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value="customerSatisfaction">رضایت مشتری</ToggleButton>
           </ToggleButtonGroup>
           :props.type === 'callStatus'?
           <ToggleButtonGroup
@@ -80,8 +80,8 @@ export default function ToggleBtn (props) {
               onChange={handleChangeCallStatus}
               aria-label="Platform"
             >
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value={true}>پاسخ داده شد</ToggleButton>
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value={false}>پاسخ داده نشد</ToggleButton>        
+              <ToggleButton className={Style.toggleBtn}  value={true}>پاسخ داده شد</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value={false}>پاسخ داده نشد</ToggleButton>        
           </ToggleButtonGroup>     
         :props.type === 'prInfos'?
           <ToggleButtonGroup
@@ -91,9 +91,9 @@ export default function ToggleBtn (props) {
               onChange={handleChangePrInfos}
               aria-label="Platform"
             >
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value='prRequests'>درخواست ها</ToggleButton>        
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value='prCalls'>تماس ها</ToggleButton>
-              <ToggleButton className={Style.toggleBtn} sx={{padding:'6px 10px 5px 10px' , fontSize:'13px' , borderColor:'#000', color:'#000'}} value='prInformation'>مشخصات</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value='prRequests'>درخواست ها</ToggleButton>        
+              <ToggleButton className={Style.toggleBtn}  value='prCalls'>تماس ها</ToggleButton>
+              <ToggleButton className={Style.toggleBtn}  value='prInformation'>مشخصات</ToggleButton>
           </ToggleButtonGroup> 
         :null
   );
