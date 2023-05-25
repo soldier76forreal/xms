@@ -64,3 +64,15 @@ h3{
   display: none;
   background: transparent !important; /* make scrollbar transparent */
 }
+
+#mainFiles{
+  display: grid;
+position: fixed;
+width: 100%;
+top: 0;
+z-index: 2;
+background-color: var(--color__standard__background);
+max-width: 100vw;
+height: 100%;
+margin-top: 110px;
+}

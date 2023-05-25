@@ -14,6 +14,9 @@ import jwtDecode from 'jwt-decode';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import AxiosGlobal from './components/authAndConnections/axiosGlobalUrl';
+import { fetchData } from './store/fileManager';
+import { useDispatch } from 'react-redux';
+
 
 
 
@@ -22,60 +25,63 @@ function App() {
   const [notifs,setNotifs] = useState('')
   const [count,setCount] = useState(0)
   const axiosGlobal = useContext(AxiosGlobal);
- 
-
-  function notifyMe() {
-    if (!("Notification" in window)) {
-      // Check if the browser supports notifications
-      alert("This browser does not support desktop notification");
-    } else if (Notification.permission === "granted") {
-      // Check whether notification permissions have already been granted;
-      // if so, create a notification
-      // …
-    } else if (Notification.permission !== "denied") {
-      // We need to ask the user for permission
-      Notification.requestPermission().then((permission) => {
-        // If the user accepts, let's create a notification
-        if (permission === "granted") {
-          // …
-        }
-      });
-    }
-  
-    // At last, if the user has denied notifications, and you
-    // want to be respectful there is no need to bother them anymore.
-  }
+  const dispatch  = useDispatch()
   useEffect(() => {
-    notifyMe()
-  }, [authCtx.token]);
+    dispatch(fetchData({authCtx , axiosGlobal}))
+  }, []);
 
-
-
-  const getSubscription = async () => {
-    const subscription = await navigator.serviceWorker
-      .getRegistration() //
-      .then((registration) => {
-        return registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey:'BM67mHEyeX_8ChNMsQGcVkgE965usqKz0LTBppeporoWbviq6zPdH2EELVIK2QnlL5MLYqIzf-0-qxdWtBAd5w4'
-        });
-      });
-    // in production we would send it directly to our server and not store it on the window
-      try{
-        const response = await authCtx.jwtInst({
-            method:'post',
-            url:`${axiosGlobal.defaultTargetApi}/notfication/saveSubsToDb`,
-            data:{subs:JSON.stringify(subscription) , userId:jwtDecode(authCtx.token).id},
-            config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
-        })
-      }catch(err){
-          console.log(err)
-      }
-  };
+  // function notifyMe() {
+  //   if (!("Notification" in window)) {
+  //     // Check if the browser supports notifications
+  //     alert("This browser does not support desktop notification");
+  //   } else if (Notification.permission === "granted") {
+  //     // Check whether notification permissions have already been granted;
+  //     // if so, create a notification
+  //     // …
+  //   } else if (Notification.permission !== "denied") {
+  //     // We need to ask the user for permission
+  //     Notification.requestPermission().then((permission) => {
+  //       // If the user accepts, let's create a notification
+  //       if (permission === "granted") {
+  //         // …
+  //       }
+  //     });
+  //   }
   
-      useEffect(() => {
-        getSubscription()
-      },[authCtx.token]);
+  //   // At last, if the user has denied notifications, and you
+  //   // want to be respectful there is no need to bother them anymore.
+  // }
+  // useEffect(() => {
+  //   notifyMe()
+  // }, [authCtx.token]);
+
+
+
+  // const getSubscription = async () => {
+  //   const subscription = await navigator.serviceWorker
+  //     .getRegistration() //
+  //     .then((registration) => {
+  //       return registration.pushManager.subscribe({
+  //         userVisibleOnly: true,
+  //         applicationServerKey:'BM67mHEyeX_8ChNMsQGcVkgE965usqKz0LTBppeporoWbviq6zPdH2EELVIK2QnlL5MLYqIzf-0-qxdWtBAd5w4'
+  //       });
+  //     });
+  //   // in production we would send it directly to our server and not store it on the window
+  //     try{
+  //       const response = await authCtx.jwtInst({
+  //           method:'post',
+  //           url:`${axiosGlobal.defaultTargetApi}/notfication/saveSubsToDb`,
+  //           data:{subs:JSON.stringify(subscription) , userId:jwtDecode(authCtx.token).id},
+  //           config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
+  //       })
+  //     }catch(err){
+  //         console.log(err)
+  //     }
+  // };
+  
+  //     useEffect(() => {
+  //       getSubscription()
+  //     },[authCtx.token]);
   return (
     <div>
         <Switch>
@@ -101,6 +107,11 @@ function App() {
             {authCtx.isLoggedIn === true ?
             <Route exact path="/newCustomer"> 
                 <NewCustomer/>
+            </Route>
+          :<Redirect to='/logIn'/>}
+          {authCtx.isLoggedIn === true ?
+            <Route  path="/files"> 
+                <Main/>
             </Route>
           :<Redirect to='/logIn'/>}
             {authCtx.isLoggedIn === true ?

@@ -35,7 +35,7 @@ import MiladiDatePicker from '../../tools/inputs/datePickerMiladi';
 import prFlag from '../../assets/per.png';
 import moment from 'jalali-moment';
 import HejriDatePicker from '../../tools/inputs/datePickerHejri';
-import { Avatar, Grid } from '@mui/material';
+import { Avatar, Divider, Grid } from '@mui/material';
 import CountriesInFarsi from '../functions/listOfCountryesInFarsi';
 import PrTitle from '../functions/prTItle';
 import DateType from '../functions/dateType';
@@ -77,6 +77,7 @@ const ShowCustomerPortal = (props) =>{
     const [listType , setListType] = useState('prInformation');
     const [value , setValue] = useState(0);
     const [calls , setCalls] = useState([]);
+    const [explanations , setExplanations] = useState(null);
 
     const [customerFavoriteProducts , setCustomerFavoriteProducts] = useState([]);
     const [calenderType , setCalenderType] = useState('');
@@ -119,6 +120,10 @@ const ShowCustomerPortal = (props) =>{
                 }
                 if(result[0].customer.personalInformation.dateOfBirth !==null){
                     setCalenderType(result[0].customer.personalInformation.dateOfBirth.dateType)
+
+                }
+                if(result[0].customer.explanations !==null){
+                    setExplanations(result[0].customer.explanations)
 
                 }
 
@@ -378,7 +383,7 @@ const ShowCustomerPortal = (props) =>{
                                     </Row>
 
                                 </div>
-                                <hr className={Style.dashLine}></hr>
+                                <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
                                 <div>
                                     
                                     <div className={Style.titlePaddign}>
@@ -403,7 +408,7 @@ const ShowCustomerPortal = (props) =>{
                                                         <Grid style={{display:'flex'}} container spacing={0}>
                                                             <Grid style={{ display:'flex', alignItems:'center', justifyContent:'center'}} item xs="auto" >
                                                                 <span style={{marginLeft:'5px'}}>
-                                                                    <a  href={`tel:${e.number}${e.countryCode}}`}>
+                                                                    <a  href={`tel:${e.countryCode}${e.number}}`}>
                                                                         <IconBotton  backgroundColor='#0076FF' text={false} icon={<Call sx={{color:'#EFEFEF'}}/>}></IconBotton>
                                                                     </a>
                                                                 </span>
@@ -468,7 +473,7 @@ const ShowCustomerPortal = (props) =>{
                                 :null}   
                                 {addresses !== null?
                                     <div>
-                                        <hr className={Style.dashLine}></hr>
+                                    <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
                                         <div className={Style.titlePaddign}>
                                             <div style={{textAlign:'right' , width:'50%'}}>
                                                 <BigOneWithDot text="آدرس"></BigOneWithDot>
@@ -590,6 +595,20 @@ const ShowCustomerPortal = (props) =>{
                                                 </Row>
                                             )
                                         })}
+                                    </div>
+                                :null}
+                                <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
+                                {explanations !== null?
+                                    <div>
+                                        <Row className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px'}}>
+                                            <Col style={{padding:'5px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
+                                                <div style={{padding:'0px 10px 0px 10px'}} dir='rtl'>
+
+                                                <LittleOneNormal text='توضیحات مختصر'></LittleOneNormal>
+                                                    <p style={{fontSize:'15px' , color:'black' , padding:'0px 5x 0px 5px'}}>{explanations}</p>
+                                                </div>   
+                                            </Col>
+                                        </Row>
                                     </div>
                                 :null}
                             </div>

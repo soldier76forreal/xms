@@ -33,8 +33,9 @@ import ShowCustomer from './showCustomer';
 import prFlag from '../../assets/per.png';
 import NoData from '../../tools/navs/noData';
 import RetryError from '../../tools/buttons/retryError';
+import ReactDom from 'react-dom';
 
-const Crm = (props) =>{
+const CrmPortal = (props) =>{
     const authCtx = useContext(AuthContext);
     const axiosGlobal = useContext(AxiosGlobal);
     const webSections = useContext(WebSections);
@@ -201,7 +202,7 @@ const Crm = (props) =>{
             <SuccessMsg openMsg={successToast.status} msg={successToast.msg}></SuccessMsg>  
             <WhatsAppModal whatsAppMsgList={whatsAppMsgList} openWhatsAppModal={openWhatsAppModal} setOpenWhatsAppModal={setOpenWhatsAppModal}></WhatsAppModal>
             <CallModal targetDocForCall={targetDocForCall} setTargetDocForCall={setTargetDocForCall}  setOpenCallModal={setOpenCallModal} openCallModal={openCallModal}></CallModal>
-            <div style={{maxWidth:'1500px'}} dir='rtl' className={Style.ovDiv}>
+            <div style={{maxWidth:'1500px' , overflowY:'scroll'}} dir='rtl' className={Style.ovDiv}>
                 <div>
                     <Row style={{padding:'0px 10px 5px 10px'}}>
                         <Col style={{padding:'5px'}} xs={12} sm={12} md={6} lg={6} xl={6} xxl={6}>
@@ -244,7 +245,6 @@ const Crm = (props) =>{
                     </Row>
 
                 </div>
-                <div style={{padding:'0px 0px 0px 0px' }} dir='ltr'>
                 {persons.length === 0 && loadingStatus.loading === false && loadingStatus.retry === false?
                     <div style={{height:'70vh' , display:'flex' , justifyContent:'center' , alignItems:'center'}}>
                         <NoData caption='مشتری ای برای نمایش وجود ندارد'></NoData>
@@ -253,6 +253,7 @@ const Crm = (props) =>{
                     <InfiniteScroll
                         dataLength={persons.length}
                         next={notifMore}
+                        style={{overflowY:'hidden'}}
                         hasMore={hasMore}                    
                         loader={<div style={{display:'flex', marginTop:'10px', justifyContent:'center', alignItem:'center'}}><CircularProgress size='35px' color='inherit'></CircularProgress></div>}
                     >
@@ -289,9 +290,22 @@ const Crm = (props) =>{
                             <CircularProgress size='44px' color='inherit'></CircularProgress>
                         </div>       
                     :null}
-                </div>
             </div>
 
+        </Fragment>
+    )
+}
+
+const Crm = (props)=>{
+    return(
+        <Fragment>
+            {ReactDom.createPortal(
+                <CrmPortal>
+
+                </CrmPortal>
+                ,
+                document.getElementById('crm')
+                )}
         </Fragment>
     )
 }

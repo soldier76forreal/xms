@@ -1,5 +1,7 @@
 import { Fragment , useState , useContext , useEffect } from 'react';
 import Style from './mis.module.scss';
+import ReactDom from 'react-dom';
+
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {Pagination,Navbar,Row,  Nav ,NavDropdown , Container ,Form ,FormControl ,Button, Col} from 'react-bootstrap';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
@@ -38,7 +40,7 @@ import InfiniteScroll from 'react-infinite-scroll-component';
 import NoData from '../../tools/navs/noData';
 import RetryError from '../../tools/buttons/retryError';
 
-const Mis = () =>{
+const MisPortal = () =>{
     const urlContext = useContext(AuthContext);
     const history = useHistory();
     const MySwal = withReactContent(Swal)
@@ -47,7 +49,8 @@ const Mis = () =>{
     const webSections = useContext(WebSections);
     var decoded = jwtDecode(authCtx.token);
 
-    
+    const [items , setItems] = useState([{root:'root', items:[]}]);
+
     //edit invoice status
     const [openEditInvoice , setOpenEditInvoice] = useState({status:false , id:null});
     
@@ -543,6 +546,21 @@ useEffect(() => {
                      
                 </div>
 
+        </Fragment>
+    )
+}
+
+
+const Mis = (props)=>{
+    return(
+        <Fragment>
+            {ReactDom.createPortal(
+                <MisPortal>
+
+                </MisPortal>
+                ,
+                document.getElementById('mis')
+                )}
         </Fragment>
     )
 }

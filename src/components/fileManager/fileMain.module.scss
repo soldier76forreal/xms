@@ -1,0 +1,359 @@
+.mainContainer{
+    overflow: hidden !important;
+    height: 100%;
+    text-align: center;
+    overflow-y: hidden !important;
+    width: 100%;
+    margin: 0px auto 0px auto;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// main section
+.topSec{
+    width: 100%;
+    
+    padding: 10px 0px 10px 0px;
+}
+.funcBtn{
+    width: 100%;
+    display: flex;
+    padding: 0px 5px 0px 5px;
+}
+.uploadBtn{
+    background-color: black;
+    color: white;
+    padding: 8px 6px 6px 0px;
+    display: flex;
+     justify-content: center;
+     max-width: 120px;
+     width: 100%;
+     
+     cursor: pointer;
+}
+.createBtn{
+    background-color: none;
+    color: rgb(0, 0, 0);
+    border: solid 2px black;
+    padding: 6px 6px 6px 0px;
+    display: flex;
+     justify-content: center;
+     max-width: 120px;
+     width: 100%;
+     margin-left: 10px;
+     cursor: pointer;
+}
+
+
+.gridOvDiv{
+    width: 100%;
+    text-align: left;
+    padding: 10px ;
+}
+.gridOvDiv h4{
+    font-family: YekanBold;
+}
+
+.folderIcon{
+    font-size: 110px !important;
+    cursor: pointer;
+}
+.fileName{
+    font-size: 13px;
+}
+
+.folderDiv{
+    width: 210px;
+    height: 210px;
+    position: relative;
+}
+.folderDiv:hover{
+    width: 210px;
+    height: 210px;
+    background-color: rgb(218, 218, 218);
+}
+
+
+
+
+.imageDiv{
+    width: 210px;
+    height: 210px;
+    position: relative;
+}
+.imageDiv:hover{
+    width: 210px;
+    height: 210px;
+    background-color: rgb(218, 218, 218);
+}
+
+.galleryImg{
+    object-fit: cover;
+    width: 100%;
+    max-height: 160px;
+    height: 100%;
+}
+
+.subToolSectionImg{
+    position: absolute;
+    width: 100%;
+    top: 0px;
+}
+.subToolSection{
+    position: absolute;
+    bottom: 0px;
+    width: 100%;
+}
+.fileType{
+    opacity: 0.5 !important;
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    bottom: 25%;
+    display: flex;
+    border-radius: 300px;
+    justify-content: center;
+    align-items: center;
+    background-color: black;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// left side menu
+.leftSizeMenu{
+    width: 100%;
+    overflow-y: scroll;
+    height: 100%;
+    background-color:rgb(240, 240, 240) ;
+    padding: 25px 0px 25px 20px !important;
+   
+}
+.leftSizeMenu ul{
+    list-style: none;
+    margin-left: 0px;
+    padding: 0px;
+    text-align: left;
+    width: 100%;
+}
+
+.leftSizeMenu ul li{ 
+    padding: 5px 0px 5px 0px;
+    width: 100%;
+    cursor: pointer;
+    font-size: 18px;
+    color: rgb(107, 107, 107);
+    margin: 5px 0px 5px 0px;
+   
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Right side thing
+.minimizedState{
+    height:100%;
+    width:55px; 
+    border: solid 1px rgb(194, 194, 194);
+     margin:0px 0px 0px auto;
+}
+.minimizedState ul{
+    list-style: none;
+    padding: 0px;
+}
+
+.showCloseRightSideMenu  {
+    padding:12px 0px 12px 0px;
+    border-bottom:solid 1px rgb(194, 194, 194);
+}
+.showCloseRightSideMenu:hover{
+    padding:12px 0px 12px 0px;
+    background-color: rgb(197, 197, 197);
+    border-bottom:solid 1px rgb(194, 194, 194);
+}
+
+.normalRightSideMenu{
+    padding:12px 0px 12px 0px;
+}
+.normalRightSideMenu:hover{
+    padding:12px 0px 12px 0px;
+    background-color: rgb(197, 197, 197);
+}
+
+
+
+.expendedRightSideDiv ul{
+    list-style: none;
+    padding: 0px;
+    display: flex;
+    flex-direction: column;
+}
+.expendedRightSideDiv{
+    height:100%;
+    max-width:22%; 
+    width: 100%;
+    border: solid 1px rgb(194, 194, 194);
+     margin:0px 0px 0px auto;
+}
+.showCloseRightSideMenuExp  {
+    text-align: right;
+    padding:12px 0px 12px 0px;
+    border-bottom:solid 1px rgb(194, 194, 194);
+}
+
+.expendedRighSideBackBtn{
+    background-color: rgb(255, 255, 255);
+    border: none;
+    padding: 10px;
+    margin-right: 10px;
+}
+.expendedRighSideBackBtn:hover{
+    border: none;
+    background-color: rgb(197, 197, 197);
+
+}
+.normalRightSideMenuExp{
+    border-bottom:solid 1px rgb(194, 194, 194);
+    text-align: left;
+
+}
+.normalRightSideMenuExp span{
+    padding: 0px 0px 0px 5px;
+}
+.expdBtns{
+    padding: 12px 0px 12px 20px;
+    cursor: pointer;
+}
+.expdBtns:hover{
+    padding: 12px 0px 12px 20px;
+
+    background-color: rgb(197, 197, 197);
+}
+.placeholderText{
+    height:100%;
+     width:100%;
+     display:flex;
+     justify-content:center;
+     align-items:center;
+     font-size:13px;
+    color:'gray';
+     padding:0px 10px 0px 10px;
+     text-align:center;
+}
+.infoDiv{
+    height: 100%;
+    width: 100%;
+}
+.selectedFiles{
+    height: 100%;
+    max-height: 280px;
+    display: flex;
+    justify-items: center;
+    align-items: center;
+    text-align: center;
+    font-size: 90px;
+
+    span{
+        font-size: 15px;
+        margin-top: 10px;
+    }
+}
+
+.selectedFilesItself{
+    height: 100%;
+    max-height: 220px;
+    display: flex;
+    justify-items: center;
+    align-items: center;
+    text-align: center;
+    img{
+        max-width: 150px;
+        margin: 0px auto 0px auto;
+        max-height: 150px;
+        width: auto;
+        height: auto;
+        object-fit: cover;
+    }
+}
+.folderIconInfo{
+    font-size: 150px !important;
+    margin: 0px auto 0px auto;
+}
+
+.searchInpDiv label{
+
+}
+
+.searchInpDiv{
+    padding: 0px 30px 0px 30px;
+}
+.fileDetails{
+    margin-top: 20px;
+}
+.rightSideListTitle{
+    font-size: 15px;
+    padding: 0px 30px 0px 30px;
+}
+.fileDetailsTitleDiv{
+    padding: 0px 30px 0px 30px;
+    li{
+        font-size: 14px;
+        color: #848484;
+        font-family: YekanLight;
+    }
+    div{
+        width: 80px;
+        display: inline-block;
+    }
+    span{
+        color: black;
+        
+    }
+}

@@ -14,6 +14,8 @@ import { createTheme, ThemeProvider } from '@mui/material';
 import { WebSectionsProvider } from './contextApi/webSection';
 import { AuthContextProvider } from './components/authAndConnections/auth';
 import { SocketContextProvider } from './components/authAndConnections/socketReq';
+import { Provider } from 'react-redux';
+import store from './store/fileManager';
 
 
 
@@ -25,6 +27,7 @@ const THEME = createTheme({
 });
 root.render(
   <React.StrictMode>
+    <Provider store={store}>
     <BrowserRouter>
       <AxiosGlobalProvider>
         <ThemeProvider theme={THEME}>
@@ -33,6 +36,7 @@ root.render(
               <WebSectionsProvider>
                
                   <SocketContextProvider>
+                   
                     <App />
                   </SocketContextProvider>
             
@@ -42,6 +46,7 @@ root.render(
         </ThemeProvider>
       </AxiosGlobalProvider>
     </BrowserRouter>
+    </Provider>
   </React.StrictMode>
 );
 

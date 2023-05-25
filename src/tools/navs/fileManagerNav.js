@@ -2,7 +2,7 @@ import { Fragment , useContext , useState  , useEffect , useLayoutEffect} from "
 import 'bootstrap/dist/css/bootstrap.min.css';
 import ReactDom from 'react-dom';
 import {Pagination,Navbar,Row  , Nav ,NavDropdown , Container ,Form ,FormControl , Col} from 'react-bootstrap';
-import Style from './mainNav.module.scss';
+import Style from './fileManagerNav.module.scss';
 import { Rotate as Hamburger } from 'hamburger-react'
 import PersonIcon from '@mui/icons-material/Person';
 import SearchIcon from '@mui/icons-material/Search';
@@ -11,8 +11,9 @@ import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import NormalMenuForProfile from './normalMenuForProfile';
-
-
+import Paper from '@mui/material/Paper';
+import InputBase from '@mui/material/InputBase';
+import IconButton from '@mui/material/IconButton';
 import EmailIcon from '@mui/icons-material/Email';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Search } from "@mui/icons-material";
@@ -23,7 +24,7 @@ import LeftSideNav from "./leftSideNav";
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import AuthContext from "../../components/authAndConnections/auth";
 import Notfications from "../../components/mis/notfications";
-const MainNavPortal = (props) =>{
+const FileManagerNav = (props) =>{
     const [showNotfication , setShowNotfication] = useState(false);
     const [notifCount , setNotifCount] = useState();
     const authContext = useContext(AuthContext);
@@ -61,13 +62,34 @@ const MainNavPortal = (props) =>{
             <LeftSideNav toggleDrawer={toggleDrawer} setLeftSideNav={setLeftSideNav} leftSideNav={leftSideNav}></LeftSideNav>
             <div  className={Style.navDiv}>
                 <Navbar className={Style.navBar}  expand="lg">
-                    <Container className={Style.containerDiv}> 
+                    <Container  className={Style.containerDiv}> 
                         <Button onClick={toggleDrawer('left', true)} variant="contained" endIcon={<MenuIcon />}>
                         ابزارها
                         </Button>
-                    <div className={Style.searchBar}>
-                        
-                    </div>
+
+                        <div>
+                            <Paper
+                                component="form"
+                                dir="ltr"
+                                sx={{ p: '2px 10px', display: 'flex', alignItems: 'center' , minWidth:'400px', width: '100%', borderRadius:'3px',boxShadow:'none' , backgroundColor:'rgb(237, 237, 237)' }}
+                                >
+                                <SearchIcon sx={{padding:'0px'}}/>
+                                <InputBase
+                                    sx={{ ml: 1, flex: 1 , paddingRight:'10px'}}
+                                    placeholder="search..."
+                                    inputProps={{ 'aria-label': 'search...' }}
+                                    onChange={(e)=>{props.setSearchForCustomer({searching:e.target.value , loading:true , retry:false})}}
+                                />
+                                <IconButton type="button" sx={{ p: '2px' }} aria-label="search">
+                                    
+                                    {/* {props.searchForCustomer.loading === true?
+                                        <CircularProgress size='25px' color='inherit'></CircularProgress>
+                                    :
+                                        <SearchIcon />
+                                    } */}
+                                </IconButton>
+                            </Paper>
+                        </div>
                     <div className={Style.rightSideDiv}>
                         <div onClick={()=>{showNotfication?setShowNotfication(false):setShowNotfication(true)}} className={Style.searchBtn}>
                             <buttom >
@@ -100,23 +122,10 @@ const MainNavPortal = (props) =>{
                     </div>
                     </Container>
                 </Navbar>
-                <div className={Style.bottomLine}></div>
 
             </div>
         </Fragment>
     )
 }
-const MainNav = (props)=>{
-    return(
-        <Fragment>
-            {ReactDom.createPortal(
-                <MainNavPortal notifCount={props.notifCount} showNotfication={props.showNotfication} setShowNotfication={props.setShowNotfication}>
 
-                </MainNavPortal>
-                ,
-                document.getElementById('headSec')
-                )}
-        </Fragment>
-    )
-}
-export default MainNav;
+export default FileManagerNav;

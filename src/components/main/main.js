@@ -11,7 +11,7 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 
 
-
+import {   actions, fetchData } from "../../store/fileManager";
 import MainNav from '../../tools/navs/mainNav';
 import SubNav from '../../tools/navs/subNav';
 import OpenIconSpeedDial from '../../tools/buttons/speedDial';
@@ -22,14 +22,13 @@ import Notfications from '../mis/notfications';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import Crm from '../crm/crm';
-
+import FileMain from '../fileManager/fileMain';
+import { useHistory, useLocation } from "react-router-dom";
+import { useDispatch } from 'react-redux';
 
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
-
-  
-
     return (
       <div
         role="tabpanel"
@@ -63,8 +62,11 @@ function TabPanel(props) {
 const Main = () =>{
   const authCtx =useContext(AuthContext);
   const axiosGlobal =useContext(AxiosGlobal);
+  const dispatch = useDispatch();
+  const location = useLocation()
   const [pageState , setPageState] = useState('');
-  
+  let history = useHistory();
+
   const theme = useTheme();
   const [value, setValue] = useState(0);
   useEffect(() => {
@@ -82,11 +84,35 @@ const Main = () =>{
     const handleChange = (event, newValue) => {
       localStorage.setItem("pageState" , newValue)
       setValue(newValue);
+      if(newValue === 1){
+        history.push('/files')
+      }
+
     };
+    useEffect(() => {
+      if(localStorage.getItem("pageState") === 1){
+        if(localStorage.getItem('fileMemory') === undefined){
+          history.push('/files')
+          localStorage.setItem('fileMemory' , '/files')
+        }else if(localStorage.getItem('fileMemory') !== undefined){
+          history.push(localStorage.getItem('fileMemory'))
+        }
+      }else if(localStorage.getItem("pageState") === 0){
+        
+      }
+    }, [value , location]);
     const handleChangeIndex = (index) => {
       localStorage.setItem("pageState" , index)
       setValue(index);
+      if(index === 1){
+        history.push('/files')
+      }
+
+
     };
+
+
+
     
 
  
@@ -95,15 +121,15 @@ const Main = () =>{
 
         
             <MainNav></MainNav>
-              <div  style={{width:'100%' , position:'relative' , height:'100%'}}>
-              <Box sx={{ bgcolor: 'background.paper', width: '100%'  , height:'100%'}}>
+              <div className={Style.tabsDiv}  style={{width:'100%' , position:'relative' , height:'100%'}}>
+              <Box  sx={{ bgcolor: 'background.paper', width: '100%'  ,boxShadow:'none' , height:'100%'}}>
                   <AppBar  position="static">
                     <Tabs
                       value={value}
                       onChange={handleChange}
                       indicatorColor="secondary"
                       textColor="inherit"
-                      sx={{backgroundColor:'#F8F8F8' , color:'#000'}}
+                      sx={{backgroundColor:'#F8F8F8',boxShadow:'none' , color:'#000'}}
                       variant="fullWidth"
                       aria-label="full width tabs example"
                     >
@@ -115,18 +141,17 @@ const Main = () =>{
                   <SwipeableViews
                     axis={theme.direction === 'rtl' ? 'x-reverse' : 'x'}
                     index={value}
-                    sx={{width:'100%' , height:'100%'}}
+                    sx={{width:'100%' ,boxShadow:'none', height:'100%'}}
                     onChangeIndex={handleChangeIndex}
                   >
-                  <TabPanel style={{backgroundColor:'#F8F8F8' , positiona:'absolute', minHeight:'100%'}} value={value} index={0} dir={theme.direction}>
+                  <TabPanel style={{backgroundColor:'#F8F8F8' ,boxShadow:'none' , positiona:'absolute', minHeight:'100%'}} value={value} index={0} dir={theme.direction}>
                     <Mis></Mis>
                   </TabPanel>
-                  <TabPanel value={value} index={1} dir={theme.direction}>
-                    <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', height:'85vh', width:'100%'}}>
-                      <Lock sx={{fontSize:'150px'}}></Lock>
-                    </div>
+                  <TabPanel className={Style.fileTabPanel} value={value} index={1} dir={theme.direction}>
+                      <FileMain></FileMain>
+                      
                   </TabPanel>
-                  <TabPanel style={{backgroundColor:'#F8F8F8' , positiona:'absolute', minHeight:'100%'}} value={value} index={2} dir={theme.direction}>
+                  <TabPanel style={{backgroundColor:'#F8F8F8' ,boxShadow:'none' , positiona:'absolute', minHeight:'100%'}} value={value} index={2} dir={theme.direction}>
 
                       <Crm></Crm>
                   </TabPanel>

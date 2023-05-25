@@ -12,3 +12,13 @@
     z-index: 1001 !important;
     background-color: rgb(249, 249, 249);
 }
+
+
+.fileTabPanel > *:first-child
+{
+    padding: 0px !important;
+
+}
+.tabsDiv header{
+    box-shadow: none !important;
+}

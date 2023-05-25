@@ -31,6 +31,8 @@ import WhatsApp from '../../assets/whatsapp.png';
 import WhatsAppBW from '../../assets/whatsappB&W.png';
 import MiladiDatePicker from '../../tools/inputs/datePickerMiladi';
 import { CircularProgress } from '@mui/material';
+import Divider from '@mui/material/Divider';
+
 const EditCustomerPortal = (props) =>{
     //hooks
     const axiosCtx = useContext(AxiosGlobal);
@@ -59,7 +61,8 @@ const EditCustomerPortal = (props) =>{
     //address information states
     const [addresses  , setAddresses] = useState([]);
 
-    
+    const [explanations , setExplanations] = useState(null);
+
     useEffect(() => {
         if(props.editCustomer.status === true){
            var result = props.editCustomer.theCustomer;
@@ -88,7 +91,9 @@ const EditCustomerPortal = (props) =>{
                     setCalenderType(result.personalInformation.dateOfBirth.dateType)
 
                 }
-
+                if(result.explanations !==null){
+                    setExplanations(result.explanations)
+                }
                 setPhoneNumbers([...result.contactInfo.phoneNumbers])
                 
                 if(result.address !==null){
@@ -212,6 +217,7 @@ const EditCustomerPortal = (props) =>{
             email:emails[0].email === '' ? null : emails,
             address: addresses,
             generatedBy:decoded.id,
+            explanations:explanations,
             id:props.editCustomer.theCustomer._id
         }
      
@@ -296,7 +302,7 @@ const EditCustomerPortal = (props) =>{
                             </Col> */}
                         </Row>
                     </div>
-                    <hr className={Style.dashLine}></hr>
+                    <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)' , margin:'10px 0px 10px 0px'}}></Divider>
                     <div>
                         <div className={Style.titlePaddignSecond}>
                             <BigOneWithDot text="اطلاعات تماس"></BigOneWithDot>
@@ -367,7 +373,7 @@ const EditCustomerPortal = (props) =>{
                             )
                         })}
                     </div>
-                    <hr className={Style.dashLine}></hr>
+                    <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
 
                     <div>
                         <BigOneWithDot text="آدرس"></BigOneWithDot>
@@ -460,6 +466,17 @@ const EditCustomerPortal = (props) =>{
                                 </Row>
                             )
                         })}
+                        <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
+                        <div>
+                            <Row className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px'}}>
+                                <Col style={{padding:'5px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
+                                    <div dir='rtl'>
+                                    <LittleOneNormal text='توضیحات مختصر'></LittleOneNormal>
+                                        <textarea value={explanations} onChange={(e)=>{setExplanations(e.target.value)}} id="w3review" name="w3review" rows="5" style={{width:'100%'}} cols="50"></textarea>                                            
+                                    </div>   
+                                </Col>
+                            </Row>
+                        </div>
                     </div>
                     <div>
                         <Row className="g-0" style={{padding:'0px'}}>

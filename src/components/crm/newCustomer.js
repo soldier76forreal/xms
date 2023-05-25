@@ -32,7 +32,7 @@ import WhatsAppBW from '../../assets/whatsappB&W.png';
 import DateMenu from './dateMenu';
 import MiladiDatePicker from '../../tools/inputs/datePickerMiladi';
 import HejriDatePicker from '../../tools/inputs/datePickerHejri';
-import { CircularProgress } from '@mui/material';
+import { CircularProgress, Divider } from '@mui/material';
 
 const NewCustomerPortal = (props) =>{
     //hooks
@@ -47,6 +47,7 @@ const NewCustomerPortal = (props) =>{
     const [personCountry , setPersonCountry] = useState(null);
     const [personTitle , setPersonTitle] = useState(null);
     const [customerType , setCustomerType] = useState(null);
+    const [explanations , setExplanations] = useState(null);
     const [customerOrigin , setCustomerOrigin] = useState(null);
     const [dateOfBrith , setDateOfBrith] = useState(null);
     const [customerFavoriteProducts , setCustomerFavoriteProducts] = useState([]);
@@ -172,7 +173,8 @@ const NewCustomerPortal = (props) =>{
             phoneNumberInformation : phoneNumbers,
             email:emails[0].email === '' ? null : emails,
             address: addresses,
-            generatedBy:decoded.id
+            generatedBy:decoded.id,
+            explanations:explanations
         }
      
         if(firstName === '' || lastName === '' || phoneNumbers[0].number ==='' || phoneNumbers[0].countryCode ===''){
@@ -257,7 +259,7 @@ const NewCustomerPortal = (props) =>{
                             </Col> */}
                         </Row>
                     </div>
-                    <hr className={Style.dashLine}></hr>
+                    <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
                     <div>
                         <div className={Style.titlePaddignSecond}>
                             <BigOneWithDot text="اطلاعات تماس"></BigOneWithDot>
@@ -324,7 +326,7 @@ const NewCustomerPortal = (props) =>{
                             )
                         })}
                     </div>
-                    <hr className={Style.dashLine}></hr>
+                    <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
 
                     <div>
                         <BigOneWithDot text="آدرس"></BigOneWithDot>
@@ -406,22 +408,39 @@ const NewCustomerPortal = (props) =>{
                                                     </div>
                                                 </div>
                                             </Col>
+                                            <Col style={{padding:'5px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
+                                                <div className={Style.addressDeleteBtnWithIcon} >
+                                                    <IconBotton onClick={()=>{var temp = [...addresses]; temp.splice(i,1); setAddresses([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
+                                                </div>
+                                            </Col>
                                         </Row>
-                                    </Col>
-                                    <Col style={{padding:'5px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
-                                        <div className={Style.addressDeleteBtnWithIcon} >
-                                            <IconBotton onClick={()=>{var temp = [...addresses]; temp.splice(i,1); setAddresses([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
-                                        </div>
+
+
                                     </Col>
                                 </Row>
                             )
+                            
                         })}
+                    </div>
+                    <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
+
+                    <div>
+                        <Row className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px'}}>
+                            <Col style={{padding:'5px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
+                                <div dir='rtl'>
+
+                                <LittleOneNormal text='توضیحات مختصر'></LittleOneNormal>
+                                      
+                                    <textarea onChange={(e)=>{setExplanations(e.target.value)}} id="w3review" name="w3review" rows="5" style={{width:'100%'}} cols="50"></textarea>                                            
+                                </div>   
+                            </Col>
+                        </Row>
                     </div>
                     <div>
                         <Row className="g-0" style={{padding:'0px'}}>
                             <Col style={{padding:'0px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
                                 <div style={{width:'100%'}}>
-                                    <button disabled={loading} onClick={saveData} className={Style.NormalBtn}>{loading === true ?<CircularProgress size='24px' color='inherit'></CircularProgress> :'ذخیره'}</button>
+                                    <button disabled={loading} onClick={saveData} className={Style.NormalBtn}>{loading === true ?<CircularProgress size='30px' color='inherit'></CircularProgress> :'ذخیره'}</button>
                                 </div>
                             </Col>
                         </Row>
