@@ -20,7 +20,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Chip from '@mui/material/Chip';
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
-const NewUser =(props)=>{
+const NewUserPortal =(props)=>{
     const urlContext = useContext(AxiosGlobal);
     const authContext = useContext(AuthContext);
     const webSectionContext = useContext(WebSections);
@@ -204,6 +204,24 @@ const NewUser =(props)=>{
             }
         </Fragment>
     )
+}
+const NewUser = (props)=>{
+    
+    return(
+      <Fragment>
+          {ReactDom.createPortal(
+              <NewUserPortal 
+              newUserStatus={props.newUserStatus}
+              setNewUserStatus={props.setNewUserStatus}
+              showModal={props.showModal}
+            ></NewUserPortal>
+          ,
+          document.getElementById('ovForms')
+          
+          )}
+
+      </Fragment>
+  );
 }
 
 export default NewUser;

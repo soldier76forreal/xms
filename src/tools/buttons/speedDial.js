@@ -9,7 +9,8 @@ import PrintIcon from '@mui/icons-material/Print';
 import ShareIcon from '@mui/icons-material/Share';
 import EditIcon from '@mui/icons-material/Edit';
 import ReactDom from 'react-dom';
-
+import { Style } from '@mui/icons-material';
+import S from './speedDial.module.scss'
 const actions = [
   { icon: <FileCopyIcon />, name: 'Copy' },
   { icon: <SaveIcon />, name: 'Save' },
@@ -19,6 +20,8 @@ const actions = [
 
 function OpenIconSpeedDialPortal(props) {
   return (
+    <div className={S.dialDiv}>
+
       <SpeedDial
         onClick={props.onClick}
         ariaLabel="SpeedDial openIcon example"
@@ -26,6 +29,7 @@ function OpenIconSpeedDialPortal(props) {
         icon={<SpeedDialIcon openIcon={<EditIcon />} />}
       >
       </SpeedDial>
+    </div>
   );
 }
 

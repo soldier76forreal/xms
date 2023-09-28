@@ -14,22 +14,69 @@ import jwtDecode from 'jwt-decode';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import AxiosGlobal from './components/authAndConnections/axiosGlobalUrl';
-import { fetchData } from './store/fileManager';
-import { useDispatch } from 'react-redux';
+import { fetchData , getAllTags, getContacts, getCustomers, getFilter, getInvoices } from './store/store';
+import { useDispatch, useSelector } from 'react-redux';
+import ShowTheLink from './components/fileManager/showTheLink';
+import { useHistory, useLocation , Link } from "react-router-dom";
 
 
 
 
 function App() {
+  // service worker reg
+  if('serviceWorker' in navigator ){
+    navigator.serviceWorker
+    .register('/serviceWorker.js')
+    .then(()=>{
+      console.log('activated')
+    })
+  }
+
+
   const authCtx = useContext(AuthContext);
   const [notifs,setNotifs] = useState('')
   const [count,setCount] = useState(0)
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch  = useDispatch()
+  const refresh = useSelector((state) => state.refresh);
+  const history = useHistory()
+  const crmRefresh = useSelector((state) => state.crmRefresh);
+  const misRefresh = useSelector((state) => state.misRefresh);
+  const refreshTag = useSelector((state) => state.refreshTag);
+
+  if(localStorage.getItem('accessToken') === 'undefined'){
+    localStorage.removeItem('accessToken')
+  }
+  useEffect(() => {
+    if(window.location.pathname !== '/showLink'){
+    }
+
+  }, [refresh]);
+
   useEffect(() => {
     dispatch(fetchData({authCtx , axiosGlobal}))
+  }, [refresh , refreshTag]);
+
+  useEffect(() => {
+    dispatch(getContacts({authCtx , axiosGlobal}))
   }, []);
 
+  useEffect(() => {
+    dispatch(getFilter({authCtx , axiosGlobal}))
+  }, [crmRefresh ,misRefresh]);
+  
+  useEffect(() => {
+    dispatch(getCustomers({authCtx , axiosGlobal}))
+  }, [crmRefresh]);
+
+
+  useEffect(() => {
+    dispatch(getAllTags({authCtx , axiosGlobal}))
+}, [refreshTag]);
+
+useEffect(() => {
+  dispatch(getInvoices({authCtx , axiosGlobal}))
+}, [misRefresh]);
   // function notifyMe() {
   //   if (!("Notification" in window)) {
   //     // Check if the browser supports notifications
@@ -51,9 +98,12 @@ function App() {
   //   // At last, if the user has denied notifications, and you
   //   // want to be respectful there is no need to bother them anymore.
   // }
+
+
   // useEffect(() => {
   //   notifyMe()
   // }, [authCtx.token]);
+
 
 
 
@@ -114,6 +164,21 @@ function App() {
                 <Main/>
             </Route>
           :<Redirect to='/logIn'/>}
+          {authCtx.isLoggedIn === true ?
+            <Route  path="/mis"> 
+                <Main/>
+            </Route>
+          :<Redirect to='/logIn'/>}
+          {authCtx.isLoggedIn === true ?
+            <Route  path="/jobReport"> 
+                <Main/>
+            </Route>
+          :<Redirect to='/logIn'/>}
+          {authCtx.isLoggedIn === true ?
+            <Route  path="/crm"> 
+                <Main/>
+            </Route>
+          :<Redirect to='/logIn'/>}
             {authCtx.isLoggedIn === true ?
             <Route exact path="/users"> 
                 
@@ -126,6 +191,9 @@ function App() {
             </Route>
           :<Redirect to='/logIn'/>}
 
+          <Route  path="/showLink">  
+            <ShowTheLink/>
+          </Route>
         </Switch>
 
     </div>

@@ -7,6 +7,8 @@ import Style from "./renameModal.module.scss";
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { useContext, useState } from 'react';
+import { useDispatch } from 'react-redux';
+import { actions } from '../../store/store';
 
 const style = {
   position: 'absolute',
@@ -24,7 +26,7 @@ export default function RenameModal(props) {
   const authCtx = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const [loading , setLoading] = useState(false);
-
+  const dispatch = useDispatch()
   const handleOpen = () => props.setOpenRenameModal(true);
   const handleClose = () => props.setOpenRenameModal(false);
   const renameFolder = async()=>{
@@ -34,9 +36,10 @@ export default function RenameModal(props) {
         const response = await authCtx.jwtInst({
           method:'post',
           url:`${axiosGlobal.defaultTargetApi}/files/folderRename`,
-          data:{id:props.selectedForChange , newName:props.renameFolder},
+          data:{typeId:props.fileFolderIdType , newName:props.renameFolder},
           config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
         })
+        dispatch(actions.refresh())
         setTimeout(()=>{
           setLoading(false)
           handleClose()

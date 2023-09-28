@@ -21,12 +21,15 @@ import { useHistory } from 'react-router-dom';
 import ToggleBtn from '../../tools/buttons/toggleBtn';
 import MultiSelect from '../../tools/inputs/multiSelect';
 import ErrorModal from '../../tools/navs/errorModal';
+import { useDispatch } from 'react-redux';
+import { actions } from '../../store/store';
 
 
 const NewCallPortal = (props) =>{
         const authContext = useContext(AuthContext);
         const axiosGlobal = useContext(AxiosGlobal);
         var decoded = jwtDecode(authContext.token);
+        const dispatch = useDispatch()
         const history = useHistory();
 
         //pre invoice states
@@ -67,7 +70,7 @@ const NewCallPortal = (props) =>{
                         data:data,
                         config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
                     })
-                    props.setRefresh(Math.random());
+                    dispatch(actions.crmRefresh())
                     setTimeout(()=>{
                         setLoading(false)
                         props.setSuccessToast({status:true , msg:'تماس جدید ثبت شد'});
@@ -210,7 +213,7 @@ const NewCall = (props)=>{
     return(
       <Fragment>
           {ReactDom.createPortal(
-              <NewCallPortal successToast={props.successToast} setSuccessToast={props.setSuccessToast} setRefresh={props.setRefresh} setTargetDocForCall={props.setTargetDocForCall} targetDocForCall={props.targetDocForCall} setNewCallStatus={props.setNewCallStatus} newCallStatus={props.newCallStatus} ></NewCallPortal>
+              <NewCallPortal successToast={props.successToast} setSuccessToast={props.setSuccessToast}  setTargetDocForCall={props.setTargetDocForCall} targetDocForCall={props.targetDocForCall} setNewCallStatus={props.setNewCallStatus} newCallStatus={props.newCallStatus} ></NewCallPortal>
           ,
           document.getElementById('ovForms')
           

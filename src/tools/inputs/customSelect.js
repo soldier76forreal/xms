@@ -4,6 +4,7 @@ import Style from "./customSelect.scss";
 
 import '../../assets/flags/flag.min.css';
 import '../../assets/flags/flag.css';
+import { useSelector } from 'react-redux';
 const options = [
   { value: 'chocolate', label: 'Chocolate' },
   { value: 'strawberry', label: 'Strawberry' },
@@ -12,6 +13,7 @@ const options = [
 
 export default function CustomSelect(props) {
   const [selectedOption, setSelectedOption] = useState(null);
+  const contactList = useSelector((state) => state.contactList);
 
   const { Option } = components;
   const IconOption = props => (
@@ -40,6 +42,8 @@ export default function CustomSelect(props) {
           options={prTitles} 
           value={prTitles.filter(e=>{return e.id === props.value})[0]}
           styles={colorStyles}
+          theme={theme}
+
           getOptionLabel={option => option.text}
           getOptionValue={option => option.id}
           placeholder={props.placeholder}
@@ -52,6 +56,8 @@ export default function CustomSelect(props) {
           name={props.name}
           options={countries}
           styles={colorStyles}
+          theme={theme}
+
           value={countries.filter(e=>{return e.code === props.value || e.phone === props.value })[0]}
           components={{ Option: IconOption }}
           isDisabled={props.disable === true ? true : false}
@@ -66,6 +72,8 @@ export default function CustomSelect(props) {
           onChange={props.onChange}
           name={props.name}
           options={countries}
+          theme={theme}
+
           value={countries.filter(e=>{return parseInt(e.phone) === parseInt(props.value)})[0]}
           styles={colorStyles}
           isDisabled={props.disable === true ? true : false}
@@ -83,6 +91,8 @@ export default function CustomSelect(props) {
             isDisabled={props.disable === true ? true : false}
             options={customerOrigin}
             styles={colorStyles}
+            theme={theme}
+
             value={customerOrigin.filter(e=>{return e.id === props.value})[0]}
             getOptionLabel={option => option.text}
             getOptionValue={option => option.id}
@@ -97,6 +107,55 @@ export default function CustomSelect(props) {
             isDisabled={props.disable === true ? true : false}
             options={props.options}
             styles={colorStyles}
+            theme={theme}
+
+            value={props.options.filter(e=>{return e.value === props.value})[0]}
+            getOptionLabel={option => option.name}
+            getOptionValue={option => option.value}
+            placeholder={props.placeholder}
+          ></Select>
+          :props.selectType === 'requestTypeMis' ?
+          <Select
+            defaultValue={selectedOption}
+            // onChange={(e)=>{props.onChange(e.id);}} 
+            name={props.name}
+            onChange={props.onChange}
+            isDisabled={props.disable === true ? true : false}
+            options={requestType}
+            styles={colorStyles}
+            theme={theme}
+
+            value={requestType.filter(e=>{return e.id === props.value})[0]}
+            getOptionLabel={option => option.text}
+            getOptionValue={option => option.id}
+            placeholder={props.placeholder}
+          ></Select>
+          :props.selectType === 'sentByMis' ?
+          <Select
+            defaultValue={selectedOption}
+            // onChange={(e)=>{props.onChange(e.id);}} 
+            name={props.name}
+            onChange={props.onChange}
+            isDisabled={props.disable === true ? true : false}
+            options={contactList.allAll.map(e=>{return {id:e._id , text:`${e.firstName} ${e.lastName}`}})}
+            styles={colorStyles}
+            theme={theme}
+
+            value={contactList.allAll.map(e=>{return {id:e._id , text:`${e.firstName} ${e.lastName}`}}).filter(e=>{return e.id === props.value})[0]}
+            getOptionLabel={option => option.text}
+            getOptionValue={option => option.id}
+            placeholder={props.placeholder}
+          ></Select>
+          :props.selectType === 'selectSortCrm' ?
+          <Select
+            defaultValue={selectedOption}
+            // onChange={(e)=>{props.onChange(e.id);}} 
+            name={props.name}
+            onChange={props.onChange}
+            isDisabled={props.disable === true ? true : false}
+            options={props.options}
+            theme={theme}
+            styles={colorStyles}
             value={props.options.filter(e=>{return e.value === props.value})[0]}
             getOptionLabel={option => option.name}
             getOptionValue={option => option.value}
@@ -110,16 +169,33 @@ export default function CustomSelect(props) {
 
 
   
-
+const theme = (theme) => ({
+  ...theme,
+  borderRadius: 5,
+  borderWidth:2,
+  colors: {
+    ...theme.colors,
+    primary25: 'rgb(193, 193, 193)',
+    primary: 'black',
+  },
+})
 
 const colorStyles = {
+  control: (baseStyles, state) => ({
+    ...baseStyles,
+    borderColor: state.isFocused ? 'grey' : 'none',
+
+
+  }),
   placeholder: defaultStyles => {
     return {
       ...defaultStyles,
       color: "rgb(73, 73, 73)",
       fontSize:'12px',
-      zIndex:'10000'
-    };
+      borderRadius:'5px',
+      position:'absolute'
+    }
+    
   }
 };
 
@@ -140,19 +216,28 @@ var prTitles = [
 
 
 var customerOrigin = [
-  {id:'call' , text:'بازاریابی تلفنی'},
-  {id:'ref' , text:'معرفی مشتریان'},
-  {id:'web' , text:'وب سایت'},
-  {id:'in' , text:'اینستاگرام'},
-  {id:'wa' , text:'واتساپ'},
-  {id:'fa' , text:'فیسبوک'},
-  {id:'bt' , text:'باتم'},
-  {id:'con' , text:'کنفرانس'},
-  {id:'wor' , text:'معرفی پرسنل'},
-  {id:'oth' , text:'معرفی دیگران'},
-  {id:'ipm' , text:'بازار یابی حضوری'},
-  {id:'em' , text:'بازاریابی ایمیلی'},
-  {id:'sr' , text:'نمایشگاه'}
+  {id:'null' , text:'None'},
+  {id:'call' , text:'Phone call marketing'},
+  {id:'ref' , text:'Refer by other customers'},
+  {id:'web' , text:'Website'},
+  {id:'in' , text:'Instagram'},
+  {id:'li' , text:'Linked In'},
+  {id:'wa' , text:'WhatsApp'},
+  {id:'fa' , text:'Facebook'},
+  {id:'bt' , text:'Bottom'},
+  {id:'con' , text:'Conference'},
+  {id:'wor' , text:'Refer by Personnel'},
+  {id:'oth' , text:'Refer by other people'},
+  {id:'ipm' , text:'Field marketing'},
+  {id:'em' , text:'Email marketing'},
+  {id:'sr' , text:'Exhibition'}
+]
+
+
+var requestType = [
+  {id:'null' , text:'All'},
+  {id:'pre' , text:'Pre invoice'},
+  {id:'invoice' , text:'Invoice'},
 ]
 
 
@@ -161,6 +246,7 @@ var customerOrigin = [
 // All countries
 // length 252
 var countries = [
+  {"name":"None","code":"null","phone":null},
   {"name":"Afghanistan","code":"AF","phone":93},
   {"name":"Aland Islands","code":"AX","phone":358},
   {"name":"Albania","code":"AL","phone":355},

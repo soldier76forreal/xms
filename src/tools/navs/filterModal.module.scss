@@ -1,0 +1,74 @@
+.ovStyle{
+    position: relative;
+    height: 100%;
+}
+.sortDiv{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.sortTitle{
+    font-size:18px;
+
+}
+.sortCustomSelect{
+    max-width: 160px;
+    width: 100%;
+    margin: 0px 0px 0px auto;
+
+}
+
+
+
+.filtertDiv{
+    display: block;
+
+}
+.filterCustomSelect{
+    width: 100%;
+    margin: 0px 0px 0px auto;
+
+}
+
+
+.subFilterDiv{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px
+}
+.subFilterTitleDiv{
+    font-size: 14px;
+
+}
+.subFilterTitleSelectDiv{
+    max-width: 310px;
+    width: 100%;
+    margin: 0px 0px 0px auto;
+
+}
+
+
+.resetDiv{
+    position: absolute;
+    bottom: 0px;
+    display: flex;
+    width: 100%;
+}
+.resetAllText{
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+}
+
+
+
+
+@media only screen and (max-width: 768.98px) {
+    .subFilterTitleSelectDiv{
+        max-width: 130px;
+        width: 100%;
+        margin: 0px 0px 0px auto;
+    
+    }
+}

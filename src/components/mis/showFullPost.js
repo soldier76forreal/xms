@@ -118,7 +118,7 @@ const ShowFullPostPortal = (props) =>{
                                     <div className={Style.name}>      
                                         <Grid3x3Icon className={Style.icon} sx={{fontSize:'26px' , marginBottom:'0px'}}></Grid3x3Icon>
                                         <span>
-                                            نام سنگ
+                                            نام محصول
                                         </span>
                                     </div>
                                     <div className={Style.context}>
@@ -247,15 +247,15 @@ const ShowFullPostPortal = (props) =>{
                                                     </Row>
                                                     <Row style={{ marginTop:'8px'}}>
                                                         <Col style={{padding:'0px 5px 0px 5px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
-                                                            <MuiInput onChange={(e)=>{setStoneRate(e.target.value)}} name='درجه سنگ' type='normal' width='100%'></MuiInput>
+                                                            <MuiInput onChange={(e)=>{setStoneRate(e.target.value)}} name='درجه کیفی محصول' type='normal' width='100%'></MuiInput>
                                                         </Col>
                                                         <Col style={{padding:'0px 5px 0px 5px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
-                                                            <MuiInput onChange={(e)=>{setStoneThickness(e.target.value)}} name='قطر سنگ - سایز' type='normal' width='100%'></MuiInput>
+                                                            <MuiInput onChange={(e)=>{setStoneThickness(e.target.value)}} name='قطر محصول - سایز' type='normal' width='100%'></MuiInput>
                                                         </Col>
                                                     </Row> 
                                                     <Row style={{ marginTop:'8px'}}>
                                                         <Col style={{padding:'0px 5px 0px 5px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
-                                                            <label style={{marginBottom:'5px' , fontSize:'13px'}}>تاریخ آماده شدن سنگ برای بارگیری</label>
+                                                            <label style={{marginBottom:'5px' , fontSize:'13px'}}>تاریخ آماده شدن محصول برای بارگیری</label>
                                                             <Datep value={dateOfShipment} onChange={(e)=>{setDateOfShipment(e)}}></Datep>    
                                                         </Col>
                                                     </Row>
@@ -335,7 +335,7 @@ const ShowFullPostPortal = (props) =>{
                                                     <div className={Style.name}>      
                                                         <GradeIcon className={Style.icon} sx={{fontSize:'26px' , marginBottom:'0px' , marginLeft:'3px'}}></GradeIcon>
                                                         <span>
-                                                            درجه سنگ
+                                                            درجه کیفی محصول
                                                         </span>
                                                     </div>
                                                     <div className={Style.context}>
@@ -348,7 +348,7 @@ const ShowFullPostPortal = (props) =>{
                                                     <div className={Style.name}>      
                                                         <LineWeightIcon className={Style.icon} sx={{fontSize:'26px' , marginBottom:'0px' , marginLeft:'3px'}}></LineWeightIcon>
                                                         <span>
-                                                            قطر سنگ-سایز
+                                                            قطر محصول-سایز
                                                         </span>
                                                     </div>
                                                     <div className={Style.context}>
@@ -364,7 +364,7 @@ const ShowFullPostPortal = (props) =>{
                                                     <div className={Style.name}>      
                                                         <DateRangeIcon className={Style.icon} sx={{fontSize:'26px' , marginBottom:'0px' , marginLeft:'3px'}}></DateRangeIcon>
                                                         <span>
-                                                           تاریخ آماده شدن سنگ برای بارگیری
+                                                           تاریخ آماده شدن محصول برای بارگیری
                                                         </span>
                                                     </div>
                                                     <div className={Style.context}>

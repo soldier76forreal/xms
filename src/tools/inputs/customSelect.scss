@@ -3,8 +3,25 @@
 .css-1s2u09g-control{
     background-color: $inputColor !important;
     border: none !important;
-    border-radius: 11px !important;
     height: 100%;
     padding: 3px 0px 3px 0px;
+    border-radius: 5px !important;
+}
+.css-1s2u09g-control:hover{
+    outline: none !important;
+    border: none !important;
 }
 
+
+
+.css-b62m3t-container:focus{
+    border-radius: 5px !important;
+    outline: none !important;
+    border: none !important;
+    color: rgb(193, 193, 193);
+}
+.css-1pahdxg-container:hover{
+    border-radius: 5px !important;
+    outline: none !important;
+    border: none !important;
+}

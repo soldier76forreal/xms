@@ -1,10 +1,15 @@
-import * as React from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Modal from '@mui/material/Modal';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Style from "./deleteModal.module.scss"; 
+import AuthContext from '../authAndConnections/auth';
+import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import { useContext, useState } from 'react';
+import { CircularProgress } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { actions } from '../../store/store';
 
 const style = {
   position: 'absolute',
@@ -18,14 +23,49 @@ const style = {
   p: 4,
 };
 
-export default function DeleteModal() {
-  const [open, setOpen] = React.useState(false);
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => setOpen(false);
+export default function DeleteModal(props) {
 
+  const selectedItemsSelect = useSelector((state) => state.selectedItems);
+  const handleOpen = () => props.setDeleteFileModal(true);
+  const handleClose = () => props.setDeleteFileModal(false);
+  const authCtx = useContext(AuthContext);
+  const dispatch = useDispatch()
+
+  const axiosGlobal = useContext(AxiosGlobal);
+  const [loading , setLoading] = useState(false);
+
+  const deleteFileFolder = async()=>{ 
+    var data = []
+    if(props.deleteCount === 'single'){
+      data.push(props.fileFolderIdType)
+    }else if(props.deleteCount === 'multi'){
+      selectedItemsSelect.forEach(element => {
+        data.push({type:element.type , id:element.id})
+      });
+    }
+    try{
+      setLoading(true);
+      const response = await authCtx.jwtInst({
+        method:'post',
+        url:`${axiosGlobal.defaultTargetApi}/files/deleteFolderFile`,
+        data:data,
+        config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
+      })
+      dispatch(actions.refresh())
+      dispatch(actions.unselectAll())
+
+      setTimeout(()=>{
+        setLoading(false)
+        handleClose()
+      }, 800)
+
+    }catch(err){
+      console.log(err)
+    }
+}
   return (
       <Modal
-        open={open}
+        open={props.deleteFileModal}
         onClose={handleClose}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
@@ -34,11 +74,11 @@ export default function DeleteModal() {
             <div style={{textAlign:'center'}}>
                 <DeleteIcon sx={{fontSize:'180px'}}></DeleteIcon>
                 <h3 style={{fontFamily:'YekanBold'}}>Delete foler?</h3>
-                <h6>Folder Name</h6>
+                <h6>{props.deleteCount === 'single'?'1 item will be deleted!':props.deleteCount === 'multi'?`${selectedItemsSelect.length} item will be deleted!`:null}</h6>
                 <div className={Style.buttonDiv}>
                     <div style={{margin:'0px auto 0px auto'}}>
-                        <button className={Style.cancelBtn}>Cancel</button>
-                        <button className={Style.okButton} style={{paddingLeft:'20px' , paddingRight:'20px'}}>Ok</button>                    
+                        <button onClick={handleClose} className={Style.cancelBtn}>Cancel</button>
+                        <button onClick={deleteFileFolder} className={Style.okButton} style={{paddingLeft:'20px' , paddingRight:'20px'}}>{loading === true?<CircularProgress size='16px' color='inherit'></CircularProgress>:'Ok'}</button>                    
                     </div>
                 </div>
             </div>

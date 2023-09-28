@@ -13,7 +13,7 @@ import ContactList from './contactList';
 import axios from 'axios';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { Avatar, Chip, CircularProgress } from '@mui/material';
+import { Avatar, Chip, CircularProgress, Divider } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import Prof from '../../assets/imagePlaceHolder.png'
 import AuthContext from '../authAndConnections/auth';
@@ -36,9 +36,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import Filter from '../../tools/navs/filter';
 import Fuse from 'fuse.js';
 import Notfications from './notfications';
-import InfiniteScroll from 'react-infinite-scroll-component';
+import InfiniteScroll from 'react-infinite-scroller';
 import NoData from '../../tools/navs/noData';
 import RetryError from '../../tools/buttons/retryError';
+import Loader from '../../tools/loader/loader';
+import { Compress } from '@mui/icons-material';
+import SearchBar from '../../tools/navs/searchModule';
+import { useDispatch, useSelector } from 'react-redux';
+import { actions, getInvoices } from '../../store/store';
 
 const MisPortal = () =>{
     const urlContext = useContext(AuthContext);
@@ -47,7 +52,14 @@ const MisPortal = () =>{
     const authCtx = useContext(AuthContext);
     const axiosGlobal = useContext(AxiosGlobal);
     const webSections = useContext(WebSections);
+    const dispatch = useDispatch()
     var decoded = jwtDecode(authCtx.token);
+
+
+    const invoicesToShow = useSelector((state) => state.invoicesToShow);
+    const misLoading = useSelector((state) => state.misLoading);
+    const misLimit = useSelector((state) => state.misLimit);
+    const misHasMore = useSelector((state) => state.misHasMore);
 
     const [items , setItems] = useState([{root:'root', items:[]}]);
 
@@ -155,59 +167,14 @@ const MisPortal = () =>{
     }
 
 
-    const getInvoiceData = async() =>{
-        setLoadingStatus({loading:true , retry:false})
-        try{
-            const response = await authCtx.jwtInst({
-                method:'get',
-                url:`${axiosGlobal.defaultTargetApi}/mis/getInvoices`,
-                params:{id:jwtDecode(localStorage.getItem('accessToken')).id},
-                config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
-            })
-            var filterd = response.data.rs.filter(e=>{return e.doc !==null})
-            setInvoice([...filterd])
-                var temp = [];
-                if(filterd.length !==0){
-                    if(limit>filterd.length){
-                        setLimit(filterd.length);
-                        temp.length =0
-                        for(var i = 0 ; i < limit; i++){
-                            if(filterd !== undefined){
-                                temp.push(filterd[i]);
-                            }
-                        }
-                        setInvoiceForShow([...temp])
-                        setHasMore(false)
-                    }else if(limit<=filterd.length){
-                        setHasMore(true)
-                        setLimit(limit+20);
-                        temp.length =0
-                        for(var j = 0 ; j < limit; j++){
-                            if(filterd[j] !== undefined){
-                                temp.push(filterd[j]);
-                            }
-                        }
-                        setInvoiceForShow([...temp])
-                    }
-                }
-                setLoadingStatus({loading:false , retry:false})
 
-        }catch(err){
-            setTimeout(()=>{
-                setLoadingStatus({loading:false , retry:true})
-            }, 10000);
-            console.log(err);
-        }
-    }
     useEffect(() => {       
         authCtx.socket?.on("newPing", (data) => {
             setContectRefresh(data.ping);
         });
     }, [authCtx.socket]);
 
-    useEffect(() => {
-        getInvoiceData()
-    }, [ contectRefresh]);
+
 
         const fuse = new Fuse(invoice, {
             keys: ['doc.preInvoice.productName', 'doc.preInvoice.meterage' , 'doc.preInvoice.destination']
@@ -260,38 +227,7 @@ const MisPortal = () =>{
             }
         }, [searchForInvoices.searching]);
 
- 
-        const notifMore = () =>{
-            setTimeout(()=>{
-            
-                var temp = [];
-                if(invoice.length !==0){
-                    if(limit>invoice.length){
-                        setLimit(invoice.length);
-                        temp.length =0
-                        for(var i = 0 ; i < limit; i++){
-                            if(invoice[i] !== undefined){
-                                temp.push(invoice[i]);
-                            }
-                        }
-                        setInvoiceForShow([...temp])
-                        setHasMore(false)
-                    }else if(limit<=invoice.length){
-                        setHasMore(true)
-                        setLimit(limit+20);
-                        temp.length =0
-                        for(var j = 0 ; j < limit; j++){
-                            if(invoice[j] !== undefined){
-                                temp.push(invoice[j]);
-                            }
-                            
-                        }
-                        setInvoiceForShow([...temp])
-                    }
-                }
-            }, 2000);
-            
-          }
+
 
   
 useEffect(() => {
@@ -332,64 +268,44 @@ useEffect(() => {
             {/* refresh */}
             <NewUser setContectRefresh={setContectRefresh}></NewUser>
             <EditInvoice setContectRefresh={setContectRefresh} openEditInvoice={openEditInvoice} setOpenEditInvoice={setOpenEditInvoice} setSuccessToast={setSuccessToast} data={ openEditInvoice.status === true?invoice[openEditInvoice.id]:null}></EditInvoice>
-            <ShowFullPost setContectRefresh={setContectRefresh}  setSuccessToast={setSuccessToast}  data={ postOpen.status === true?invoice[postOpen.id]:null} setPostOpen={setPostOpen} setShowPost={setShowPost} showPost={showPost}></ShowFullPost>
+            <ShowFullPost setContectRefresh={setContectRefresh}  setSuccessToast={setSuccessToast}  data={ postOpen.status === true?invoicesToShow[postOpen.id]:null} setPostOpen={setPostOpen} setShowPost={setShowPost} showPost={showPost}></ShowFullPost>
             <OpenIconSpeedDial  onClick={()=>{setNewPreInvoiceStatus(true); history.push('#newPreInvoices')}}></OpenIconSpeedDial>
             <ShowMore openEditInv={openEditInv} deleteModal={deleteModal}  selectContact={selectContact} anchorEl={anchorEl} setAnchorEl={setAnchorEl} open={open}  handleClose={handleClose}></ShowMore>
             <NewPreInvoice setTargetToSend={setTargetToSend} setContectRefresh={setContectRefresh} setSuccessToast={setSuccessToast}  openContactList={openContactList} setOpenContactList={setOpenContactList}  setNewPreInvoiceStatus={setNewPreInvoiceStatus} newPreInvoiceStatus={newPreInvoiceStatus}></NewPreInvoice>
             <ContactList  setContectRefresh={setContectRefresh} setSuccessToast={setSuccessToast} targetToSend={targetToSend} state={openContactList} setState={setOpenContactList}></ContactList>
             <SuccessMsg openMsg={successToast.status} msg={successToast.msg}></SuccessMsg>  
-                <div style={{maxWidth:'700px' , padding:'0px 0px 18px 0px'}} className={Style.overalDiv}>
-                    <div style={{marginBottom:'10px'}}>
-                        <Filter searchForInvoices={searchForInvoices} setSearchForInvoices={setSearchForInvoices}></Filter>
+                <div style={{maxWidth:'700px' , padding:'0px 15px 18px 15px'}} className={Style.overalDiv}>
+                    <div style={{marginTop:'8px'}} className={Style.topToolsDiv}>
+                        <div style={{width:'100%'}} className={Style.searchDiv}> 
+                            <SearchBar></SearchBar>
+                        </div>
+                        
+                        <div  className={Style.tileChange}>
+                            <Compress sx={{color:'white'}}></Compress>
+                        </div>
                     </div>
-                    <div  dir='rtl' style={{backgroundColor:'#000' , marginBottom:'10px' , display:'flex' , alignItems:'center'}} className={`${Style.invoiceCard} ${Style.fadeIn}` }>
-                        <div  style={{width:'91%' , padding:'10px 10px 10px 10px' ,  alignItems:'center' , display:'flex' , height:'100%'}}>
-                            <Avatar
-                                alt="Remy Sharp"
-                                src={jwtDecode(authCtx.token).profileImage  === undefined && authCtx.login === false ?ProfilePhoto:jwtDecode(authCtx.token).profileImage !== undefined && authCtx.login === true ? `${authCtx.defaultTargetApi}/uploads/${jwtDecode(authCtx.token).profileImage.filename}`:null}
-                                sx={{ width: 46, height: 46 }}
-                            />
-                                <div style={{padding:'2px 8px 5px 0px' , display:'inline-block'}}>
-                                    <div className={Style.titleProfile}>
-                                        <span>
-                                            {jwtDecode(authCtx.token).firstName} {jwtDecode(authCtx.token).lastName}
-                                        </span>
+                    <Divider sx={{borderBottomWidth:'1px' , marginTop:'10px', marginBottom:'10px' , opacity:'1' , borderColor:'rgb(194, 194, 194)'}}></Divider>
 
-                                    </div>
-                                    <div className={Style.disProfAccess}>
-                                        {`نقش ها:${decoded.access.map(data=>{
-                                            for(var i=0 ; webSections.listOfSections.length >i; i++){
-                                                if(webSections.listOfSections[i].value === data){
-                                                    return(
-                                                        `${webSections.listOfSections[i].jobTitle}` 
-                                                    )
-                                                }
-                                            }
-                                            })}`}
-                                    </div>
-                                </div>
-                        </div>
-                        <div className={Style.editBtn}>
-                            <EditIcon className={Style.editIcon} sx={{color:'#fff' , fontSize:"22px"}}></EditIcon>
-                        </div>
-                    </div>
-                        {loadingStatus.loading === false && loadingStatus.retry === true?
+                    {/* <div style={{marginBottom:'10px'}}>
+                        <Filter searchForInvoices={searchForInvoices} setSearchForInvoices={setSearchForInvoices}></Filter>
+                    </div> */}
+                        {misLoading.loading === false && misLoading.retry === true?
                             <Fragment>
                                 <div style={{display:'flex' , justifyContent:'center' , alignItems:'center' , textAlign:'center' , minHeight:'50vh' }}>
-                                    <RetryError onClick={getInvoiceData}></RetryError>
+                                    <RetryError onClick={dispatch(getInvoices({authCtx , axiosGlobal}))}></RetryError>
                                 </div>       
                             </Fragment>
-                        :loadingStatus.loading === false && loadingStatus.retry === false?
+                        :misLoading.loading === false && misLoading.retry === false?
                             <div>                           
                                 <InfiniteScroll
-                                    dataLength={invoiceForShow.length}
-                                    next={notifMore}
-                                    hasMore={hasMore}          
-                                    loader={<div style={{display:'flex', marginTop:'10px', justifyContent:'center', alignItem:'center'}}><CircularProgress size='35px' color='inherit'></CircularProgress></div>}
+                                    loadMore={()=>{dispatch(actions.misNotfiMore())}}
+                                    pageStart={0}
+                                    hasMore={misHasMore}             
+                                    loader={<div style={{display:'flex', marginTop:'10px', justifyContent:'center', alignItem:'center'}}><Loader width='30px' color='black'></Loader></div>}
                                 >
-                                {loadingStatus.loading === false
+                                {misLoading.loading === false
                                 && searchForInvoices.searching === ''?
-                                    invoiceForShow.map((data , i)=>{
+                                    invoicesToShow.map((data , i)=>{
                                         if(data !== undefined){
                                             return(
                                                 <div  key={i} dir='rtl' style={{backgroundColor:data.doc.status === 0?'#fff': data.doc.status === 1?'rgb(239, 156, 78)' :data.doc.status === 2?'rgb(112, 236, 139)':null , marginBottom:'10px'}} className={postOpen.status === true && postOpen.id === i ?`${Style.invoiceCard} ${Style.fadeOut}`:`${Style.invoiceCard} ${Style.fadeIn}` }>
@@ -537,7 +453,12 @@ useEffect(() => {
                                 </InfiniteScroll>
                         
                             </div>
-                        :loadingStatus.loading === false && loadingStatus.retry === false?   
+                        :misLoading.loading === true && misLoading.retry === false?   
+                            <div style={{width:'100%',textAlign:'center', display:'flex', justifyContent:'center',alignItems:'center'}}>
+                                <Loader width='30px' color='black'></Loader>
+                            </div>
+
+                        :misLoading.loading === true && misLoading.retry === false && invoicesToShow.length === 0?
                             <div style={{display:'flex' , justifyContent:'center' , alignItems:'center', minHeight:'50vh' }}>
                                 <NoData caption='درخواستی برای نمایش وجود ندارد'></NoData>
                             </div>

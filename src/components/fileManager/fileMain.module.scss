@@ -2,14 +2,19 @@
     overflow: hidden !important;
     height: 100%;
     text-align: center;
-    overflow-y: hidden !important;
     width: 100%;
+    position: fixed;
+    height: 100vh;
     margin: 0px auto 0px auto;
 }
 
 
 
-
+.photoSwipeDiv img{
+    max-width: none;
+    object-fit: contain
+    
+}
 
 
 
@@ -25,8 +30,9 @@
 // main section
 .topSec{
     width: 100%;
-    
+    display: flex;
     padding: 10px 0px 10px 0px;
+    height: 62px;
 }
 .funcBtn{
     width: 100%;
@@ -62,6 +68,9 @@
     width: 100%;
     text-align: left;
     padding: 10px ;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 .gridOvDiv h4{
     font-family: YekanBold;
@@ -106,7 +115,13 @@
     max-height: 160px;
     height: 100%;
 }
-
+.fileIconDiv svg{
+    max-height: 80px !important;
+}
+.fileIconDiv{
+    margin-top: 15px !important;
+    margin-bottom: 10px;
+}
 .subToolSectionImg{
     position: absolute;
     width: 100%;
@@ -171,9 +186,24 @@
    
 }
 
-
-
-
+.multiSelectActions{
+    display: flex;
+    width: 100%;
+    justify-content: right;
+}
+.selectedItems{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 10px;
+    font-size: 15px !important;
+    margin-top: 3px;
+    span{
+        margin-right: 3px;
+        font-size: 20px;
+        font-family: YekanBold;
+    }
+}
 
 
 
@@ -200,6 +230,7 @@
 // Right side thing
 .minimizedState{
     height:100%;
+    position: f;
     width:55px; 
     border: solid 1px rgb(194, 194, 194);
      margin:0px 0px 0px auto;
@@ -236,6 +267,7 @@
     flex-direction: column;
 }
 .expendedRightSideDiv{
+    max-height: 95vh;
     height:100%;
     max-width:22%; 
     width: 100%;
@@ -355,5 +387,134 @@
     span{
         color: black;
         
+    }
+}
+
+
+
+
+
+.innerScroll{
+    overflow-y: scroll;
+    overflow-x: hidden;
+    width: 100%;
+    display:flex; 
+    height:80vh;
+}
+.fileMainDiv{
+    width:100%;
+    padding:0px 10px 0px 10px;
+}
+.routeDiv{
+    text-align:left;
+    font-family:YekanBold; 
+    font-size:22px;
+    padding:15px 0px 0px 10px;
+}
+
+.SelectBtnDiv{
+    display: none;
+}
+.resPonsiveFuncBtn{
+    right:70px
+}
+.checkBoxDiv{
+    display: inline-block;
+}
+.checkBoxDivSelect{
+   
+    display: none;
+}
+.menuNormal{
+    display: inline-block;
+}
+.menuResponsive{
+    display: none;
+}
+@media only screen and (max-width: 768.98px) {
+    .mainContainer{
+        overflow: hidden !important;
+        height: 100%;
+        text-align: center;
+        width: 100%;
+        position: static;
+       
+        margin: 0px auto 0px auto;
+    }
+    
+
+    .innerScroll{
+        overflow-y: scroll;
+        overflow-x: hidden;
+    
+        display:flex; 
+        height:100%;
+        padding-bottom: 180px;
+    }
+
+    
+    .minimizedState{
+        display: none;
+    }
+    .expendedRightSideDiv{
+        display: none;
+    }
+    .fileMainDiv{
+        width:100%;
+        padding:0px 10px 0px 10px;
+    }
+    .routeDiv{
+        text-align:left;
+        font-family:YekanBold; 
+        font-size:18px;
+        overflow-x: scroll;
+        padding:12px 0px 8px 5px;
+    }
+    .funcBtn{
+        width: 100%;
+        display: flex;
+        padding: 0px 5px 0px 5px;
+        display: none;
+    }
+    .topSec{
+        width: 100%;
+        display: flex;
+        padding: 10px 0px 10px 0px;
+        height: 62px;
+        position: relative;
+    }
+    .SelectBtnDiv{
+        display: block;
+    }
+    
+    .resPonsiveFuncBtn{
+        right:0px
+    }
+    .checkBoxDivSelect{
+        display: inline-block;
+        width: 100%;
+    }
+    .checkBoxDiv{
+        display: none;
+    }
+    .menuNormal{
+        display: none;
+    }
+    .menuResponsive{
+        display: block;
+        width: 100%;
+    }
+    .multiSelectActions{
+        display: flex;
+        width: 100%;
+        justify-content: right;
+
+    }
+}
+
+
+@media only screen and (max-width: 576.98px) {
+    .selectedItems{
+        display: none;
     }
 }

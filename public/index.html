@@ -29,11 +29,20 @@
       name="description"
       content="XCAPITAL managment software"
     />
+
     <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
     -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="XMS">
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon-192x192.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon-256x256.png" sizes="256x256">
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon-384x384.png" sizes="384x384">
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/icon-512x512.png" sizes="512x512">
+
     <link rel="stylesheet" href="../src/assets/flags/flag.min.css">
       <link rel="stylesheet" href="../src/assets/flags/flag.css">
     <!--
@@ -47,17 +56,21 @@
     -->
     <title>xms</title>
   </head>
+
   <body>
-    <header id="headSec"></header>
+    <header  style="position: fixed; top: 0px; width: 100%;" id="headSec"></header>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <div id="speedDial"></div>
-    <div id="ovForms"></div>
+    <div style="z-index: 900;" id="speedDial"></div>
+    <div style="position: fixed;  top:0px; z-index: 1401;" id="ovForms"></div>
     <div id="toast"></div>
-    <div id="modal"></div>
-    <div id="mainFiles"></div>
-    <div id="mis"></div>
-    <div id="crm"></div>
+    <div style="position: fixed;" id="modal"></div>
+    <div  id="mainFiles"></div>
+    <div id="showLinkContent"></div>
+
+    <div  id="mis"></div>
+    <div  id="crm"></div>
+    <div  id="jobReport"></div>
 
     <!--
       This HTML file is a template.
@@ -70,7 +83,7 @@
       To create a production bundle, use `npm run build` or `yarn build`.
     -->
   </body>
-  <script>
+  <!-- <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
           navigator.serviceWorker
@@ -83,8 +96,44 @@
             .catch((err) => console.log('ServiceWorker registration failed: ', err));
         });
       }
-  </script>
+  </script> -->
   <script src="https://unpkg.com/react/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-bootstrap@next/dist/react-bootstrap.min.js" crossorigin></script>
+  <script>
+    {
+      const nav = document.querySelector('#headSec');
+      let lastScrollY = window.scrollY;
+
+      window.addEventListener('scroll' , ()=>{
+        if(lastScrollY < window.scrollY){
+          nav.classList.add('scaleOutSearchBar')
+          nav.classList.remove('scaleInSearchBar')
+        } else {
+          nav.classList.add('scaleInSearchBar')
+          nav.classList.remove('scaleOutSearchBar')
+        }
+        lastScrollY = window.scrollY;
+      });
+    }
+  </script>
+
+
+<script>
+  {
+    const nav = document.querySelector('#speedDial');
+    let lastScrollY = window.scrollY;
+
+    window.addEventListener('scroll' , ()=>{
+      if(lastScrollY < window.scrollY){
+        nav.classList.add('floatBtnOut')
+        nav.classList.remove('floatBtnIn')
+      } else {
+        nav.classList.add('floatBtnIn')
+        nav.classList.remove('floatBtnOut')
+      }
+      lastScrollY = window.scrollY;
+    });
+  }
+</script>
 </html>

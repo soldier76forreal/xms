@@ -1,0 +1,31 @@
+
+.logOutBtn{
+  width: 45px;
+  height: 40px;
+  background-color: rgb(227, 41, 41);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.2s all ease-in-out;
+}
+.logOutBtn:hover{
+    background-color: rgb(245, 117, 117);
+  }
+.settingBtn{
+    width: 185px !important;
+    height: 40px;
+    margin: 0px 0px 0px auto;
+    background: none !important;
+    border: solid 2px rgb(172, 172, 172);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.2s all ease-in-out;
+}
+.settingBtn:hover{
+    background: rgb(54, 54, 54) !important;
+}

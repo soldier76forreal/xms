@@ -12,7 +12,7 @@ const SuccessMsgPortal =(props)=>{
     const cssClass = ['successMsg' , props.openMsg === true? 'successMsgAnimateIn' : 'successMsgAnimateOut'];
     return(
         <Fragment>
-                <div dir='rtl' className={cssClass.join(' ')}>
+                <div dir='ltr' className={cssClass.join(' ')}>
                     <div className='msgDiv'> 
                         <div className='iconMsg'>
                             <CheckCircleIcon className='iconTick' sx={{ color:'rgb(126, 240, 97)'}}  icon='check-circle'></CheckCircleIcon>

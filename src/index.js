@@ -15,7 +15,9 @@ import { WebSectionsProvider } from './contextApi/webSection';
 import { AuthContextProvider } from './components/authAndConnections/auth';
 import { SocketContextProvider } from './components/authAndConnections/socketReq';
 import { Provider } from 'react-redux';
-import store from './store/fileManager';
+import store from './store/store';
+
+import { PageSectionProvider } from './contextApi/pageSection';
 
 
 
@@ -25,27 +27,25 @@ const THEME = createTheme({
    "fontFamily": `"YekanRegular", sans-serif`,
   }
 });
+
 root.render(
   <React.StrictMode>
-    <Provider store={store}>
-    <BrowserRouter>
-      <AxiosGlobalProvider>
-        <ThemeProvider theme={THEME}>
-          <AuthContextProvider>
-            
-              <WebSectionsProvider>
-               
-                  <SocketContextProvider>
-                   
-                    <App />
-                  </SocketContextProvider>
-            
-              </WebSectionsProvider>
-           
-          </AuthContextProvider>
-        </ThemeProvider>
-      </AxiosGlobalProvider>
-    </BrowserRouter>
+      <Provider store={store}>
+        <BrowserRouter>
+          <AxiosGlobalProvider>
+            <ThemeProvider theme={THEME}>
+              <AuthContextProvider>
+                <PageSectionProvider>
+                  <WebSectionsProvider>
+                      <SocketContextProvider>
+                        <App />
+                      </SocketContextProvider>
+                  </WebSectionsProvider>
+                </PageSectionProvider>
+              </AuthContextProvider>
+            </ThemeProvider>
+          </AxiosGlobalProvider>
+        </BrowserRouter>
     </Provider>
   </React.StrictMode>
 );

@@ -102,7 +102,7 @@ const NewPreInvoicePortal = (props) =>{
             
             if(insertFactor === true){
             if(name === ''){
-                setNameErr({status:true , msg:'نام سنگ را وارد کنید'});
+                setNameErr({status:true , msg:'نام محصول را وارد کنید'});
                 stoneNameRef.current.scrollIntoView();
                 setLoadingAndSend(false)
                 setLoading(false)
@@ -179,7 +179,7 @@ const NewPreInvoicePortal = (props) =>{
             // }
         }else if(insertFactor === false){
             if(name === ''){
-                setNameErr({status:true , msg:'نام سنگ را وارد کنید'});
+                setNameErr({status:true , msg:'نام محصول را وارد کنید'});
                 stoneNameRef.current.scrollIntoView();
                 setLoadingAndSend(false)
                 setLoading(false)
@@ -221,13 +221,13 @@ const NewPreInvoicePortal = (props) =>{
                 setLoading(false)
             }
             if(stoneThickness === ''){
-                setStoneThicknessErr({status:true , msg:'قطر سنگ - سایز را وارد کنید'});
+                setStoneThicknessErr({status:true , msg:'قطر محصول - سایز را وارد کنید'});
                 invoiceDateRef.current.scrollIntoView();
                 setLoadingAndSend(false)
                 setLoading(false)
             }
             if(stoneRate === ''){
-                setStoneRateErr({status:true , msg:'درجه سنگ را وارد کنید'});
+                setStoneRateErr({status:true , msg:'درجه کیفی محصول را وارد کنید'});
                 costCnfRef.current.scrollIntoView();
                 setLoadingAndSend(false)
                 setLoading(false)
@@ -331,7 +331,7 @@ const NewPreInvoicePortal = (props) =>{
                         <div onClick={()=>{props.setNewPreInvoiceStatus(false); history.push('#newPreInvoices')}} className={Style.backBtn}><ArrowBackIosIcon className={Style.arrowIcon} sx={{color:'#000' , fontSize:'30px'}}></ArrowBackIosIcon></div>
                         <div className={Style.topTitle}>پیش فاکتور جدید</div>
                     </div>
-                    <div style={{overflowY:'scroll' , height:'95vh'}}>              
+                    <div style={{overflowY:'scroll' , height:'100vh' , padding:'0px 0px 40px 00px'}}>              
                         {decoded.access.includes('inv')?
                             <div   className={Style.formDiv}>
                                 <div className={Style.secTitle}>پیش فاکتور</div>
@@ -339,7 +339,7 @@ const NewPreInvoicePortal = (props) =>{
                                     <Row style={{marginBottom:'10px'}}>
                                         <Col style={{padding:'0px 10px 0px 10px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div ref={stoneNameRef}>
-                                                <MuiInput value={name} onChange={(e)=>{setName(e.target.value); setNameErr({status:false , msg:''})}} err={nameErr} name='نام سنگ' type='normal' width='100%'></MuiInput>
+                                                <MuiInput value={name} onChange={(e)=>{setName(e.target.value); setNameErr({status:false , msg:''})}} err={nameErr} name='نام محصول' type='normal' width='100%'></MuiInput>
                                             </div>
                                         </Col>
                                     </Row>
@@ -448,19 +448,19 @@ const NewPreInvoicePortal = (props) =>{
                                                 <Row style={{marginBottom:'10px', padding:'0px 10px 0px 10px'}}>
                                                         <Col style={{ padding:'0px 5px 0px 0px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
                                                             <div ref={stoneRateRef}>
-                                                                <MuiInput insertFactor={insertFactor} err={stoneRateErr} value={stoneRate} onChange={(e)=>{setStoneRate(e.target.value); setStoneRateErr({status:false , msg:''})}} name='درجه سنگ' type='normal' width='100%'></MuiInput>
+                                                                <MuiInput insertFactor={insertFactor} err={stoneRateErr} value={stoneRate} onChange={(e)=>{setStoneRate(e.target.value); setStoneRateErr({status:false , msg:''})}} name='درجه کیفی محصول' type='normal' width='100%'></MuiInput>
                                                             </div>
                                                         </Col>
                                                         <Col style={{ padding:'0px 0px 0px 5px'}} xs={6} md={6} lg={6} xl={6} xxl={6}>
                                                             <div ref={stoneThicknessRef}>
-                                                                <MuiInput insertFactor={insertFactor} err={stoneThicknessErr} value={stoneThickness} onChange={(e)=>{setStoneThickness(e.target.value); setStoneThicknessErr({status:false , msg:''})}} name='قطر سنگ - سایز' type='normal' width='100%'></MuiInput>
+                                                                <MuiInput insertFactor={insertFactor} err={stoneThicknessErr} value={stoneThickness} onChange={(e)=>{setStoneThickness(e.target.value); setStoneThicknessErr({status:false , msg:''})}} name='قطر محصول - سایز' type='normal' width='100%'></MuiInput>
                                                             </div>
                                                         </Col>
                                                 </Row> 
                                                 <Row style={{marginBottom:'5px' , padding:'0px 5px 0px 10px'}}>
                                                     <Col style={{ padding:'0px 5px 0px 0px'}}  xs={12} md={12} lg={12} xl={12} xxl={12}>
                                                         <div ref={dateOfShipmentRef}>
-                                                            <label style={{marginBottom:'5px' , fontSize:'13px'}}>تاریخ آماده شدن سنگ برای بارگیری</label>
+                                                            <label style={{marginBottom:'5px' , fontSize:'13px'}}>تاریخ آماده شدن محصول برای بارگیری</label>
                                                             <Datep insertFactor={insertFactor}  onChange={(e)=>{setDateOfShipment(e)}}></Datep>    
                                                         </div>
                                                     </Col>
@@ -483,7 +483,7 @@ const NewPreInvoicePortal = (props) =>{
                                     <Row style={{marginBottom:'10px'}}>
                                         <Col style={{padding:'0px 10px 0px 10px'}}  xs={12} md={12} lg={12} xl={12} xxl={12}>
                                             <div  ref={stoneNameRef}>
-                                                <MuiInput value={name} onChange={(e)=>{setName(e.target.value); setNameErr({status:false , msg:''})}} err={nameErr} name='نام سنگ' type='normal' width='100%'></MuiInput>
+                                                <MuiInput value={name} onChange={(e)=>{setName(e.target.value); setNameErr({status:false , msg:''})}} err={nameErr} name='نام محصول' type='normal' width='100%'></MuiInput>
                                             </div>
                                         </Col>
                                     </Row>

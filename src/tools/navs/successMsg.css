@@ -1,6 +1,5 @@
 .msgDiv{
     background-color: rgb(21, 21, 21);
-    border: solid rgb(126, 240, 97) 3px;
     height: 60px;
     max-width: 300px;
     border-radius: 50px;
@@ -22,7 +21,7 @@
 .iconMsg{
     display: inline-block;
  
-    padding-right: 10px;
+    padding-left: 10px;
     text-align: right;
 }
 
@@ -30,7 +29,7 @@
     display: flex;
     height: fit-content;
     margin-top: 10px;
-    margin-right: 5px;
+    margin-left: 5px;
     justify-content: center;
     align-items: center;
     font-family:YekanRegular ;
@@ -63,7 +62,6 @@
     }
     .msgDiv{
         background-color: rgb(21, 21, 21);
-        border: solid rgb(126, 240, 97) 2px;
         height: 54px;
         max-width: 250px;
         border-radius: 50px;

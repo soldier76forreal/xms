@@ -50,10 +50,10 @@ export default function CardMenu(props) {
         }}
       >
           <MenuItem   onClick={(e)=>{ props.deleteModal(props.id); e.stopPropagation(); handleClose()}}>
-            حذف
+            Delete
           </MenuItem>
-          <MenuItem   onClick={(e)=>{props.setEditCustomer({status:true , theCustomer:props.data});e.stopPropagation();console.log(props.data); handleClose()}}>
-            ویرایش
+          <MenuItem   onClick={(e)=>{props.setEditCustomer({status:true , theCustomer:props.data});e.stopPropagation(); handleClose()}}>
+            Edit
           </MenuItem>
           
       </Menu>

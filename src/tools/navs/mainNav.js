@@ -12,7 +12,7 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import NormalMenuForProfile from './normalMenuForProfile';
 
-
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EmailIcon from '@mui/icons-material/Email';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Search } from "@mui/icons-material";
@@ -23,10 +23,16 @@ import LeftSideNav from "./leftSideNav";
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import AuthContext from "../../components/authAndConnections/auth";
 import Notfications from "../../components/mis/notfications";
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
+import FilterModal from "./filterModal";
+import SearchBar from "./searchModule";
 const MainNavPortal = (props) =>{
     const [showNotfication , setShowNotfication] = useState(false);
     const [notifCount , setNotifCount] = useState();
     const authContext = useContext(AuthContext);
+    const [status , setStatus] = useState(false);
+    const [openFilterModal , setOpenFilterModal] = useState(false);
+
     const [leftSideNav , setLeftSideNav] = useState({
         left: false,
       
@@ -45,6 +51,7 @@ const MainNavPortal = (props) =>{
       const [anchorEl, setAnchorEl] = useState(null);
       const open = Boolean(anchorEl);
       const handleClick = (event) => {
+        
         setAnchorEl(event.currentTarget);
       };
       const handleClose = () => {
@@ -56,33 +63,37 @@ const MainNavPortal = (props) =>{
       };
     return(
         <Fragment>
+            <FilterModal  setOpenFilterModal={setOpenFilterModal} openFilterModal={openFilterModal}></FilterModal>
             <Notfications notifCount={(e)=>{setNotifCount(e)}}  setShowNotfication={setShowNotfication} showNotfication={showNotfication}></Notfications>
             <NormalMenuForProfile logOut={logOut} handleClick={handleClick} handleClose={handleClose} open={open} anchorEl={anchorEl} setAnchorEl={setAnchorEl}></NormalMenuForProfile>
-            <LeftSideNav toggleDrawer={toggleDrawer} setLeftSideNav={setLeftSideNav} leftSideNav={leftSideNav}></LeftSideNav>
-            <div  className={Style.navDiv}>
+            <LeftSideNav a11yProps={props.a11yProps} toggleDrawer={toggleDrawer} setLeftSideNav={setLeftSideNav} leftSideNav={leftSideNav}></LeftSideNav>
+            <div dir="ltr" className={Style.navDiv}>
                 <Navbar className={Style.navBar}  expand="lg">
                     <Container className={Style.containerDiv}> 
-                        <Button onClick={toggleDrawer('left', true)} variant="contained" endIcon={<MenuIcon />}>
-                        ابزارها
-                        </Button>
-                    <div className={Style.searchBar}>
+                    <div style={{textAlign:'left',width:'5%'}}>
+                        <botton onClick={leftSideNav.left===true?toggleDrawer('left', false):toggleDrawer('left', true)} style={{backgroundColor:'black', padding:'6px 7px 6px 7px' , borderRadius:'3px'}}>
+                            {leftSideNav.left === false?<MenuIcon sx={{fontSize:'22px'}}/>:<ArrowBackIcon sx={{fontSize:'22px'}}/>}
+                        </botton>
                         
                     </div>
+                    <div className={Style.searchBar}>
+                        <SearchBar></SearchBar>
+                    </div>
                     <div className={Style.rightSideDiv}>
-                        <div onClick={()=>{showNotfication?setShowNotfication(false):setShowNotfication(true)}} className={Style.searchBtn}>
-                            <buttom >
+                        <div style={{background:'none',border:'solid black 2px'}} onClick={()=>{showNotfication?setShowNotfication(false):setShowNotfication(true)}} className={Style.searchBtn}>
+                            <botton >
                                 <Badge badgeContent={notifCount} color="primary">
                                     <NotificationsIcon sx={{color:'#000' , fontSize:'22px' , marginTop:'1px'}}></NotificationsIcon>
                                 </Badge>
-                            </buttom>
+                            </botton>
                         </div>
-                        <div className={Style.userBtn}>
-                            <buttom>
-                                <Badge badgeContent={0} color="primary">
+                        <div style={{background:'none',border:'solid black 2px'}} className={Style.userBtn}>
+                            <botton >
+                                <Badge  badgeContent={0} color="primary">
                                     <EmailIcon sx={{color:'#000' , fontSize:'22px' , marginTop:'1px'}}></EmailIcon>
                                 </Badge>
 
-                            </buttom>
+                            </botton>
                         </div>
                         <div 
                             id="demo-positioned-button"

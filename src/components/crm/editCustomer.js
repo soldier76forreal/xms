@@ -32,6 +32,8 @@ import WhatsAppBW from '../../assets/whatsappB&W.png';
 import MiladiDatePicker from '../../tools/inputs/datePickerMiladi';
 import { CircularProgress } from '@mui/material';
 import Divider from '@mui/material/Divider';
+import { useDispatch } from 'react-redux';
+import { actions } from '../../store/store';
 
 const EditCustomerPortal = (props) =>{
     //hooks
@@ -40,6 +42,7 @@ const EditCustomerPortal = (props) =>{
     const history = useHistory();
     var decoded = jwtDecode(authCtx.token);
     const MySwal = withReactContent(Swal)
+    const dispatch = useDispatch()
     //personal information states
     const [firstName , setFirstName] = useState(null);
     const [lastName , setLastName] = useState(null);
@@ -51,6 +54,12 @@ const EditCustomerPortal = (props) =>{
     const [customerFavoriteProducts , setCustomerFavoriteProducts] = useState([]);
     const [calenderType , setCalenderType] = useState('shamsi');
     const [loading , setLoading] = useState(false);
+    
+
+
+
+
+
     //phone numbers information states
 
     const [phoneNumbers , setPhoneNumbers] = useState([]);
@@ -62,7 +71,14 @@ const EditCustomerPortal = (props) =>{
     const [addresses  , setAddresses] = useState([]);
 
     const [explanations , setExplanations] = useState(null);
+    //instagrams information states
+    const [instagrams , setInstagrams] = useState([{instagram:''}]);
 
+    //websites information states
+    const [websites , setWebsites] = useState([{website:''}]);
+
+    //linkedIns information states
+    const [linkedIns , setLinkedIns] = useState([{linkedIn:''}]);
     useEffect(() => {
         if(props.editCustomer.status === true){
            var result = props.editCustomer.theCustomer;
@@ -89,7 +105,6 @@ const EditCustomerPortal = (props) =>{
                 }
                 if(result.personalInformation.dateOfBirth !==null){
                     setCalenderType(result.personalInformation.dateOfBirth.dateType)
-
                 }
                 if(result.explanations !==null){
                     setExplanations(result.explanations)
@@ -106,6 +121,23 @@ const EditCustomerPortal = (props) =>{
                 }else if(result.contactInfo.emails ===null){
                     setEmails([{email:''}])
                 }
+                
+                if(result.contactInfo.instagrams !==null){
+                    setInstagrams([...result.contactInfo.instagrams])
+                }else if(result.contactInfo.instagrams ===null){
+                    setInstagrams([{instagram:''}])
+                }
+                if(result.contactInfo.websites !==null){
+                    setWebsites([...result.contactInfo.websites])
+                }else if(result.contactInfo.websites ===null){
+                    setWebsites([{website:''}])
+                }
+                if(result.contactInfo.linkedIns !==null){
+                    setLinkedIns([...result.contactInfo.linkedIns])
+                }else if(result.contactInfo.linkedIns ===null){
+                    setLinkedIns([{linkedIn:''}])
+                }
+
         }
     }, [props.editCustomer.status])
     
@@ -113,16 +145,28 @@ const EditCustomerPortal = (props) =>{
    
     //numbers phone call onChange
     const getCountryCode = (e , j) =>{
-        var tempAr = [...phoneNumbers];
-        tempAr[j.name].countryCode = e.phone;
-        setPhoneNumbers([...tempAr]);
-        
+
+        const updatedItems = phoneNumbers.map((item,i) => {
+        if (parseInt(j.name) === parseInt(i)) {
+            return { ...item, countryCode: e.phone };
+        }
+        return item;
+        });
+        // Update the state with the new array
+        setPhoneNumbers([...updatedItems]);
     }
 
     const getPhoneNumber = (e) =>{
-        var tempAr = [...phoneNumbers];
-        tempAr[e.target.name].number = e.target.value;
-        setPhoneNumbers([...tempAr]);
+
+        const updatedItems = phoneNumbers.map((item,i) => {
+        if (parseInt(e.target.name) === parseInt(i)) {
+            return { ...item, number: e.target.value };
+        }
+        return item;
+        });
+        // Update the state with the new array
+        setPhoneNumbers([...updatedItems]);
+        
        
     }
 
@@ -130,78 +174,162 @@ const EditCustomerPortal = (props) =>{
 
     //email onChange 
     const getEmail = (e) =>{
-        var tempAr = [...emails];
-        tempAr[e.target.name].email = e.target.value;
-        setEmails([...tempAr]);
+        const updatedItems = emails.map((item,i) => {
+            if (parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, email: e.target.value };
+            }
+            return item;
+        });
+        // Update the state with the new array
+        setEmails([...updatedItems]);
         
     }
 
+    //instagram onChange 
+    const getInstagram = (e) =>{
+        const updatedItems = instagrams.map((item,i) => {
+            if (parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, instagram: e.target.value };
+            }
+            return item;
+        });
+        // Update the state with the new array
+        setInstagrams([...updatedItems]);
+        
+    }
+    
 
+    //website onChange 
+    const getWebsite = (e) =>{
+        const updatedItems = websites.map((item,i) => {
+            if (parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, website: e.target.value };
+            }
+            return item;
+        });
+        // Update the state with the new array
+        setWebsites([...updatedItems]);
+        
+    }
+    
+    //linkedIns onChange 
+    const getLinkeIn = (e) =>{
+        const updatedItems = linkedIns.map((item,i) => {
+            if (parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, linkedIn: e.target.value };
+            }
+            return item;
+        });
+        // Update the state with the new array
+        setLinkedIns([...updatedItems]);
+        
+    }
 
     //address onChange
     const getAddressCountry = (e , j) =>{
-        var tempAr = [...addresses];
-        tempAr[j.name].country = e.code;
-        setAddresses([...tempAr]);
-       
+        const updatedItems = addresses.map((item,i) => {
+        if(parseInt(j.name) === parseInt(i)) {
+            return { ...item, country: e.code};
+        }
+            return item;
+        });
+        setAddresses([...updatedItems]);
     }
 
 
     const getProvince = (e) =>{
-        var tempAr = [...addresses];
-        tempAr[e.target.name].province = e.target.value;
-        setAddresses([...tempAr]);
-        
+        const updatedItems = addresses.map((item,i) => {
+        if(parseInt(e.target.name) === parseInt(i)) {
+            return { ...item, province: e.target.value};
+        }
+            return item;
+        });
+        setAddresses([...updatedItems]);
     }
 
     
     const getCity = (e) =>{
-        var tempAr = [...addresses];
-        tempAr[e.target.name].city = e.target.value;
-        setAddresses([...tempAr]);
-       
+        const updatedItems = addresses.map((item,i) => {
+            if(parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, city: e.target.value};
+            }
+                return item;
+        });
+        setAddresses([...updatedItems]);
     }
 
     const getNeighbourhood = (e) =>{
-        var tempAr = [...addresses];
-        tempAr[e.target.name].neighbourhood = e.target.value;
-        setAddresses([...tempAr]);
-        
+        const updatedItems = addresses.map((item,i) => {
+            if(parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, neighbourhood: e.target.value};
+            }
+                return item;
+        });
+        setAddresses([...updatedItems]);
     }
     const getStreet = (e) =>{
-        var tempAr = [...addresses];
-        tempAr[e.target.name].street = e.target.value;
-        setAddresses([...tempAr]);
-        
+        const updatedItems = addresses.map((item,i) => {
+            if(parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, street: e.target.value};
+            }
+                return item;
+        });
+        setAddresses([...updatedItems]);
     }
     const getPlate = (e) =>{
-        var tempAr = [...addresses];
-        tempAr[e.target.name].plate = e.target.value;
-        setAddresses([...tempAr]);
-        
+        const updatedItems = addresses.map((item,i) => {
+            if(parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, plate: e.target.value};
+            }
+                return item;
+        });
+        setAddresses([...updatedItems]);   
     }
     const getPostalCode = (e) =>{
-        var tempAr = [...addresses];
-        tempAr[e.target.name].postalCode = e.target.value;
-        setAddresses([...tempAr]);
-        
+        const updatedItems = addresses.map((item,i) => {
+            if(parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, postalCode: e.target.value};
+            }
+                return item;
+        });
+        setAddresses([...updatedItems]);
     }
     const getMapLink = (e) =>{
-        var tempAr = [...addresses];
-        tempAr[e.target.name].mapLink = e.target.value;
-        setAddresses([...tempAr]);
-        
+        const updatedItems = addresses.map((item,i) => {
+            if(parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, mapLink: e.target.value};
+            }
+                return item;
+        });
+        setAddresses([...updatedItems]);
     }
     const getAddressExplanations = (e) =>{
-        var tempAr = [...addresses];
-        tempAr[e.target.name].addressExplanations = e.target.value;
-        setAddresses([...tempAr]);
-        
+        console.log(e.target.value)
+        const updatedItems = addresses.map((item,i) => {
+            if(parseInt(e.target.name) === parseInt(i)) {
+                return { ...item, addressExplanations: e.target.value};
+            }
+                return item;
+        });
+        setAddresses([...updatedItems]);
     }
 
 
     const saveData = async() =>{
         setLoading(true)
+        const checkArray = (arr , innerType) =>{
+            if(arr[0] !== undefined){
+                if(arr[0].innerType === ''){
+                    return null
+                }else{
+                    return arr
+                }
+            }else if(arr.length === 0){
+                return null
+            }else{
+                return arr
+            }
+        }
         const dataToSend = {
             personalInformation:{
                 firstName : firstName,
@@ -214,7 +342,11 @@ const EditCustomerPortal = (props) =>{
                 calenderType:calenderType
             },
             phoneNumberInformation : phoneNumbers,
-            email:emails[0].email === '' ? null : emails,
+            
+            email:checkArray(emails ,'email'),
+            instagram:checkArray(instagrams ,'instagram'),
+            website:checkArray(websites ,'website'),
+            linkedIn:checkArray(linkedIns ,'linkedIn'),
             address: addresses,
             generatedBy:decoded.id,
             explanations:explanations,
@@ -224,8 +356,8 @@ const EditCustomerPortal = (props) =>{
         if(firstName === '' || lastName === '' || phoneNumbers[0].number ==='' || phoneNumbers[0].countryCode ===''){
             Swal.fire({
                 icon: 'error',
-                title: 'خطا',
-                text: 'برای اضافه کردن مشتری جدید، باید حداقل نام و نام خانوادگی شماره تماس را وارد کنید',
+                title: 'Error',
+                text: 'To add new customer, you have to enter first name ,last name and phone number.',
               })
             setLoading(false)
         }else{
@@ -238,10 +370,11 @@ const EditCustomerPortal = (props) =>{
                 })
                 
                 const dataRes = response.data;
-                props.setSuccessToast({status:true , msg:'ویرایش مشتری انجام شد'});
+                
+                props.setSuccessToast({status:true , msg:'Customer information has been edited'});
                 const closingNewPreInvoice = setTimeout(()=>{props.setEditCustomer({status:false , theCustomer:{}});setLoading(false)}, 500);
-                const closingSuccessMsgTimeOut = setTimeout(()=>{props.setSuccessToast({status:false , msg:'ویرایش مشتری انجام شد'})}, 3000);
-                props.setRefresh(Math.random())
+                const closingSuccessMsgTimeOut = setTimeout(()=>{props.setSuccessToast({status:false , msg:'Customer information has been edited'})}, 3000);
+                dispatch(actions.crmRefresh())
             }catch(err){
                 console.log(err);
                 setLoading(false)
@@ -254,28 +387,28 @@ const EditCustomerPortal = (props) =>{
             <div style={props.editCustomer.status === true?{display:'block'}:{display:'none'}}  className={props.editCustomer.status === true? `${Style.newInvoice} ${Style.fadeIn}` : props.editCustomer.status === false?`${Style.newInvoice} ${Style.fadeOut}`:null}>
                 <div className={Style.topSection}>
                     <div onClick={()=>{props.setEditCustomer({status:false , theCustomer:{}});}} className={Style.backBtn}><ArrowBackIos className={Style.arrowIcon} sx={{color:'#000' , fontSize:'30px'}}></ArrowBackIos></div>
-                    <div className={Style.topTitle}>ویرایش مشخصات مشتری</div>
+                    <div className={Style.topTitle}>Edit customer information</div>
                 </div>
-                <div className={Style.ovDiv}  dir='rtl'  style={{maxWidth:'700px' , overflowY:'scroll' , height:'95vh' , padding:"0px 15px 60px 15px"}}>
+                <div className={Style.ovDiv}    style={{maxWidth:'700px' , overflowY:'scroll' , height:'95vh' , padding:"0px 15px 60px 15px"}}>
                     <div className={Style.titlePaddign}>
-                        <BigOneWithDot text="مشخصات فردی"></BigOneWithDot>
+                        <BigOneWithDot text="Personal information"></BigOneWithDot>
                     </div>
                     <div className={Style.personalInformationFirstOne}>
                         <Row className="g-0">
                             <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1000'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
-                                <CustomSelect value={personCountry} onChange={(e)=>{setPersonCountry(e.code)}} selectType='countryWithFlag' placeholder="کشور"></CustomSelect>
+                                <CustomSelect value={personCountry} onChange={(e)=>{setPersonCountry(e.code)}} selectType='countryWithFlag' placeholder="Country"></CustomSelect>
                             </Col>
                             <Col style={{padding:'10px 5px 0px 5px' , zIndex:'1999'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
-                                <CustomSelect value={customerOrigin} onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="جذب شده از طریق"></CustomSelect>
+                                <CustomSelect value={customerOrigin} onChange={(e)=>{setCustomerOrigin(e.id)}}  selectType='customerOrigin' placeholder="Attracted customers through"></CustomSelect>
                             </Col>
                             {/* <Col style={{padding:'10px 5px 0px 5px' , zIndex:'2000'}} sm={12} md={12} lg={2} xl={2} xxl={2} xs={6}>
                                 <CustomSelect value={personCountry}  onChange={(e)=>{setPersonTitle(e.id)}} selectType='personTitle' placeholder="عنوان"></CustomSelect>
                             </Col> */}
                             <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
-                                <TextInputNormal value={firstName} onChange={(e)=>{setFirstName(e.target.value)}}  placeholder="نام"></TextInputNormal>
+                                <TextInputNormal value={firstName} onChange={(e)=>{setFirstName(e.target.value)}}  placeholder="First name"></TextInputNormal>
                             </Col>
                             <Col style={{padding:'10px 5px 0px 5px'}} sm={12} md={12} lg={12} xl={6} xxl={6} xs={6}>
-                                <TextInputNormal value={lastName} onChange={(e)=>{setLastName(e.target.value)}} placeholder="نام خانوادگی"></TextInputNormal>
+                                <TextInputNormal value={lastName} onChange={(e)=>{setLastName(e.target.value)}} placeholder="Last name"></TextInputNormal>
                             </Col>
                         </Row>
                         <Row className="g-0" style={{padding:'0px 0px 5px 0px'}}>
@@ -305,23 +438,22 @@ const EditCustomerPortal = (props) =>{
                     <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)' , margin:'10px 0px 10px 0px'}}></Divider>
                     <div>
                         <div className={Style.titlePaddignSecond}>
-                            <BigOneWithDot text="اطلاعات تماس"></BigOneWithDot>
+                            <BigOneWithDot text="Contact information"></BigOneWithDot>
                         </div>
 
-                        <Row className="g-0" dir='rtl' style={{padding:'2px 0px 0px 0px'}}>
+                        <Row className="g-0" style={{padding:'2px 0px 0px 0px'}}>
                             <div className={Style.littleTitleDiv}>
-                                <LittleOneNormal text='شماره تماس'></LittleOneNormal>
+                                <LittleOneNormal text='Phone number'></LittleOneNormal>
                                 <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
                             </div>
 
                             <Col sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
-                                <IconBotton  onClick={()=>{var a = [...phoneNumbers]; a.push({title:'' , countryCode:'' , number:'' , whatsApp:false}); setPhoneNumbers([...a])}} color='black' name='شماره تماس جدید' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                                <IconBotton  onClick={()=>{var a = [...phoneNumbers]; a.push({title:'' , countryCode:'' , number:'' , whatsApp:false}); setPhoneNumbers([...a])}} color='black' name='New phone number' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
                             </Col>
                         </Row>
                             {phoneNumbers.map((data , i)=>{
-                              console.log(data)
                                 return(
-                                    <Row key={i} className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px' , marginTop:'5px'}}>
+                                    <Row key={i} className="g-0"  style={{padding:'5px 0px 5px 0px' , marginTop:'5px'}}>
                                         <Col style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={7} xl={7} xxl={7} >
                                             <div className={Style.phoneNumberMainDiv}>
                                                 <div>
@@ -334,12 +466,12 @@ const EditCustomerPortal = (props) =>{
                                                 <div style={{padding:'4px 10px 0px 10px'}} className={Style.dot}>{i+1}</div>
                                                     <IconBotton onClick={()=>{var temp = [...phoneNumbers]; temp.splice(i,1); setPhoneNumbers([...temp]) }}  text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
                                                 <div className={Style.phoneNumberCountry}>
-                                                    <CustomSelect value={data.countryCode} name={i} onChange={getCountryCode} selectType='countryWithFlagAndCountryCode' placeholder="کد کشور"></CustomSelect>
+                                                    <CustomSelect value={data.countryCode} name={i} onChange={getCountryCode} selectType='countryWithFlagAndCountryCode' placeholder="Country code"></CustomSelect>
                                                 </div>
                                             </div>
                                         </Col>
                                         <Col  style={{padding:'10px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={5} xl={5} xxl={5} >
-                                            <TextInputNormal value={data.number} name={i} onChange={getPhoneNumber} placeholder="شماره تماس"></TextInputNormal>
+                                            <TextInputNormal value={data.number} name={i} onChange={getPhoneNumber} placeholder="Phone number"></TextInputNormal>
                                         </Col>
                                     </Row>
                                 )
@@ -347,15 +479,15 @@ const EditCustomerPortal = (props) =>{
                     </div>
                     
                     <div> 
-                        <Row className="g-0" dir='rtl' style={{padding:'30px 0px 0px 0px'}}>
+                        <Row className="g-0"  style={{padding:'30px 0px 0px 0px'}}>
                             <div className={Style.littleTitleDiv}>
-                                <LittleOneNormal  text='ایمیل'></LittleOneNormal>
+                                <LittleOneNormal  text='Email'></LittleOneNormal>
                                 <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
 
                             </div>
 
                             <Col style={{marginBottom:'5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
-                                    <IconBotton onClick={()=>{var a = [...emails]; a.push({email:''}); setEmails([...a])}} color='black' name='ایمیل جدید'  text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                                    <IconBotton onClick={()=>{var a = [...emails]; a.push({email:''}); setEmails([...a])}} color='black' name='New email'  text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
                             </Col>
                         </Row>
                         {emails.map((data , i)=>{
@@ -365,7 +497,7 @@ const EditCustomerPortal = (props) =>{
                                         <div className={Style.dot}>{i+1}</div>
                                         <IconBotton onClick={()=>{var temp = [...emails]; temp.splice(i,1); setEmails([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
                                         <div className={Style.phoneNumberCountry}>
-                                        <TextInputNormal value={data.email} name={i} onChange={getEmail} placeholder='ایمیل'></TextInputNormal>
+                                        <TextInputNormal value={data.email} name={i} onChange={getEmail} placeholder='Email'></TextInputNormal>
                                         </div>
 
                                     </div>
@@ -373,17 +505,93 @@ const EditCustomerPortal = (props) =>{
                             )
                         })}
                     </div>
+                    <Divider sx={{borderBottomWidth:'2px' , opacity:'0.2' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
+                    <div> 
+                        <Row className="g-0"  style={{padding:'30px 0px 0px 0px'}}>
+                            <div className={Style.littleTitleDiv}>
+                                <LittleOneNormal  text='instagram'></LittleOneNormal>
+                                <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
+                            </div>
+                            <Col style={{marginBottom:'5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                <IconBotton onClick={()=>{var a = [...instagrams]; a.push({instagram:''}); setInstagrams([...a])}} color='black' name='New instagram url'  text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                            </Col>
+                        </Row>
+                        {instagrams.map((data , i)=>{
+                            return(
+                                <Col style={{padding:'5px  0px 5px 0px'}} key={i} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                    <div className={Style.phoneNumberMainDiv}>
+                                        <div className={Style.dot}>{i+1}</div>
+                                            <IconBotton onClick={()=>{var temp = [...instagrams]; temp.splice(i,1); setInstagrams([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
+                                        <div className={Style.phoneNumberCountry}>
+                                            <TextInputNormal value={data.instagram} name={i} onChange={getInstagram} placeholder='Instagram profile url'></TextInputNormal>
+                                        </div>
+                                    </div>
+                                </Col>
+                            )
+                        })}
+                    </div>
+                    <Divider sx={{borderBottomWidth:'2px' , opacity:'0.2' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
+                    <div> 
+                        <Row className="g-0"  style={{padding:'30px 0px 0px 0px'}}>
+                            <div className={Style.littleTitleDiv}>
+                                <LittleOneNormal  text='Website'></LittleOneNormal>
+                                <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
+                            </div>
+                            <Col style={{marginBottom:'5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                <IconBotton onClick={()=>{var a = [...websites]; a.push({website:''}); setWebsites([...a])}} color='black' name='New Website url'  text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                            </Col>
+                        </Row>
+                        {websites.map((data , i)=>{
+                            return(
+                                <Col style={{padding:'5px  0px 5px 0px'}} key={i} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                    <div className={Style.phoneNumberMainDiv}>
+                                        <div className={Style.dot}>{i+1}</div>
+                                            <IconBotton onClick={()=>{var temp = [...websites]; temp.splice(i,1); setWebsites([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
+                                        <div className={Style.phoneNumberCountry}>
+                                            <TextInputNormal value={data.website} name={i} onChange={getWebsite} placeholder='Website url'></TextInputNormal>
+                                        </div>
+                                    </div>
+                                </Col>
+                            )
+                        })}
+                    </div>
+                    <Divider sx={{borderBottomWidth:'2px' , opacity:'0.2' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
+                    <div> 
+                        <Row className="g-0"  style={{padding:'30px 0px 0px 0px'}}>
+                            <div className={Style.littleTitleDiv}>
+                                <LittleOneNormal  text='linkedIn'></LittleOneNormal>
+                                <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
+                            </div>
+                            <Col style={{marginBottom:'5px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                <IconBotton onClick={()=>{var a = [...linkedIns]; a.push({linkedIn:''}); setLinkedIns([...a])}} color='black' name='New linkedIn url'  text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                            </Col>
+                        </Row>
+                        {linkedIns.map((data , i)=>{
+                            return(
+                                <Col style={{padding:'5px  0px 5px 0px'}} key={i} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
+                                    <div className={Style.phoneNumberMainDiv}>
+                                        <div className={Style.dot}>{i+1}</div>
+                                            <IconBotton onClick={()=>{var temp = [...linkedIns]; temp.splice(i,1); setLinkedIns([...temp]) }} text={false} icon={<DeleteIcon sx={{color:'#EA005A'}}/>}></IconBotton>
+                                        <div className={Style.phoneNumberCountry}>
+                                            <TextInputNormal value={data.linkedIn} name={i} onChange={getLinkeIn} placeholder='linkedIn url'></TextInputNormal>
+                                        </div>
+                                    </div>
+                                </Col>
+                            )
+                        })}
+                    </div>
+                    
                     <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
 
                     <div>
-                        <BigOneWithDot text="آدرس"></BigOneWithDot>
-                        <Row className="g-0" dir='rtl' style={{padding:'30px 0px 0px 0px'}}>
+                        <BigOneWithDot text="Address"></BigOneWithDot>
+                        <Row className="g-0"  style={{padding:'30px 0px 0px 0px'}}>
                             <div className={Style.littleTitleDiv}>
-                                <LittleOneNormal text='آدرس ها'></LittleOneNormal>
+                                <LittleOneNormal text='Addresses'></LittleOneNormal>
                                 <hr style={{marginRight:'8px' , maxWidth:'15px' , padding:"3px , 0px , 3px , 0px"}} className={Style.dashLineVer}></hr>
                             </div>
                             <Col style={{marginBottom:'10px'}} sm={12} md={12} lg={12} xl={12} xxl={12} xs={12}>
-                                <IconBotton  onClick={()=>{var a = [...addresses]; a.push({country:'' , province:'' , city:'' , neighbourhood:'' , street:'' , plate:'' , postalCode:'' , mapLink:'' , addressExplanations:''}); setAddresses([...a])}} color='black' name='آدرس جدید' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
+                                <IconBotton  onClick={()=>{var a = [...addresses]; a.push({country:'' , province:'' , city:'' , neighbourhood:'' , street:'' , plate:'' , postalCode:'' , mapLink:'' , addressExplanations:''}); setAddresses([...a])}} color='black' name='New address' text={true} icon={<AddIcon sx={{color:'rgb(231, 231, 231)'}}/>}></IconBotton>
                             </Col>
                         </Row>
                         
@@ -398,29 +606,29 @@ const EditCustomerPortal = (props) =>{
                                         <Row style={{padding:'0px 0px 0px 0px'}}>
                                             <Col  xs={12} sm={12} md={12} lg={12} xl={12} xxl={12}>
                                                 <div style={{width:'100%' , fontSize:'12px' , borderRadius:'11px' , padding:'10px 0px 10px 0px' , marginBottom:'5px' , display:'flex' , justifyContent:'center' , color:'#fff' , backgroundColor:'rgb(60, 60, 60)'}}>
-                                                آدرس {i+1}
+                                                Address {i+1}
                                                 </div>
                                             </Col>
                                         </Row>
-                                        <Row className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px'}}>
+                                        <Row className="g-0"  style={{padding:'5px 0px 5px 0px'}}>
                                             <Col style={{padding:'0px 0px 10px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div className={Style.phoneNumberMainDiv}>
                                                     <div className={Style.phoneNumberCountry}>
-                                                        <CustomSelect value={data.country} onChange={getAddressCountry} name={i} selectType='countryWithFlag' placeholder="کشور"></CustomSelect>
+                                                        <CustomSelect value={data.country} onChange={getAddressCountry} name={i} selectType='countryWithFlag' placeholder="Country"></CustomSelect>
                                                     </div>
 
                                                     <div className={Style.phoneNumberCountry}>
-                                                        <TextInputNormal value={data.province} onChange={getProvince} name={i} placeholder='استان'></TextInputNormal>
+                                                        <TextInputNormal value={data.province} onChange={getProvince} name={i} placeholder='State'></TextInputNormal>
                                                     </div>
                                                 </div>
                                             </Col>
                                             <Col style={{padding:'0px 0px 10px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div className={Style.phoneNumberMainDiv}>                 
                                                     <div className={Style.phoneNumberCountry}>
-                                                        <TextInputNormal value={data.city} onChange={getCity} name={i} placeholder='شهر'></TextInputNormal>
+                                                        <TextInputNormal value={data.city} onChange={getCity} name={i} placeholder='City'></TextInputNormal>
                                                     </div>
                                                     <div className={Style.phoneNumberCountry}>
-                                                        <TextInputNormal value={data.neighbourhood} onChange={getNeighbourhood} name={i} placeholder='منطقه(محله)'></TextInputNormal>
+                                                        <TextInputNormal value={data.neighbourhood} onChange={getNeighbourhood} name={i} placeholder='Neighborhood'></TextInputNormal>
                                                     </div>
 
                                                 </div>
@@ -428,7 +636,7 @@ const EditCustomerPortal = (props) =>{
                                             </Col>
                                             <Col style={{padding:'0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                     <div className={Style.phoneNumberCountry}>
-                                                        <TextInputNormal value={data.street} onChange={getStreet} name={i} placeholder='خیابان'></TextInputNormal>
+                                                        <TextInputNormal value={data.street} onChange={getStreet} name={i} placeholder='Street'></TextInputNormal>
                                                     </div>
                                             </Col>
                                         </Row>
@@ -436,23 +644,23 @@ const EditCustomerPortal = (props) =>{
                                             <Col style={{padding:'0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div className={Style.phoneNumberMainDiv}>                 
                                                     <div style={{maxWidth:'50%'}} className={Style.phoneNumberCountry}>
-                                                        <TextInputNormal value={data.plate} onChange={getPlate} name={i} placeholder='پلاک'></TextInputNormal>
+                                                        <TextInputNormal value={data.plate} onChange={getPlate} name={i} placeholder='Plate'></TextInputNormal>
                                                     </div>
                                                     <div style={{maxWidth:'50%'}} className={Style.phoneNumberCountry}>
-                                                        <TextInputNormal value={data.postalCode} onChange={getPostalCode} name={i} placeholder='کد پستی'></TextInputNormal>
+                                                        <TextInputNormal value={data.postalCode} onChange={getPostalCode} name={i} placeholder='Postal code'></TextInputNormal>
                                                     </div>
                                                 </div>
                                             </Col>
                                             <Col style={{padding:'10px 0px 10px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div style={{maxWidth:'100%'}} className={Style.phoneNumberCountry}>
-                                                    <TextInputNormal value={data.mapLink} onChange={getMapLink} name={i} placeholder='لینک نقشه'></TextInputNormal>
+                                                    <TextInputNormal value={data.mapLink} onChange={getMapLink} name={i} placeholder='Map link'></TextInputNormal>
                                                 </div>
                                             </Col>
                                             <Col style={{padding:'0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
                                                 <div className={Style.phoneNumberMainDiv}>                 
 
                                                     <div className={Style.phoneNumberCountry}>
-                                                        <TextInputNormal value={data.addressExplanations} onChange={getAddressExplanations} name={i} placeholder='توضیحات'></TextInputNormal>
+                                                        <TextInputNormal value={data.addressExplanations} onChange={getAddressExplanations} name={i} placeholder='Explaintion'></TextInputNormal>
                                                     </div>
                                                 </div>
                                             </Col>
@@ -468,10 +676,10 @@ const EditCustomerPortal = (props) =>{
                         })}
                         <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)', margin:'10px 0px 10px 0px'}}></Divider>
                         <div>
-                            <Row className="g-0" dir='rtl' style={{padding:'5px 0px 5px 0px'}}>
+                            <Row className="g-0"  style={{padding:'5px 0px 5px 0px'}}>
                                 <Col style={{padding:'5px 0px 0px 0px'}} xs={12} sm={12} md={12} lg={12} xl={12} xxl={12} >
-                                    <div dir='rtl'>
-                                    <LittleOneNormal text='توضیحات مختصر'></LittleOneNormal>
+                                    <div >
+                                        <LittleOneNormal text='Extra explaintion'></LittleOneNormal>
                                         <textarea value={explanations} onChange={(e)=>{setExplanations(e.target.value)}} id="w3review" name="w3review" rows="5" style={{width:'100%'}} cols="50"></textarea>                                            
                                     </div>   
                                 </Col>
@@ -499,7 +707,7 @@ const EditCustomer = (props)=>{
     return(
       <Fragment>
           {ReactDom.createPortal(
-              <EditCustomerPortal setRefresh={props.setRefresh} setSuccessToast={props.setSuccessToast} editCustomer={props.editCustomer} setEditCustomer={props.setEditCustomer}></EditCustomerPortal>
+              <EditCustomerPortal  setSuccessToast={props.setSuccessToast} editCustomer={props.editCustomer} setEditCustomer={props.setEditCustomer}></EditCustomerPortal>
           ,
           document.getElementById('ovForms')
           

@@ -42,6 +42,8 @@ export default function Persons(props) {
         return (
           <ListItem
             dir='rtl'
+            onClick={handleToggle(value._id)}
+            
             key={value._id}
             secondaryAction={
               <Checkbox

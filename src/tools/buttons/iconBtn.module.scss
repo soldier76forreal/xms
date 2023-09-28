@@ -12,7 +12,7 @@
 
 
 .iconButtonWithText{
-    padding: 8px 8px 8px 14px;
+    padding: 8px 14px 8px 8px;
     background-color:$inputColor ;
     border: none;
     box-shadow: none;
@@ -23,7 +23,7 @@
 
 
 .iconButtonWithTextBlack{
-    padding: 8px 8px 8px 14px;
+    padding: 8px 14px 8px 8px;
     background-color:$primaryColor ;
     border: none;
     color: $darkBackText;
@@ -34,7 +34,7 @@
 
 @media only screen and (max-width: 768.98px) {
     .iconButtonWithText{
-        padding: 6px 6px 6px 12px;
+        padding: 6px 12px 6px 6px;
         background-color:$inputColor ;
         border: none;
         box-shadow: none;
@@ -45,7 +45,7 @@
     
     
     .iconButtonWithTextBlack{
-        padding: 6px 6px 6px 12px;
+        padding: 6px 12px 6px 6px;
         background-color:$primaryColor ;
         border: none;
         color: $darkBackText;

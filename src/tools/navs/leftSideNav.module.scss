@@ -2,7 +2,7 @@
     width: 100%;
     display: flex;
     position: relative;
-    border-bottom:2px solid rgb(138, 138, 138) ;
+    border-bottom:1px solid rgb(0, 0, 0) ;
     display: flex;
     align-items: center;
     margin-top: -8px;
@@ -18,9 +18,11 @@
 }
 .topTitle{
     position: absolute;
-    right: 20px;
-    margin-top: -4px;
+    
+    left: 80px;
+    
     font-size: 16px;
+    
     
 }
 

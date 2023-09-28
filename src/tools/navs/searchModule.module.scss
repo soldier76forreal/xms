@@ -1,0 +1,29 @@
+.searchBar{
+    max-width: 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: left;
+    width: 100%;
+
+}
+.searchBar input{
+
+    max-width: 400px;
+    text-align: left;
+    width: 100%;
+    
+    font-size: 15px;
+    border: none;
+    background-color: #e6e6e6;
+    padding: 0px 0px 0px 6px;
+    height: 35px;
+}
+.searchBar input:focus{
+    outline: none !important; 
+}
+.searchBar input::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+    color: rgb(0, 0, 0) !important;
+    font-family: YekanRegular;
+   
+  }

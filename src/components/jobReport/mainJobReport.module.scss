@@ -1,0 +1,103 @@
+.topToolsDiv{
+    justify-content: center;
+    width: 100%;
+    display: none;
+    padding: 0px 5px 0px 5px;
+    
+}
+.ovDiv{
+    background-color: none !important;
+    width: 100%;
+    overflow-y: none !important;
+    margin:5px auto 0px auto;
+    height: 84vh !important;
+
+}
+.searchDiv{
+    display: flex;
+    margin-right: 5px;
+}
+.todayJobReport{
+    h3{
+        font-size: 26px;
+        font-family: YekanBold;
+        padding: 20px 0px 20px 8px !important;
+    }
+}
+.cardItemForToday{
+    max-width:700px;
+    background-color: rgb(240, 240, 240);
+    height: 140px;
+    border-radius: 5px;
+    border: 1px solid rgba(219, 219, 219, 0.659);
+}
+.cardItemTodayTitle{
+    font-size: 16px;
+    font-family: YekanRegular;
+    margin-top: 15px;
+    margin-left: 15px;
+    
+    span{
+        background-color: #d47732;
+        padding: 3px 5px 1px 5px;
+        font-size: 12px;
+        border-radius: 5px;
+        margin-left: 10px;
+    }
+}
+.cardItemForNorm{
+    max-width:700px;
+    background-color: rgb(240, 240, 240);
+    
+    border-radius: 5px;
+    border: 1px solid rgba(219, 219, 219, 0.659);
+}
+.cardItemNormTitle{
+    font-size: 16px;
+    font-family: YekanRegular;
+    padding: 10px 0px 10px 0px;
+    margin-left: 15px;
+    
+    span{
+        background-color: #d47732;
+        padding: 3px 5px 1px 5px;
+        font-size: 12px;
+        border-radius: 5px;
+        margin-left: 10px;
+    }
+}
+@media only screen and (max-width: 1200.98px) {
+
+}
+
+
+@media only screen and (max-width: 992.98px) {
+
+    
+}
+
+@media only screen and (max-width: 768.98px) {
+  .topToolsDiv{
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        
+        padding: 0px 5px 0px 5px;
+    
+    }
+ }
+ @media only screen and (max-width: 576.98px) {
+    .searchDiv{
+        margin-right: 5px;
+        width: 100%;
+      }
+  }
+
+    
+ 
+
+ @media only screen and (max-width: 356.98px) {
+
+
+
+ }

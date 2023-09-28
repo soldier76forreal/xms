@@ -1,74 +1,56 @@
-import zIndex from '@mui/material/styles/zIndex';
-import {React, useContext} from 'react';
+import React from 'react';
+import { useSelector } from 'react-redux';
+
 import Select from 'react-select';
 
-const customStyles = {
-  menu: (provided, state) => ({
-    ...provided,
-    width:'100%',
-    color:'#354063',
-    borderRadius:'0px',
-    zIndex:"100"
-  }),
-  control: (provided, state) => ({
-      ...provided,
-      width:'100%',
-      border:'none',
-      borderRadius:'5px',
-      padding:'0px 0px 0px 0px',
-      zIndex:"100"
-    }),
-    placeholder: (defaultStyles) => {
-      return {
-          ...defaultStyles,
-         fontSize:'12px',
-         zIndex:"100"
-      }
-    },
-
-
-
-    singleValue: (provided, state) => {
-      const opacity = state.isDisabled ? 0.5 : 1;
-      const transition = 'opacity 300ms';
-  
-      return { ...provided, opacity, transition };
-    }
-  }
 const MultiSelect = (props) =>{
-    return(
-        <Select
-          isMulti
-          onChange={props.onChange}
-          name="colors"
-          options={props.options}
-          className="basic-multi-select"
-          classNamePrefix="select"
-          value={props.value}
-          ref={props.ref}
-          getOptionLabel={option => option.name}
-          getOptionValue={option => option.value}
-          placeholder={props.placeholder}
-          isDisabled={props.disable === true ? true : false}
-
-          theme={(theme) => ({
-              ...theme,
-              borderRadius: 0,
-              colors: {
-                ...theme.colors,
-                primary25: '#F0F0F0',
-                primary: '#000000',
-                neutral0:'#F0F0F0',
-                neutral80:'#5D5D5D',
-                neutral90:'#5D5D5D',
-                neutral70:'#5D5D5D',
-
-                neutral50:'#5D5D5D',
-              },
-            })}
-          styles={customStyles}
-      />
-    )
+  const contactList = useSelector((state) => state.contactList);
+  
+  return(
+    <Select
+      theme={theme}
+      styles={colorStyles}
+      isMulti
+      value={contactList.allAll.map(e=>{return {id:e._id , text:`${e.firstName} ${e.lastName}`}}).filter(e=>{return e.id === props.value})[0]}
+      options={contactList.allAll.map(e=>{return {id:e._id , text:`${e.firstName} ${e.lastName}`}})}
+      name="colors"
+      onChange={props.onChange}
+      getOptionLabel={option => option.text}
+      getOptionValue={option => option.id}
+      className="basic-multi-select"
+      classNamePrefix="select"
+    />
+  )
 }
-export default MultiSelect;
 
+  
+const theme = (theme) => ({
+  ...theme,
+  borderRadius: 5,
+  borderWidth:2,
+  colors: {
+    ...theme.colors,
+    primary25: 'rgb(193, 193, 193)',
+    primary: 'black',
+  },
+})
+const colorStyles = {
+  control: (baseStyles, state) => ({
+    ...baseStyles,
+    borderColor: state.isFocused ? 'grey' : 'none',
+
+
+  }),
+  placeholder: defaultStyles => {
+    return {
+      ...defaultStyles,
+      color: "rgb(73, 73, 73)",
+      fontSize:'12px',
+      borderRadius:'5px',
+      width:'100%',
+      position:'absolute'
+    }
+    
+  }
+};
+export default MultiSelect

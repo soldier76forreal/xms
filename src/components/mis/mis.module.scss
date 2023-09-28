@@ -124,7 +124,25 @@
   .editIcon{
     font-size: 22px;
   }
+  .topToolsDiv{
+    justify-content: center;
+    width: 100%;
 
+    padding: 0px 5px 0px 5px;
+    
+  }
+  .searchDiv{
+    margin-right: 5px;
+    display: none;
+  }
+  .tileChange{
+    display: inline-block;
+    
+    background-color: black;
+    padding: 5px 8px 5px 8px;
+    border-radius: 5px;
+    
+  }
 
   @media only screen and (max-width: 1200.98px) {
 
@@ -203,6 +221,18 @@
     }
     .editIcon{
       font-size: 18px;
+    }
+    .topToolsDiv{
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      
+      padding: 0px 5px 0px 5px;
+      
+    }
+    .searchDiv{
+      display: flex;
+      margin-right: 5px;
     }
    }
    @media only screen and (max-width: 576.98px) {

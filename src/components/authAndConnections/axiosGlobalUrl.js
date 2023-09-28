@@ -1,12 +1,16 @@
 import React ,{useState} from "react";
 const AxiosGlobal = React.createContext({
     defaultTargetApi:'',
-    authTargetApi:''
+    authTargetApi:'',
+    externalLink:'',
+    originLink:''
 });
 export const AxiosGlobalProvider = (props) =>{
     const contextValue ={
-        defaultTargetApi:'http://localhost:3001',
-        authTargetApi:'http://localhost:3002'
+        defaultTargetApi:'https://api.iliyaapp.ir',
+        authTargetApi:'https://auth.iliyaapp.ir',
+        externalLink:'https://iliyaapp.ir',
+        originLink:window.location.origin
     }
     return <AxiosGlobal.Provider value={contextValue}>{props.children}</AxiosGlobal.Provider>
 }

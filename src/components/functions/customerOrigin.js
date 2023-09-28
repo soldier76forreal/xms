@@ -7,18 +7,20 @@ export default function CustomerOrigin (value){
     return res[0].text;
 }
 var customerOrigin = [
-    {id:'call' , text:'بازاریابی تلفنی'},
-    {id:'ref' , text:'معرفی مشتریان'},
-    {id:'web' , text:'وب سایت'},
-    {id:'in' , text:'اینستاگرام'},
-    {id:'wa' , text:'واتساپ'},
-    {id:'fa' , text:'فیسبوک'},
-    {id:'bt' , text:'باتم'},
-    {id:'con' , text:'کنفرانس'},
-    {id:'wor' , text:'معرفی پرسنل'},
-    {id:'oth' , text:'معرفی دیگران'},
-    {id:'ipm' , text:'بازار یابی حضوری'},
-    {id:'em' , text:'بازاریابی ایمیلی'},
-    {id:'sr' , text:'نمایشگاه'}
+    {id:'null' , text:'None'},
+    {id:'call' , text:'Phone call marketing'},
+    {id:'ref' , text:'Refer by other customers'},
+    {id:'web' , text:'Website'},
+    {id:'in' , text:'Instagram'},
+    {id:'li' , text:'Linked In'},
+    {id:'wa' , text:'WhatsApp'},
+    {id:'fa' , text:'Facebook'},
+    {id:'bt' , text:'Bottom'},
+    {id:'con' , text:'Conference'},
+    {id:'wor' , text:'Refer by Personnel'},
+    {id:'oth' , text:'Refer by other people'},
+    {id:'ipm' , text:'Field marketing'},
+    {id:'em' , text:'Email marketing'},
+    {id:'sr' , text:'Exhibition'}
   ]
   

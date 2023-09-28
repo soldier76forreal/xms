@@ -1,0 +1,204 @@
+
+.newInvoice{
+
+    position: fixed;
+    top: 0;
+    z-index: 12;
+    bottom: 0;
+    left: 0;
+    
+    right: 0;
+    transition: 0.5s ease-in-out all;
+    z-index: 1001 !important;
+    background-color: rgb(249, 249, 249);
+}
+.topSection{
+    width: 100%;
+    top: 0px;
+    background-color: rgb(236, 236, 236);
+    position: relative;
+    border-bottom:2px solid rgb(138, 138, 138) ;
+    display: flex;
+    align-items: center;
+}
+.backBtn{
+    padding: 20px 25px 20px 34px;
+    border-right:2px solid rgb(138, 138, 138) ;
+    transition: 0.2s all ease-in-out;
+}
+.backBtn:hover{
+
+    background-color: rgb(182, 182, 182);
+}
+.topTitle{
+    position: absolute;
+    right: 20px;
+    font-family: YekanBold;
+    font-size: 25px;
+}
+.formDiv{
+    max-width: 660px;
+    width: 100%;
+    text-align: right;
+    height: 100%;
+    padding: 0px 30px 40px 30px;
+
+    overflow-y: scroll !important;
+    overflow-x: none;
+    margin:0px auto 0px auto;
+}
+.btnDiv{
+    margin-top: 10px;
+    text-align: right;
+    padding: 5px 15px 20px 15px;
+
+}
+
+
+.topTitleDiv{
+    width: 100%;
+    border-bottom: solid 2px rgb(181, 181, 181);
+    text-align: right;
+    margin-top: 5px;
+}
+.preInvoice{
+    font-family:YekanBold;
+    display: inline-block;
+    font-size: 20px;
+    
+    padding: 6px 6px 6px 0px;
+}
+.editIcon{
+    float: left;
+    display: flex;
+    cursor: pointer;
+    margin-top: 0px;
+    padding: 6px;
+    transition: all 0.2s ease-in-out;
+}
+.editIcon:hover{
+    color: rgb(116, 116, 116);
+}
+
+
+.fadeIn{
+
+    animation: openModal ease-in-out 0.3s forwards;
+}
+.fadeOut{
+    animation: closeModal ease-in-out 0.2s forwards;
+
+}
+
+@keyframes openModal {
+    0% {
+        opacity: 0;
+        transform: translateY(-100%);
+
+    }
+    50% {
+        opacity: 0;
+        transform: translateY(0%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0%);
+    }
+}
+@keyframes closeModal {
+    0% {
+
+        opacity: 1;
+        transform: translateY(0%);
+
+    }
+    50% {
+        opacity: 0;
+        transform: translateY(0%);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+}
+
+.secTitle{
+    margin-bottom:10px;
+    margin-top:25px;
+    font-family:YekanBold;
+    margin-right:10px;
+    font-size:20px;
+}
+
+
+@media only screen and (max-width: 1200.98px) {
+
+}
+
+
+@media only screen and (max-width: 992.98px) {
+
+    
+}
+
+@media only screen and (max-width: 768.98px) {
+    .topSection{
+        width: 100%;
+        top: 0px;
+        position: relative;
+        border-bottom:2px solid rgb(138, 138, 138) ;
+        display: flex;
+        background-color: rgb(236, 236, 236);
+        align-items: center;
+    }
+    .backBtn{
+        padding: 12px 25px 12px 34px;
+        border-right:2px solid rgb(138, 138, 138) ;
+        transition: 0.2s all ease-in-out;
+    }
+    .backBtn:hover{
+        background-color: rgb(182, 182, 182);
+    }
+    .topTitle{
+        position: absolute;
+        right: 20px;
+        font-size: 20px;
+        font-family: YekanBold;
+        
+    }
+    .formDiv{
+        max-width: 600px;
+        width: 100%;
+        text-align: right;
+        height: 100%;
+        overflow-y: scroll !important;
+        overflow-x: none;
+        padding: 0px 20px 30px 20px;
+        margin:0px auto 0px auto;
+    }
+    .arrowIcon{
+        font-size: 22px !important;
+    }
+    .secTitle{
+        margin-bottom:10px;
+        margin-top:25px;
+        font-family:YekanBold;
+        margin-right:10px;
+        font-size:18px ;
+    }
+
+    .btn{
+        font-size: 12px !important;
+    }
+ }
+ @media only screen and (max-width: 576.98px) {
+
+
+    
+ }
+
+ @media only screen and (max-width: 356.98px) {
+
+    
+
+ }

@@ -13,16 +13,19 @@ import { useState } from 'react';
 import jwtDecode from 'jwt-decode';
 import { CircularProgress } from '@mui/material';
 import { useDispatch, useSelector } from "react-redux";
+import { actions } from '../../store/store';
 
 const style = {
   position: 'absolute',
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 400,
+  maxWidth:350,
+  width: '100%',
   bgcolor: 'background.paper',
   border:'none',
   boxShadow: 24,
+  padding:'0px 40px 0px 40px',
   p: 1,
 };
 
@@ -31,17 +34,28 @@ export default function NewFileModal(props) {
     const axiosGlobal = useContext(AxiosGlobal);
     const handleOpen = () => props.setNewFileModal(true);
     const handleClose = () => props.setNewFileModal(false);
+    const dispatch = useDispatch()
     const [loading , setLoading] = useState(false);
     const [theName , setTheName] = useState('');
     const currentDisplay = useSelector((state) => state.currentDisplay);
+    const currentDisplayFilePicker = useSelector((state) => state.currentDisplayFilePicker);
+
     const newFile = async() =>{   
         const decodeJwt = jwtDecode(authContext.token)
         setLoading(true);
         var temp = []
         var current;
-        const data = {
-            supFolder:currentDisplay.id,
-            name:theName 
+        var data;
+        if(props.newFolderType === 'inFilePicker'){
+            data = {
+                supFolder:currentDisplayFilePicker.id,
+                name:theName 
+            }
+        }else if(props.newFolderType === 'mainNewFolderBtn'){
+            data = {
+                supFolder:currentDisplay.id,
+                name:theName 
+            }
         }
         try{
             const response = await authContext.jwtInst({
@@ -50,6 +64,9 @@ export default function NewFileModal(props) {
                 data:data,
                 config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
             })
+
+            dispatch(actions.refresh())
+    
             setTimeout(()=>{
                 setLoading(false)
                 handleClose()
@@ -64,6 +81,7 @@ export default function NewFileModal(props) {
       <Modal
         open={props.newFileModal}
         onClose={handleClose}
+        sx={{zIndex:'20000'}}
         aria-labelledby="modal-modal-title"
         aria-describedby="modal-modal-description"
       >

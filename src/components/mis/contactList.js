@@ -22,17 +22,18 @@ import jwtDecode from 'jwt-decode';
 import axios from 'axios';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import SocketContext from '../authAndConnections/socketReq';
+import { useSelector } from 'react-redux';
+import Loader from '../../tools/loader/loader';
 export default function ContactList(props) {
 
 
-
+  const contactList = useSelector((state) => state.contactList);
   const authCtx = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const socketCtx = useContext(SocketContext);
-    const [isSend , setIsSent] = React.useState(false);
-    const [checked, setChecked] = React.useState([]);
-    const [loading, setLoading] = React.useState(false);
-    const [data ,setData] = React.useState({sa:[],inv:[],req:[] , all:[] , allAll:[] , lenght:0})
+  const [isSend , setIsSent] = React.useState(false);
+  const [checked, setChecked] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
 
   const toggleDrawer = (anchor, open) => (event) => {
     setChecked([...[]]);
@@ -50,32 +51,7 @@ export default function ContactList(props) {
 
 
 
-  var userList = {sa:[],inv:[],req:[] , all:[] , allAll:[] , lenght:0};
-  const getUserData = async() =>{
-    
 
-      try{
-          const response = await authCtx.jwtInst({
-              method:'get',
-              url:`${axiosGlobal.defaultTargetApi}/users/getAllUsers`,
-              config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
-          })
-          userList.sa = response.data.rs.sa;
-          userList.inv = response.data.rs.inv;
-          userList.req = response.data.rs.req;
-          userList.all = response.data.rs.all;
-          userList.allAll = response.data.rs.allAll;
-          userList.lenght = response.data.ln;
-          setData(userList)   
-          
-      }catch(err){
-          console.log(err);
-      }
-  }
-
-  useEffect(() => {
-    getUserData()
-  }, []);
 
   const sendPreInvoices = async()=>{
     const data = {
@@ -134,7 +110,7 @@ export default function ContactList(props) {
         </List>
         <Divider />
         <List>
-          <Persons setChecked={setChecked} checked={checked} userData={data.inv} setIsSent={setIsSent}></Persons>
+          <Persons setChecked={setChecked} checked={checked} userData={contactList.inv} setIsSent={setIsSent}></Persons>
         </List>
         
 
@@ -147,7 +123,7 @@ export default function ContactList(props) {
         </List>
         <Divider />
         <List>
-          <Persons setChecked={setChecked} checked={checked} userData={data.req} setIsSent={setIsSent}></Persons>
+          <Persons setChecked={setChecked} checked={checked} userData={contactList.req} setIsSent={setIsSent}></Persons>
         </List>
         <List>
           <ListItem dir='rtl' disablePadding>
@@ -158,7 +134,7 @@ export default function ContactList(props) {
         </List>
         <Divider />
         <List>
-          <Persons setChecked={setChecked} checked={checked} userData={data.sa} setIsSent={setIsSent}></Persons>
+          <Persons setChecked={setChecked} checked={checked} userData={contactList.sa} setIsSent={setIsSent}></Persons>
         </List>
       </div>
       {isSend === true?
@@ -167,12 +143,15 @@ export default function ContactList(props) {
 
             <div style={{backgroundColor:'#fff'}} className={Style.sendBtn}>
             <Stack direction="row" spacing={2}>
-                <Button onClick={toggleDrawer('bottom', false)} variant="outlined" startIcon={<DeleteIcon />}>
-                لغو
-                </Button>
-                <Button onClick={sendPreInvoices} variant="contained" endIcon={loading === true?<CircularProgress size='20px' color='inherit'></CircularProgress>:<SendIcon />}>
-                ارسال
-                </Button>
+                <botton style={{marginLeft:'10px'}} onClick={toggleDrawer('bottom', false)} className='btnWithIconOutLine'>
+                    <span>Cancel</span>
+                    <DeleteIcon />
+                </botton>
+                <botton onClick={sendPreInvoices} className='btnWithIcon'>
+                    <span>Send</span>
+                    {loading === true?<Loader width='24px' color='white'></Loader>:<SendIcon />}
+                </botton>
+
             </Stack>
             </div>
       </List>
@@ -186,6 +165,7 @@ export default function ContactList(props) {
 
         <React.Fragment >
           <Drawer
+            sx={{zIndex:'10000'}}
             anchor={'bottom'}
             open={props.state['bottom']}
             onClose={toggleDrawer('bottom', false)}

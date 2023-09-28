@@ -23,8 +23,8 @@ import AuthContext from './auth';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useHistory } from 'react-router-dom';
 import jwtDecode from 'jwt-decode';
-
-
+import '../overalStyle/overals.scss'
+import Loader from '../../tools/loader/loader';
 
 
 
@@ -81,7 +81,7 @@ const LogIn =(props)=>{
                 history.replace('/');
               }
           }catch(err){
-            let error = 'خطایی رخ داده است!'
+            let error = 'Log in failed...'
             if(err && err.response.data !== ''){
                 error=err.response.data;
                 setSignUpError(true);
@@ -96,56 +96,52 @@ const LogIn =(props)=>{
             <div  className={Style.overDiv}>
 
                 <div  className={Style.background}>
-                    <Row>
-                        <Col style={{padding:'0px'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
+                    <Row style={{padding:'0px'}}>
+                        <Col style={{padding:'0px' , display:'flex', justifyContent:'center' , alignItems:'center'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
                             <div className={Style.keySiv}>
-                                <h2>XCAPITAL</h2>
+                                <h2>XMS</h2>
                             </div>
                         </Col>
                         <Col xs={12} md={12} lg={12} xl={12} xxl={12}>
-                            <div dir='rtl' className={Style.fields}>
-                                <TextField
-
-                                    id="filled-multiline-flexible"
-                                    label='شماره تلفن'
+                            <div  className={Style.fields}>
+                                <input
+                                    className='normInput'
+                                    placeholder='Phone number'
                                     sx={{width:'100%'}}
-                                    multiline
                                     onChange={getPhoneNumber}
-                                    maxRows={2}
-                                    inputProps={{min: 0, style: { textAlign: 'right' , width:'100%' }}} // the change is here
-                                    variant="filled"
                                 />
-                                <FormControl  sx={{ m: 1, width: '100%' , margin:'10px 0px 0px 0px'}} variant="filled">
-                                <InputLabel htmlFor="filled-adornment-password">کلمه عبور</InputLabel>
-                                <FilledInput
-                                    id="filled-adornment-password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    onChange={getPassword}
-                                    endAdornment={
-                                    <InputAdornment position="end">
-                                        <IconButton
+                                <div style={{position:'relative', marginTop:'10px'}}>
+
+                                    <input
+                                        className='normInput'
+                                        type={showPassword ? 'text' : 'password'}
+                                        onChange={getPassword}
+                                        placeholder='Password'
+                                    />
+                                     <IconButton
+                                        sx={{position:'absolute' , right:'15px'}}
                                         aria-label="toggle password visibility"
                                         onClick={()=>{if(showPassword === true){setShowPassword(false)}else if(showPassword === false){setShowPassword(true)}}}
                                         edge="end"
                                         >
                                         {showPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                    }
-                                />
-                                </FormControl>
+                                    </IconButton>
+                                </div>
                             </div>
                         </Col>
                         <Col xs={12} md={12} lg={12} xl={12} xxl={12}>
                             <div className={Style.logInBtnDiv}>
-                                <div style={{color:'red' ,fontSize:'16px' , height:'20px' , marginBottom:'10px'}}>{signUpErrorMsg}</div>
-                                <Button onClick={sendLogIn} style={{margin:'0px auto 0px auto' , paddingTop:'10px' , paddingBottom:'10px' ,width:'100%'}} variant="contained" disableElevation>
-                                {loadingStatus ===true ? <CircularProgress size='25px' color='inherit'></CircularProgress> : loadingStatus ===false ?'ورود':null}
-                                </Button>
+                                <div style={{color:'red' ,fontSize:'14px' , height:'20px' , marginBottom:'10px'}}>{signUpErrorMsg}</div>
+                                <botton onClick={sendLogIn} className='btn'>
+                                {loadingStatus ===true ? <Loader width='25px' color='white' ></Loader > : loadingStatus ===false ?'Log in':null}
+                                </botton>
                             </div>
                         </Col>
 
                     </Row>
+                    <div style={{padding:'10px 0px 9px 10px', fontFamily:'codeBold', borderRadius:'5px' , letterSpacing:'1px',width:'100%',backgroundColor:'black' , color:'white',display:'flex', justifyContent:'center',alignItems:'center'}}>
+                         XCAPITAL           
+                    </div>
                 </div>
             </div>
             
