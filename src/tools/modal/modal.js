@@ -1,58 +1,39 @@
-import Style from "./modal.module.css";
-
-import { Fragment } from 'react';
-import ReactDom from 'react-dom';
-import DeleteIcon from '@mui/icons-material/Delete';
-import Delete from "@mui/icons-material/Delete";
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
-const ModalPortal =(props)=>{
-    console.log(props.showModal)
-    return(
-        <Fragment>
+const Modal = (props) => {
+  return (
+    <Dialog
+      open={props.showModal === true}
+      onClose={props.closeModalFn}
+      maxWidth="xs"
+      fullWidth
+    >
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2, gap: 1 }}>
+          <DeleteOutlineIcon color="error" sx={{ fontSize: 72 }} />
+          <DialogTitle sx={{ p: 0, textAlign: 'center' }}>مطمئن هستید؟</DialogTitle>
+          <DialogContentText sx={{ textAlign: 'center', fontSize: '0.875rem' }}>
+            این عملیات قابل بازگشت نیست.
+          </DialogContentText>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 3, gap: 1 }}>
+        <Button onClick={props.closeModalFn} variant="outlined" fullWidth>
+          بستن
+        </Button>
+        <Button onClick={props.delete} variant="contained" color="error" fullWidth>
+          حذف
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
-                    <div className={props.showModal === true ? `${Style.modalDiv} ${Style.fadeIn}` : props.showModal === false ? `${Style.modalDiv} ${Style.fadeOut}` : null}>
-                        <div onClick={props.closeModalFn}  className={props.showModal === true ? `${Style.backDrop} ${Style.fadeIn}` : props.showModal === false ? `${Style.backDrop} ${Style.fadeOut}` : null} dir='rtl' ></div>
-
-                        <div className={props.showModal === true ? `${Style.modalBoarder} ${Style.scaleIn}` : props.showModal === false ? `${Style.modalBoarder} ${Style.scaleOut}` : null} >
-                            <div className={Style.modalSymbol}>
-                                <Delete sx={{ margin:'0px auto 0px auto' , fontSize: 170,color: '#1043A9' ,iconHover:'#3e76e6' }}></Delete>
-                            </div>
-                            <div className={Style.msg}>
-                                <h3>مطمئن هستید؟</h3>
-                            </div>
-                            <div className={Style.btnsDiv}>
-                                <div className={Style.btnDiv}>
-                                    <Button onClick={props.closeModalFn} variant="outlined" size="medium">
-                                      بستن
-                                    </Button>
-                                </div>
-                                <div className={Style.btnDiv2}>
-                                    <Button onClick={props.delete} variant="outlined" size="medium">
-                                      حذف
-                                    </Button>
-                                </div>
-
-                            </div>
-                        </div>
-                    </div>
-                
-                 
-        </Fragment>
-    )
-}
-const Modal = (props)=>{
-
-    return(
-        <Fragment>
-            {ReactDom.createPortal(
-                <ModalPortal delete={props.delete} closeModalFn={props.closeModalFn}  showModal={props.showModal} ></ModalPortal>
-            ,
-            document.getElementById('modal')
-            
-            )}
-
-        </Fragment>
-    );
-}
 export default Modal;

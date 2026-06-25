@@ -1,16 +1,23 @@
-import { Fragment } from "react"
+import { useTheme } from '@mui/material/styles';
+import Lottie from 'lottie-react';
+import xLoadingWhite from '../../assets/white.json';
+import xLoadingBlack from '../../assets/xcapitalLoading.json';
 
+const Loader = (props) => {
+  const theme = useTheme();
 
-import Lottie from "lottie-react";
+  // explicit color prop wins; fallback to current theme mode
+  const useDark = props.color
+    ? props.color === 'black'
+    : theme.palette.mode === 'light';
 
-import xLoadingWhite from "../../assets/white.json";
-import xLoadingBlack from "../../assets/xcapitalLoading.json";
+  return (
+    <Lottie
+      style={{ width: props.width ?? 80 }}
+      animationData={useDark ? xLoadingBlack : xLoadingWhite}
+      loop
+    />
+  );
+};
 
-const Loader = (props)=>{
-    return(
-        <Fragment>
-            <Lottie style={{width:props.width}} animationData={props.color === 'black'?xLoadingBlack:props.color === 'white'?xLoadingWhite:null} loop={true} ></Lottie>
-        </Fragment>
-    )
-}
-export default Loader
+export default Loader;
