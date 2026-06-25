@@ -1,6 +1,6 @@
-import logo from './logo.svg';
 import {Route , Switch   , Redirect} from "react-router-dom";
-import './App.scss';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import { lightTheme, darkTheme } from './theme/theme';
 
 import Crm from './components/crm/crm';
 import NewCustomer from './components/crm/newCustomer';
@@ -33,6 +33,13 @@ function App() {
     })
   }
 
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('theme') || 'light');
+
+  const toggleTheme = () => {
+    const next = themeMode === 'light' ? 'dark' : 'light';
+    localStorage.setItem('theme', next);
+    setThemeMode(next);
+  };
 
   const authCtx = useContext(AuthContext);
   const [notifs,setNotifs] = useState('')
@@ -145,10 +152,11 @@ useEffect(() => {
   //       getSubscription()
   //     },[authCtx.token]);
   return (
-    <div>
-        <SnackBar></SnackBar>
+    <ThemeProvider theme={themeMode === 'light' ? lightTheme : darkTheme}>
+      <CssBaseline />
+      <SnackBar></SnackBar>
 
-        <Switch>
+      <Switch>
           
             <Route path="/logIn" exact>
                 {authCtx.isLoggedIn ===true?
@@ -216,12 +224,11 @@ useEffect(() => {
             </Route>
           :<Redirect to='/logIn'/>}
 
-          <Route  path="/showLink">  
+          <Route  path="/showLink">
             <ShowTheLink/>
           </Route>
         </Switch>
-
-    </div>
+    </ThemeProvider>
   );
 }
 
