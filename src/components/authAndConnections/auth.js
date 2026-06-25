@@ -21,6 +21,7 @@ const AuthContext = React.createContext({
   decode: {},
   access: [],
   isLoggedIn: false,
+  isOnline: true,
   login: (token) => {},
   logout: () => {},
   jwtInst: null,
@@ -38,6 +39,7 @@ export const AuthContextProvider = (props) => {
   const [userId, setUserId] = useState(decoded?.id || '');
   const [accessSection, setAccessSection] = useState(decoded?.access || []);
   const [socket, setSocket] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const history = useHistory();
   const userIsLoggedIn = !!token && !!decoded;
@@ -69,7 +71,10 @@ export const AuthContextProvider = (props) => {
       );
       return response.data;
     } catch (error) {
-      logOutHandler();
+      const isNetworkError = error.code === 'ERR_NETWORK' || !navigator.onLine;
+      if (!isNetworkError) {
+        logOutHandler();
+      }
       throw error;
     }
   };
@@ -169,11 +174,19 @@ export const AuthContextProvider = (props) => {
 
   useEffect(() => {
     const onOnline = () => {
+      setIsOnline(true);
       processQueue();
+    };
+    const onOffline = () => {
+      setIsOnline(false);
     };
 
     window.addEventListener('online', onOnline);
-    return () => window.removeEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -197,6 +210,7 @@ export const AuthContextProvider = (props) => {
     access: accessSection,
     userId,
     isLoggedIn: userIsLoggedIn,
+    isOnline,
     login: logInHandler,
     logout: logOutHandler,
     jwtInst: jwt,
