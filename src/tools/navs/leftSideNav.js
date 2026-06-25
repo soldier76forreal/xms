@@ -1,175 +1,143 @@
-import  React , {useContext, useEffect} from 'react';
+import React, { useContext, useState } from 'react';
 import Box from '@mui/material/Box';
 import SwipeableDrawer from '@mui/material/SwipeableDrawer';
-import Button from '@mui/material/Button';
 import List from '@mui/material/List';
 import Divider from '@mui/material/Divider';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import InboxIcon from '@mui/icons-material/MoveToInbox';
-import MailIcon from '@mui/icons-material/Mail';
-import Style from './leftSideNav.module.scss'
-import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
+import Typography from '@mui/material/Typography';
+
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
-import { Link , useHistory} from 'react-router-dom';
-import AuthContext from '../../components/authAndConnections/auth';
-import Cookies from 'js-cookie';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import Diversity2Icon from '@mui/icons-material/Diversity2';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import { useState } from 'react';
-import PageSection from '../../contextApi/pageSection';
-import { Inventory, Report } from '@mui/icons-material';
 import WorkHistoryIcon from '@mui/icons-material/WorkHistory';
 import DataThresholdingIcon from '@mui/icons-material/DataThresholding';
+import { Inventory } from '@mui/icons-material';
+
+import { Link, useHistory } from 'react-router-dom';
+import AuthContext from '../../components/authAndConnections/auth';
+import PageSection from '../../contextApi/pageSection';
+
+const NAV_ITEMS = [
+  { label: 'Invoices',   icon: <ReceiptIcon />,          section: 0, path: '/mis' },
+  { label: 'Customers',  icon: <PeopleAltIcon />,         section: 2, path: '/crm' },
+  { label: 'Files',      icon: <InsertDriveFileIcon />,   section: 1, path: '/files' },
+  { label: 'Job Report', icon: <WorkHistoryIcon />,       section: 3, path: '/jobReport', disabled: true },
+  { label: 'Marketing',  icon: <DataThresholdingIcon />,  section: 4, path: '/projects', disabled: true },
+  { label: 'Inventory',  icon: <Inventory />,             section: 5, path: '/inventory' },
+];
+
 export default function LeftSideNav(props) {
-const authContext = useContext(AuthContext);
-const pageSection = useContext(PageSection);
-const [value , setValue ] = useState();
-const history = useHistory();
-// useEffect(() => {
-//   if (localStorage.getItem("pageState") !== null) {
-    
-//     setValue(parseInt(localStorage.getItem("pageState")))
-//   } else {
-//     localStorage.setItem("pageState" , 0)
-//   }
-// }, [])
-// useEffect(() => {
+  const authContext = useContext(AuthContext);
+  const pageSection = useContext(PageSection);
+  const history = useHistory();
 
-//   if(value === 1){
-//     console.log(1)
-//     if(localStorage.getItem('fileMemory') === undefined){
-//       history.push('/files')
-//       localStorage.setItem('fileMemory' , '/files')
-//     }else if(localStorage.getItem('fileMemory') !== undefined){
-//       history.push(localStorage.getItem('fileMemory'))
-//     }
-//   }else if(value === 0){
-//     localStorage.setItem('pageState' , 0)
-//     console.log(0)
-//     // history.push('/invoices')
-//   }else if(value === 2){
-//     console.log(2)
-//     localStorage.setItem('pageState' , 2)
-
-//     // history.push('/crm')
-//   }
-// }, [value]);
-  const list = (anchor) => (
-    
+  const drawerContent = (anchor) => (
     <Box
-      sx={{ width: anchor === 'top' || anchor === 'bottom' ? 'auto' : 250   }}
+      sx={{ width: anchor === 'top' || anchor === 'bottom' ? 'auto' : 250 }}
       role="presentation"
       onClick={props.toggleDrawer(anchor, false)}
       onKeyDown={props.toggleDrawer(anchor, false)}
     >
-      <List>
-          {/* <ListItem  disablePadding>
-                <div  className={Style.topSection}>
-                    <div onClick={()=>{props.toggleDrawer('left', false)}} className={Style.backBtn}><ArrowBackIosIcon sx={{color:'#000' , fontSize:'30px'}}></ArrowBackIosIcon></div>
-                    <div style={{float:'left'}} className={Style.topTitle}>Sections</div>
-                </div>
-          </ListItem> */}
-          <div style={{marginTop:'60px'}}>
+      {/* Offset for fixed AppBar */}
+      <Box sx={{ height: 64 }} />
 
-              <ListItem  style={{fontSize:'26px' , width:'fit-content' , padding:'8px 0px 8px 0px' , marginLeft:'12px', fontFamily:'YekanBold'}} disablePadding>
-                XCAPITAL
-              </ListItem>
+      <List disablePadding>
+        {/* Brand name */}
+        <ListItem sx={{ px: 2, py: 1.5 }}>
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.primary' }}
+          >
+            XCAPITAL
+          </Typography>
+        </ListItem>
 
-              <ListItem sx={{background:pageSection.selectedSection=== 0?'rgb(222, 222, 222)':null}}  onClick={()=>{pageSection.selectedSectionFunc(0);history.push('/mis')}} disablePadding>
-                  <ListItemButton >
-                  <ListItemIcon style={{minWidth:'0px',padding:'0px 10px 0px 0px'}}>
-                      <ReceiptIcon sx={{color:'black'}}></ReceiptIcon>
-                  </ListItemIcon>
-                      <ListItemText  primary='Invoices' />
-                  </ListItemButton>
-              </ListItem>
-              <ListItem sx={{background:pageSection.selectedSection=== 2?'rgb(222, 222, 222)':null}}  onClick={()=>{pageSection.selectedSectionFunc(2);history.push('/crm')}} disablePadding>
-                  <ListItemButton >
-                  <ListItemIcon style={{minWidth:'0px',padding:'0px 10px 0px 0px'}}>
-                      <PeopleAltIcon sx={{color:'black'}}></PeopleAltIcon>
-                  </ListItemIcon>
-                      <ListItemText  primary='Customers' />
-                  </ListItemButton>
-              </ListItem>
-              <ListItem sx={{background:pageSection.selectedSection=== 1?'rgb(222, 222, 222)':null}} onClick={()=>{pageSection.selectedSectionFunc(1);history.push('/files')}}  disablePadding>
-                  <ListItemButton>
-                  <ListItemIcon style={{minWidth:'0px',padding:'0px 10px 0px 0px'}}>
-                      <InsertDriveFileIcon sx={{color:'black'}}></InsertDriveFileIcon>
-                  </ListItemIcon>
-                      <ListItemText  primary='Files' />
-                  </ListItemButton>
-              </ListItem>
-              <ListItem sx={{background:pageSection.selectedSection=== 3?'rgb(222, 222, 222)':null}}  onClick={()=>{pageSection.selectedSectionFunc(3);history.push('/jobReport')}}  disablePadding>
-                  <ListItemButton disabled={true}>
-                  <ListItemIcon style={{minWidth:'0px',padding:'0px 10px 0px 0px'}}>
-                      <WorkHistoryIcon sx={{color:'black'}}></WorkHistoryIcon>
-                  </ListItemIcon>
-                      <ListItemText  primary='Job report' />
-                  </ListItemButton>
-              </ListItem>
-              <ListItem  sx={{background:pageSection.selectedSection=== 4?'rgb(222, 222, 222)':null}}  onClick={()=>{pageSection.selectedSectionFunc(4);history.push('/projects')}}  disablePadding>
-                  <ListItemButton disabled={true}>
-                  <ListItemIcon style={{minWidth:'0px',padding:'0px 10px 0px 0px'}}>
-                      <DataThresholdingIcon sx={{color:'black'}}></DataThresholdingIcon>
-                  </ListItemIcon>
-                      <ListItemText  primary='Marketing' />
-                  </ListItemButton>
-              </ListItem>
-              <ListItem  sx={{background:pageSection.selectedSection=== 5?'rgb(222, 222, 222)':null}}  onClick={()=>{pageSection.selectedSectionFunc(5);history.push('/inventory')}}  disablePadding>
-                  <ListItemButton>
-                  <ListItemIcon style={{minWidth:'0px',padding:'0px 10px 0px 0px'}}>
-                      <Inventory sx={{color:'black'}}></Inventory>
-                  </ListItemIcon>
-                      <ListItemText  primary='Inventory' />
-                  </ListItemButton>
-              </ListItem>
-              <Divider></Divider>
-              {authContext.access.includes('sa') ? 
-                <Link style={{textDecoration:'none' , color:'black'}} to='/users'>
-                  <ListItem   disablePadding>
-                      <ListItemButton>
-                        <ListItemIcon style={{minWidth:'0px',padding:'0px 10px 0px 0px'}}>
-                            <Diversity2Icon sx={{color:'black'}}></Diversity2Icon>
-                        </ListItemIcon>
-                          <ListItemText  primary='peaple' />
-                      </ListItemButton>
-                  </ListItem>
-                </Link>
-            :
-                <ListItem   disablePadding>
-                    <ListItemButton disabled={true}>
-                    <ListItemIcon style={{minWidth:'0px',padding:'0px 10px 0px 0px'}}>
-                        <Diversity2Icon sx={{color:'black'}}></Diversity2Icon>
-                    </ListItemIcon>
-                        <ListItemText primary='peaple' />
-                    </ListItemButton>
-                </ListItem>
-            }
-          </div> 
+        {/* Main nav items */}
+        {NAV_ITEMS.map((item) => (
+          <ListItem key={item.section} disablePadding>
+            <ListItemButton
+              selected={pageSection.selectedSection === item.section}
+              disabled={item.disabled || false}
+              onClick={() => {
+                pageSection.selectedSectionFunc(item.section);
+                history.push(item.path);
+              }}
+              sx={{
+                borderRadius: 2,
+                mx: 1,
+                '&.Mui-selected': {
+                  backgroundColor: 'action.selected',
+                  '&:hover': { backgroundColor: 'action.selected' },
+                },
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={item.label}
+                primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+              />
+            </ListItemButton>
+          </ListItem>
+        ))}
 
+        <Divider sx={{ my: 1 }} />
+
+        {/* People — super admin only */}
+        <ListItem disablePadding>
+          {authContext.access.includes('sa') ? (
+            <ListItemButton
+              component={Link}
+              to="/users"
+              sx={{
+                borderRadius: 2,
+                mx: 1,
+                color: 'text.primary',
+                textDecoration: 'none',
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>
+                <Diversity2Icon />
+              </ListItemIcon>
+              <ListItemText
+                primary="People"
+                primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+              />
+            </ListItemButton>
+          ) : (
+            <ListItemButton
+              disabled
+              sx={{ borderRadius: 2, mx: 1 }}
+            >
+              <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>
+                <Diversity2Icon />
+              </ListItemIcon>
+              <ListItemText
+                primary="People"
+                primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+              />
+            </ListItemButton>
+          )}
+        </ListItem>
       </List>
-      {/* <Divider /> */}
-
     </Box>
   );
 
   return (
-    <div>
-
-        <React.Fragment>
-          <SwipeableDrawer
-            anchor={'left'}
-            open={props.leftSideNav['left']}
-            onClose={props.toggleDrawer('left', false)}
-            onOpen={props.toggleDrawer('left', true)}
-          >
-            {list('left')}
-          </SwipeableDrawer>
-        </React.Fragment>
-   </div>
+    <React.Fragment>
+      <SwipeableDrawer
+        anchor="left"
+        open={props.leftSideNav['left']}
+        onClose={props.toggleDrawer('left', false)}
+        onOpen={props.toggleDrawer('left', true)}
+      >
+        {drawerContent('left')}
+      </SwipeableDrawer>
+    </React.Fragment>
   );
 }
