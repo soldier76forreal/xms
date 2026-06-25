@@ -1,153 +1,195 @@
-import { Fragment , useContext , useState  , useEffect , useLayoutEffect} from "react";
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { Fragment, useContext, useState } from "react";
 import ReactDom from 'react-dom';
-import {Pagination,Navbar,Row  , Nav ,NavDropdown , Container ,Form ,FormControl , Col} from 'react-bootstrap';
-import Style from './mainNav.module.scss';
-import { Rotate as Hamburger } from 'hamburger-react'
-import PersonIcon from '@mui/icons-material/Person';
-import SearchIcon from '@mui/icons-material/Search';
-import axios from "axios";
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import IconButton from '@mui/material/IconButton';
 import Avatar from '@mui/material/Avatar';
-import Chip from '@mui/material/Chip';
-import Stack from '@mui/material/Stack';
-import NormalMenuForProfile from './normalMenuForProfile';
+import Badge from '@mui/material/Badge';
+import Box from '@mui/material/Box';
+import Tooltip from '@mui/material/Tooltip';
 
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import EmailIcon from '@mui/icons-material/Email';
-import NotificationsIcon from '@mui/icons-material/Notifications';
-import { Download, Search, Upload } from "@mui/icons-material";
-import { Badge, Button } from "@mui/material";
 import MenuIcon from '@mui/icons-material/Menu';
-import LeftSideNav from "./leftSideNav";
-import ProfilePhoto from '../../assets/imagePlaceHolder.png';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import EmailIcon from '@mui/icons-material/Email';
+import UploadIcon from '@mui/icons-material/Upload';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+
+import Lottie from "lottie-react";
+import UploadArrowAnimation from '../../assets/uploadArrowAnimation.json';
+
 import AuthContext from "../../components/authAndConnections/auth";
 import AxiosGlobal from "../../components/authAndConnections/axiosGlobalUrl";
+import ThemeCtx from "../../contextApi/themeContext";
+
+import NormalMenuForProfile from './normalMenuForProfile';
+import LeftSideNav from "./leftSideNav";
 import Notfications from "../../components/mis/notfications";
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import FilterModal from "./filterModal";
 import SearchBar from "./searchModule";
+import DownloadNavigation from "./downloadNavigation";
+
 import { useDispatch, useSelector } from "react-redux";
 import { actions } from "../../store/store";
-import DownloadNavigation from "./downloadNavigation";
-import Lottie from "lottie-react";
-import UploadArrowAnimation from '../../assets/uploadArrowAnimation.json'
-const MainNavPortal = (props) =>{
-    const [showNotfication , setShowNotfication] = useState(false);
-    const [notifCount , setNotifCount] = useState();
-    const authContext = useContext(AuthContext);
-    const axiosGlobal = useContext(AxiosGlobal);
-    const profileImage = authContext.decode?.profileImage;
-    const [status , setStatus] = useState(false);
-    const [openFilterModal , setOpenFilterModal] = useState(false);
-    const navDownloadList = useSelector((state) => state.downloadNavMenu);
-    const onGoingUpload = useSelector((state) => state.onGoingUpload);
+import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 
-    const dispatch = useDispatch()
-    const [leftSideNav , setLeftSideNav] = useState({
-        left: false,
-      
-      });
-      const toggleDrawer = (anchor, open) => (event) => {
-        if (
-          event &&
-          event.type === 'keydown' &&
-          (event.key === 'Tab' || event.key === 'Shift')
-        ) {
-          return;
-        }
-    
-        setLeftSideNav({ ...leftSideNav, [anchor]: open });
-      };
-      const [anchorEl, setAnchorEl] = useState(null);
-      const open = Boolean(anchorEl);
-      const handleClick = (event) => {
-        
-        setAnchorEl(event.currentTarget);
-      };
-      const handleClose = () => {
-        setAnchorEl(null);
-      };
-      const logOut = () => {
-        authContext.logout()
-        setAnchorEl(null);
-      };
-    return(
-        <Fragment>
-            <FilterModal  setOpenFilterModal={setOpenFilterModal} openFilterModal={openFilterModal}></FilterModal>
-            <DownloadNavigation></DownloadNavigation>
-            <Notfications notifCount={(e)=>{setNotifCount(e)}}  setShowNotfication={setShowNotfication} showNotfication={showNotfication}></Notfications>
-            <NormalMenuForProfile logOut={logOut} handleClick={handleClick} handleClose={handleClose} open={open} anchorEl={anchorEl} setAnchorEl={setAnchorEl}></NormalMenuForProfile>
-            <LeftSideNav a11yProps={props.a11yProps} toggleDrawer={toggleDrawer} setLeftSideNav={setLeftSideNav} leftSideNav={leftSideNav}></LeftSideNav>
-            <div dir="ltr" className={Style.navDiv}>
-                <Navbar className={Style.navBar}  expand="lg">
-                    <Container className={Style.containerDiv}> 
-                    <div style={{textAlign:'left',width:'5%'}}>
-                        <botton onClick={leftSideNav.left===true?toggleDrawer('left', false):toggleDrawer('left', true)} style={{backgroundColor:'black', padding:'6px 7px 6px 7px' , borderRadius:'3px'}}>
-                            {leftSideNav.left === false?<MenuIcon sx={{fontSize:'22px'}}/>:<ArrowBackIcon sx={{fontSize:'22px'}}/>}
-                        </botton>
-                        
-                    </div>
-                    <div className={Style.searchBar}>
-                        <SearchBar></SearchBar>
-                    </div>
-                    <div className={Style.rightSideDiv}>
-                        <div style={{background:'none',border:'solid black 2px'}} onClick={()=>{dispatch(actions.toggleDownloadNavMenu())}} className={Style.searchBtn}>
-                            <botton >
-                                {onGoingUpload === true?
-                                    <Lottie style={{width:'65px'}} color="black" animationData={UploadArrowAnimation} loop={true}></Lottie>
-                                :onGoingUpload === false?
-                                    <Upload sx={{color:'#000' , fontSize:'22px' , marginTop:'1px'}}></Upload> 
-                                :null}
-                            </botton>
-                        </div>
-                        <div style={{background:'none',border:'solid black 2px'}} onClick={()=>{showNotfication?setShowNotfication(false):setShowNotfication(true)}} className={Style.searchBtn}>
-                            <botton >
-                                <Badge badgeContent={notifCount} color="primary">
-                                    <NotificationsIcon sx={{color:'#000' , fontSize:'22px' , marginTop:'1px'}}></NotificationsIcon>
-                                </Badge>
-                            </botton>
-                        </div>
-                        <div style={{background:'none',border:'solid black 2px'}} className={Style.userBtn}>
-                            <botton >
-                                <Badge  badgeContent={0} color="primary">
-                                    <EmailIcon sx={{color:'#000' , fontSize:'22px' , marginTop:'1px'}}></EmailIcon>
-                                </Badge>
+const MainNavPortal = (props) => {
+  const [showNotfication, setShowNotfication] = useState(false);
+  const [notifCount, setNotifCount] = useState();
+  const [openFilterModal, setOpenFilterModal] = useState(false);
 
-                            </botton>
-                        </div>
-                        <div 
-                            id="demo-positioned-button"
-                            aria-controls={open ? 'demo-positioned-menu' : undefined}
-                            aria-haspopup="true"
-                            aria-expanded={open ? 'true' : undefined}
-                            onClick={handleClick}
-                        className={Style.profImageDiv}>
-                            <Avatar
-                                alt="Remy Sharp"
-                                src={profileImage?.filename ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}` : ProfilePhoto}
-                                sx={{ width: 40, height: 40 }}
-                            />
-                        </div>
-                    </div>
-                    </Container>
-                </Navbar>
-                <div className={Style.bottomLine}></div>
+  const authContext = useContext(AuthContext);
+  const axiosGlobal = useContext(AxiosGlobal);
+  const { themeMode, toggleTheme } = useContext(ThemeCtx);
 
-            </div>
-        </Fragment>
-    )
-}
-const MainNav = (props)=>{
-    return(
-        <Fragment>
-            {ReactDom.createPortal(
-                <MainNavPortal notifCount={props.notifCount} showNotfication={props.showNotfication} setShowNotfication={props.setShowNotfication}>
+  const profileImage = authContext.decode?.profileImage;
+  const dispatch = useDispatch();
+  const navDownloadList = useSelector((state) => state.downloadNavMenu);
+  const onGoingUpload = useSelector((state) => state.onGoingUpload);
 
-                </MainNavPortal>
-                ,
-                document.getElementById('headSec')
+  const [leftSideNav, setLeftSideNav] = useState({ left: false });
+
+  const toggleDrawer = (anchor, open) => (event) => {
+    if (event?.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) return;
+    setLeftSideNav({ ...leftSideNav, [anchor]: open });
+  };
+
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  const handleClick = (event) => setAnchorEl(event.currentTarget);
+  const handleClose = () => setAnchorEl(null);
+  const logOut = () => { authContext.logout(); setAnchorEl(null); };
+
+  const avatarSrc = profileImage?.filename
+    ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}`
+    : ProfilePhoto;
+
+  return (
+    <Fragment>
+      <FilterModal setOpenFilterModal={setOpenFilterModal} openFilterModal={openFilterModal} />
+      <DownloadNavigation />
+      <Notfications
+        notifCount={(e) => setNotifCount(e)}
+        setShowNotfication={setShowNotfication}
+        showNotfication={showNotfication}
+      />
+      <NormalMenuForProfile
+        logOut={logOut}
+        handleClick={handleClick}
+        handleClose={handleClose}
+        open={open}
+        anchorEl={anchorEl}
+        setAnchorEl={setAnchorEl}
+      />
+      <LeftSideNav
+        a11yProps={props.a11yProps}
+        toggleDrawer={toggleDrawer}
+        setLeftSideNav={setLeftSideNav}
+        leftSideNav={leftSideNav}
+      />
+
+      <AppBar position="fixed" dir="ltr">
+        <Toolbar sx={{ gap: 1 }}>
+
+          {/* Hamburger / back */}
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={leftSideNav.left ? toggleDrawer('left', false) : toggleDrawer('left', true)}
+            sx={{ mr: 0.5 }}
+          >
+            {leftSideNav.left ? <ArrowBackIcon /> : <MenuIcon />}
+          </IconButton>
+
+          {/* Search — centre, grows to fill available space */}
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', maxWidth: 440, mx: 'auto' }}>
+            <SearchBar />
+          </Box>
+
+          {/* Right-side action buttons */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+
+            {/* Upload / in-progress indicator */}
+            <Tooltip title="Uploads">
+              <IconButton
+                color="inherit"
+                onClick={() => dispatch(actions.toggleDownloadNavMenu())}
+              >
+                {onGoingUpload === true ? (
+                  <Lottie style={{ width: 28, height: 28 }} animationData={UploadArrowAnimation} loop />
+                ) : (
+                  <UploadIcon />
                 )}
-        </Fragment>
-    )
-}
+              </IconButton>
+            </Tooltip>
+
+            {/* Notifications */}
+            <Tooltip title="Notifications">
+              <IconButton
+                color="inherit"
+                onClick={() => setShowNotfication((prev) => !prev)}
+              >
+                <Badge badgeContent={notifCount} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Messages */}
+            <Tooltip title="Messages">
+              <IconButton color="inherit">
+                <Badge badgeContent={0} color="error">
+                  <EmailIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Dark / Light toggle */}
+            <Tooltip title={themeMode === 'light' ? 'Dark mode' : 'Light mode'}>
+              <IconButton color="inherit" onClick={toggleTheme}>
+                {themeMode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+              </IconButton>
+            </Tooltip>
+
+            {/* Profile avatar */}
+            <Tooltip title="Profile">
+              <IconButton
+                id="demo-positioned-button"
+                aria-controls={open ? 'demo-positioned-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? 'true' : undefined}
+                onClick={handleClick}
+                sx={{ p: 0.5 }}
+              >
+                <Avatar
+                  alt="Profile"
+                  src={avatarSrc}
+                  sx={{ width: 36, height: 36 }}
+                />
+              </IconButton>
+            </Tooltip>
+
+          </Box>
+        </Toolbar>
+      </AppBar>
+    </Fragment>
+  );
+};
+
+const MainNav = (props) => {
+  return (
+    <Fragment>
+      {ReactDom.createPortal(
+        <MainNavPortal
+          notifCount={props.notifCount}
+          showNotfication={props.showNotfication}
+          setShowNotfication={props.setShowNotfication}
+        />,
+        document.getElementById('headSec')
+      )}
+    </Fragment>
+  );
+};
+
 export default MainNav;
