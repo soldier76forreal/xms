@@ -1,17 +1,18 @@
-import { Fragment } from 'react';
-import Style from './textInputNormal.module.scss';
+import TextField from '@mui/material/TextField';
 
+const TextInputNormal = (props) => {
+  return (
+    <TextField
+      disabled={props.disable}
+      onChange={props.onChange}
+      value={props.value ?? ''}
+      name={props.name}
+      placeholder={props.placeholder}
+      type="text"
+      fullWidth
+      size="small"
+    />
+  );
+};
 
-const TextInputNormal = (props) =>{
-    return(
-        <Fragment>
-            <div className={Style.textInputDiv}>
-                <input disabled={props.disable} onChange={props.onChange} value={props.value} name={props.name} placeholder={props.placeholder} type='text' ></input>
-            </div>
-
-
-            
-        </Fragment>
-    )
-}
 export default TextInputNormal;
