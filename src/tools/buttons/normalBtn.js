@@ -1,10 +1,19 @@
-import { Fragment } from 'react';
-import Style from './normalBtn.module.scss';
+import Button from '@mui/material/Button';
 
+const NormalBtn = (props) => {
+  return (
+    <Button
+      onClick={props.onClick}
+      disabled={props.disable}
+      variant={props.variant ?? 'contained'}
+      color={props.color ?? 'primary'}
+      fullWidth={props.fullWidth !== false}
+      startIcon={props.startIcon}
+      size={props.size ?? 'medium'}
+    >
+      {props.name}
+    </Button>
+  );
+};
 
-const NormalBtn = (props) =>{
-    <Fragment>
-        <button style={{width:'100%'}} className={Style.normalBtn}>props.name</button>
-    </Fragment>
-}
 export default NormalBtn;
