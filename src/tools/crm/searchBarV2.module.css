@@ -1,0 +1,41 @@
+.searchBarDiv{
+height: 100%;
+margin-right: 18px;
+display: flex;
+z-index: 0;
+}
+.searchBar{
+    border: none;
+    border-radius: 11px;
+    border-top-right-radius: 0px;
+    max-width: 250px;
+    width: 100%;
+    border-bottom-right-radius: 0px;
+    font-size: 13px;
+    text-align: right;
+    transition: 0.2s ease-in-out all;
+    border-right: none;
+    background-color: #EDEDED;
+    padding:5px 4px 10px 0px;
+}
+.searchBar:focus{
+    border-color: none !important;
+    outline: none;
+    border:none !important; 
+
+
+}
+    .searchBtn{
+        align-content: center;
+        background-color: #EDEDED;
+        padding:10px 9px 15px 3px;
+        border-top-right-radius: 11px;
+        transition: 0.1s ease-in-out all;
+        border-bottom-right-radius: 11px;
+        z-index: 3;
+        border: none;
+    }
+
+    .clearBtn{
+        position: absolute
+    }

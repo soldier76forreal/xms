@@ -1,0 +1,50 @@
+.iconButton {
+  padding: 9px;
+  background-color: #F0F0F0;
+  border: none;
+  box-shadow: none;
+  border-radius: 12px;
+  width: -moz-fit-content;
+  width: fit-content;
+  height: -moz-fit-content;
+  height: fit-content;
+}
+
+.iconButtonWithText {
+  padding: 8px 14px 8px 8px;
+  background-color: #F0F0F0;
+  border: none;
+  box-shadow: none;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.iconButtonWithTextBlack {
+  padding: 8px 14px 8px 8px;
+  background-color: rgb(22, 22, 22);
+  border: none;
+  color: rgb(231, 231, 231);
+  box-shadow: none;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+@media only screen and (max-width: 768.98px) {
+  .iconButtonWithText {
+    padding: 6px 12px 6px 6px;
+    background-color: #F0F0F0;
+    border: none;
+    box-shadow: none;
+    border-radius: 12px;
+    font-size: 11px;
+  }
+  .iconButtonWithTextBlack {
+    padding: 6px 12px 6px 6px;
+    background-color: rgb(22, 22, 22);
+    border: none;
+    color: rgb(231, 231, 231);
+    box-shadow: none;
+    border-radius: 12px;
+    font-size: 11px;
+  }
+}/*# sourceMappingURL=iconBtn.module.css.map */

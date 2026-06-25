@@ -1,0 +1,405 @@
+::-moz-placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: rgb(73, 73, 73) !important;
+  opacity: 1; /* Firefox */
+}
+
+::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: rgb(73, 73, 73) !important;
+  opacity: 1; /* Firefox */
+}
+
+:-ms-input-placeholder { /* Internet Explorer 10-11 */
+  color: rgb(73, 73, 73) !important;
+}
+
+::-ms-input-placeholder { /* Microsoft Edge */
+  color: rgb(115, 115, 115) !important;
+}
+
+.ovDiv {
+  display: block;
+  margin: 10px auto 0px auto;
+  padding: 0px 20px 0px 20px;
+}
+
+.dashLine {
+  border-top: 2px line #969696 !important;
+}
+
+.dashLineVer {
+  border-top: 2px dashed #969696 !important;
+  transform: rotate(90deg);
+  max-width: 30px;
+  padding: 5px 0px 5px 0px;
+  margin-left: 20px;
+}
+
+.personalInformation {
+  padding: 25px 20px 20px 20px;
+  background-color: #ffffff;
+  border-radius: 11px;
+}
+
+.phoneNumberMainDiv {
+  display: flex;
+  align-items: center;
+}
+
+.dot {
+  width: 40px;
+  height: 40px;
+  background-color: rgb(74, 74, 74);
+  border-radius: 10px;
+  margin-right: 6px;
+  color: rgb(255, 255, 255);
+  display: flex;
+  padding-top: 5px;
+  font-size: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.phoneNumberCountry {
+  width: 100%;
+  padding: 0px 5px 0px 5px;
+}
+
+.littleTitleDiv {
+  margin-left: 14px;
+}
+
+.NormalBtn {
+  width: 100%;
+  padding: 10px 0px 10px 0px;
+  background-color: rgb(22, 22, 22);
+  color: rgb(231, 231, 231);
+  border: none;
+  border-radius: 11px;
+  margin-top: 35px;
+  margin-bottom: 20px;
+  font-size: 20px;
+}
+
+.addressDeleteBtnWithIcon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.titlePaddign {
+  padding: 15px 0px 5px 0px;
+  display: flex;
+  width: 100% !important;
+  align-items: center;
+}
+
+.titlePaddignSecond {
+  padding: 5px 0px 0px 0px;
+}
+
+.newInvoice {
+  position: fixed;
+  top: 0;
+  z-index: 12;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transition: 0.5s ease-in-out all;
+  z-index: 1001 !important;
+  background-color: rgb(249, 249, 249);
+}
+
+.topSection {
+  width: 100%;
+  top: 0px;
+  background-color: rgb(236, 236, 236);
+  position: relative;
+  border-bottom: 2px solid rgb(138, 138, 138);
+  display: flex;
+  align-items: center;
+}
+
+.backBtn {
+  padding: 20px 25px 20px 34px;
+  border-right: 2px solid rgb(138, 138, 138);
+  transition: 0.2s all ease-in-out;
+}
+
+.backBtn:hover {
+  background-color: rgb(182, 182, 182);
+}
+
+.fadeIn {
+  animation: openModal ease-in-out 0.3s forwards;
+}
+
+.fadeOut {
+  animation: closeModal ease-in-out 0.2s forwards;
+}
+
+@keyframes openModal {
+  0% {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  50% {
+    opacity: 0;
+    transform: translateY(0%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0%);
+  }
+}
+@keyframes closeModal {
+  0% {
+    opacity: 1;
+    transform: translateY(0%);
+  }
+  50% {
+    opacity: 0;
+    transform: translateY(0%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+}
+.topTitle {
+  position: absolute;
+  left: 120px;
+  font-family: YekanBold;
+  font-size: 25px;
+}
+
+.showCustomerNav {
+  position: fixed;
+  bottom: 0px;
+  background-color: white;
+  width: 100%;
+  max-width: 700px;
+  text-align: center;
+}
+
+.callStatusText {
+  font-size: 11px;
+  margin-left: 3px;
+}
+
+.callStatus {
+  background-color: #F0F0F0;
+  padding: 5px 10px 5px 10px;
+  border-radius: 10px;
+}
+
+.phoneNum {
+  float: left;
+  display: flex;
+  margin-right: 10px;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.callDropDownDiv {
+  width: 100%;
+  display: flex;
+}
+
+.callDropDownCallType {
+  text-align: left;
+  font-size: 12px;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  font-family: "yekanRegular";
+}
+.callDropDownCallType span {
+  font-size: 14px;
+  font-family: "yekanBold";
+  color: rgb(69, 69, 69);
+}
+
+.subToolsForCall {
+  padding: 0px 15px 0px 15px;
+  display: flex;
+}
+
+.rightTools {
+  margin: 0px 0px 0px auto;
+  font-size: 14px;
+  display: flex;
+  font-family: YekanBold;
+}
+
+.leftTools {
+  margin: 0px auto 0px 0px;
+}
+
+.btm {
+  background-color: rgb(0, 0, 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 3px;
+  color: rgb(247, 247, 247);
+}
+
+.btm button {
+  border: none;
+  padding: 5px 6px 5px 6px !important;
+  height: 100%;
+  transition: 0.2s all ease-in-out;
+  font-family: YekanBold;
+  font-size: 14px !important;
+}
+
+.btm button:hover {
+  background-color: rgb(210, 210, 210);
+}
+
+.callBtn {
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: center;
+}
+
+.number {
+  margin-right: 5px;
+  display: flex;
+  font-size: 14px;
+  padding: 5px 10px 0px 10px;
+}
+
+.chosenInvoiceDiv span {
+  font-family: YekanBold;
+  font-size: 14px;
+}
+
+.callChosenInvoice {
+  text-align: center;
+  padding: 25px 0px 25px 0px;
+}
+.callChosenInvoice span {
+  font-size: 11px;
+  color: #848484;
+  font-family: YekanRegular;
+}
+
+.discriptionDiv span {
+  font-family: YekanBold;
+  font-size: 14px;
+}
+
+.callDiscription {
+  text-align: center;
+  padding: 25px 0px 35px 0px;
+  font-size: 11px;
+  color: #848484;
+  font-family: YekanRegular;
+}
+
+.callDiscriptionItSelf {
+  padding: 5px 10px 5px 10px;
+  font-size: 13px;
+}
+
+.editBtn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  justify-content: center;
+  background-color: rgb(110, 110, 110);
+  border-radius: 5px;
+  align-items: center;
+  margin-left: 10px;
+  margin: 0px 0px 0px auto;
+  transition: 0.2s all ease-in-out;
+}
+
+@media only screen and (max-width: 768.98px) {
+  .topSection {
+    width: 100%;
+    top: 0px;
+    position: relative;
+    border-bottom: 2px solid rgb(138, 138, 138);
+    display: flex;
+    background-color: rgb(236, 236, 236);
+    align-items: center;
+  }
+  .backBtn {
+    padding: 12px 20px 12px 29px;
+    border-right: 2px solid rgb(138, 138, 138);
+    transition: 0.2s all ease-in-out;
+  }
+  .backBtn:hover {
+    background-color: rgb(182, 182, 182);
+  }
+  .topTitle {
+    position: absolute;
+    left: 85px;
+    font-size: 17px;
+    font-family: YekanBold;
+  }
+  .formDiv {
+    max-width: 600px;
+    width: 100%;
+    text-align: right;
+    height: 100%;
+    overflow-y: scroll !important;
+    overflow-x: none;
+    padding: 0px 20px 30px 20px;
+    margin: 0px auto 0px auto;
+  }
+  .arrowIcon {
+    font-size: 22px !important;
+  }
+  .secTitle {
+    margin-bottom: 10px;
+    margin-top: 25px;
+    font-family: YekanBold;
+    margin-left: 10px;
+    font-size: 18px;
+  }
+  .btn {
+    font-size: 12px !important;
+  }
+  .NormalBtn {
+    font-size: 12px;
+  }
+  .callDropDownDiv {
+    width: 100%;
+    display: flex;
+  }
+  .phoneNum {
+    display: none;
+  }
+  .callDropDownCallType {
+    text-align: left;
+    font-size: 10px;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    font-family: "yekanBold";
+  }
+  .callDropDownCallType span {
+    font-size: 10px;
+    font-family: "yekanBold";
+    color: rgb(240, 240, 240);
+  }
+  .callIcon {
+    font-size: 100px !important;
+  }
+  .number {
+    margin-right: 5px;
+    display: flex;
+    font-size: 13px;
+    padding: 3px 6px 0px 4px;
+  }
+}
+.subToolsForCall {
+  width: 100%;
+}/*# sourceMappingURL=showCustomer.module.css.map */

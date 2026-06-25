@@ -1,0 +1,166 @@
+.topSection{
+    display: flex;
+    position: relative;
+    display: flex;
+    padding: 30px 20px 30px 20px;
+    align-items: center;
+}
+.logoDiv{
+    position: absolute;
+    right: 20px;
+}
+.showFileDiv{
+    width: 100%;
+
+    margin: 0px auto 0px auto;
+    height: 100vh;
+    max-width: 2000px;
+    position: relative;
+    overflow-y: hidden;
+}
+
+
+.buttonDiv{
+    margin: 0px 0px 0px auto;
+    display: flex;
+    padding: 15px 15px 10px 15px;
+    
+
+}
+
+.listStyle{
+    ul{
+        list-style: none;
+        border: 2px solid black;
+        padding: 0px !important;
+     }
+     li{
+        display: inline-block;
+        padding: 8px;
+        border-left: solid 2px black;
+     }
+}
+.infoSection{
+    padding: 10px 0px 10px 10px !important;
+}
+.footer{
+    width: 100%;
+    height: 45px;
+    background-color: black;
+    position: fixed;
+    bottom: 0px;
+    color: white;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    font-size: 12px;
+    span{
+        font-size: 18px;
+        margin-left: 3px;
+        font-family: YekanBold;
+    }
+}
+
+
+
+
+
+
+
+
+.prName{
+    display:flex;
+    align-items:center;
+    font-size:14px;
+}
+.prSubName{
+    display:flex;
+    align-items:center;
+    margin-left:1px;
+    font-size:14px; 
+}
+.route{
+    text-align:left;
+    font-family:YekanBold;
+    font-size:22px;
+    padding:0px 0px 0px 10px;
+    
+}
+.subRoute{
+    text-align:left;
+    font-family:YekanLight;
+    font-size:22px;
+    padding:0px 0px 0px 5px;
+}
+.backBtn{
+    padding: 8px 15px 8px 15px;
+    margin-right: 10px;
+    border-right: 1px solid black;
+}
+@media only screen and (max-width: 768.98px) {
+}
+@media only screen and (max-width: 576.98px) {
+    .topSection{
+        display: flex;
+        position: relative;
+        display: flex;
+        padding: 20px 15px 20px 15px;
+        align-items: center;
+    }
+    .logoDiv img{
+        width: 50px !important;
+    }
+    .prName{
+        display:flex;
+        align-items:center;
+        font-size:12px;
+    }
+    .prSubName{
+        display:flex;
+        align-items:center;
+        margin-left:1px;
+        font-size:12px; 
+    }
+    .route{
+        text-align:left;
+        font-family:YekanBold;
+        font-size:16px;
+        padding:0px 0px 0px 10px;
+
+    }
+    .subRoute{
+        text-align:left;
+        font-family:YekanLight;
+        font-size:16px;
+        padding:0px 0px 0px 5px;
+    }
+    .buttonDiv{
+        margin: 0px 0px 0px auto;
+        display: flex;
+        padding: 10px 5px 10px 5px;
+    }
+    .backBtn{
+        padding: 8px 15px 8px 15px;
+        margin-right: 0px;
+        border-right: 1px solid black;
+    }
+    .footer{
+        width: 100%;
+        height: 35px;
+        background-color: black;
+        position: fixed;
+        bottom: 0px;
+        color: white;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
+        display: flex;
+        font-size: 8px;
+        span{
+            font-size: 14px;
+            margin-left: 3px;
+            font-family: YekanBold;
+        }
+    }
+}

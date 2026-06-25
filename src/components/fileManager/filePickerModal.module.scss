@@ -1,0 +1,86 @@
+.inputDiv{
+    width: 100%;
+    text-align: center;
+    padding: 20px 0px 0px 0px;
+    
+    input{
+        width: 90%;
+        font-size: 13px;
+        
+        margin: 0px auto 0px auto;
+        border: 2px solid black;
+        padding: 5px 0px 3px 5px;
+        border-radius: 0px;
+
+    }
+}
+.buttonDiv{
+    margin: 0px 0px 0px auto;
+    display: flex;
+    padding: 15px 15px 0px 15px;
+    
+
+}
+
+
+
+.okButton{
+    background-color: black;
+    color: white;
+    margin-left: 5px;
+    border: none;
+    transition: ease-in-out all 0.2s;
+    font-size: 14px;
+    padding: 7px 10px 4px 10px;
+}
+.okButton:hover{
+    background-color: rgb(45, 45, 45);
+    color: white;
+    margin-left: 5px;
+    font-size: 14px;
+    padding: 7px 10px 4px 10px;
+    border: none;
+
+
+}
+.cancelBtn{
+    font-size: 14px;
+    padding: 5px 10px 2px 10px;
+    border:2px solid black;
+    background-color: white ;
+    transition: ease-in-out all 0.2s;
+}
+.cancelBtn:hover{
+    padding: 5px 10px 2px 10px;
+    border:2px solid black;
+    background-color: rgb(221, 221, 221);
+}
+
+
+.list{
+    height: 450px;
+    max-height: auto;
+    margin-top: 8px;
+    overflow-y: scroll;
+}
+.folderIcon{
+    font-size: 35px !important;
+}
+.listItSelf{
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 50px;
+    transition: 0.2s all ease-in-out;
+    padding: 8px 0px 8px 6px;
+    border-bottom: 1px solid rgb(194, 194, 194);
+}
+.listItSelf:hover{
+    background-color: rgb(231, 231, 231);
+    padding: 8px 0px 8px 6px;
+}
+.listItSelf div{
+    font-size:14px;
+    padding: 3px 0px 0px 5px;
+}

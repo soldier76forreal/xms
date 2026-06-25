@@ -1,0 +1,33 @@
+.titleDiv {
+  display: inline-block;
+}
+.titleDiv h3 {
+  font-size: 25px;
+  font-family: YekanBold;
+}
+.titleDiv span {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 80px;
+  background-color: rgb(22, 22, 22);
+}
+
+@media only screen and (max-width: 1200.98px) {
+  .titleDiv {
+    display: inline-block;
+  }
+  .titleDiv h3 {
+    font-size: 19px;
+    font-family: YekanBold;
+  }
+  .titleDiv span {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 6px;
+    border-radius: 80px;
+    background-color: rgb(22, 22, 22);
+  }
+}/*# sourceMappingURL=bigOneWithDot.module.css.map */

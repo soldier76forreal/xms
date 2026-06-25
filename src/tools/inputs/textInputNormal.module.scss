@@ -1,0 +1,26 @@
+@import '../../overalStyle/colors';
+.textInputDiv{
+    width: 100%;
+    display: inline-block;
+    input{
+        background-color: $inputColor;
+        width: 100%;
+        border: 1px solid rgb(202, 202, 202);
+        padding: 9px 12px 9px 12px;
+        border-radius: 5px !important;
+
+    }
+    input:focus{
+        border: solid 1px rgb(0, 0, 0) !important;
+        outline: none;
+    }
+    input::placeholder{
+        font-size: 12px;
+    }
+    
+}
+
+
+
+
+

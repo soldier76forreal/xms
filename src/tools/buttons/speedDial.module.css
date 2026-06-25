@@ -1,0 +1,15 @@
+.dialDiv button {
+  background-color: black !important;
+}
+
+.dialDivFileRes button {
+  background-color: black !important;
+  display: none;
+}
+
+@media only screen and (max-width: 768.98px) {
+  .dialDivFileRes button {
+    background-color: black !important;
+    display: block;
+  }
+}/*# sourceMappingURL=speedDial.module.css.map */

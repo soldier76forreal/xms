@@ -1,0 +1,21 @@
+.textInputDiv {
+  width: 100%;
+  display: inline-block;
+}
+.textInputDiv input {
+  background-color: #F0F0F0;
+  width: 100%;
+  border: 1px solid rgb(202, 202, 202);
+  padding: 9px 12px 9px 12px;
+  border-radius: 5px !important;
+}
+.textInputDiv input:focus {
+  border: solid 1px rgb(0, 0, 0) !important;
+  outline: none;
+}
+.textInputDiv input::-moz-placeholder {
+  font-size: 12px;
+}
+.textInputDiv input::placeholder {
+  font-size: 12px;
+}/*# sourceMappingURL=textInputNormal.module.css.map */
