@@ -1,0 +1,262 @@
+import { useState, useEffect, useContext, useCallback } from 'react';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
+import Typography from '@mui/material/Typography';
+import { useDispatch, useSelector } from 'react-redux';
+import AuthContext from '../authAndConnections/auth';
+import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import { createProduct, updateProduct, actions } from '../../store/store';
+
+const ProductForm = () => {
+  const authCtx     = useContext(AuthContext);
+  const axiosGlobal = useContext(AxiosGlobal);
+  const dispatch    = useDispatch();
+
+  const showNew    = useSelector((s) => s.invShowNewProduct);
+  const editProd   = useSelector((s) => s.invEditProduct);
+  const stoneTypes = useSelector((s) => s.invLookups.stoneTypes) || [];
+  const units      = useSelector((s) => s.invLookups.units)      || [];
+
+  const open   = showNew || Boolean(editProd);
+  const isEdit = Boolean(editProd);
+
+  const [stoneType,    setStoneType]    = useState('TR');
+  const [quarryCode,   setQuarryCode]   = useState('');
+  const [quarryName,   setQuarryName]   = useState('');
+  const [name,         setName]         = useState('');
+  const [nameAr,       setNameAr]       = useState('');
+  const [description,  setDescription]  = useState('');
+  const [defaultUnit,  setDefaultUnit]  = useState('M2');
+  const [category,     setCategory]     = useState('');
+  const [status,       setStatus]       = useState('active');
+  const [busy,         setBusy]         = useState(false);
+
+  // Populate when editing
+  useEffect(() => {
+    if (editProd) {
+      setStoneType(editProd.stoneType    || 'TR');
+      setQuarryCode(editProd.quarryCode  || '');
+      setQuarryName(editProd.quarryName  || '');
+      setName(editProd.name              || '');
+      setNameAr(editProd.nameAr          || '');
+      setDescription(editProd.description || '');
+      setDefaultUnit(editProd.defaultUnit || 'M2');
+      setCategory(editProd.category      || '');
+      setStatus(editProd.status          || 'active');
+    } else {
+      setStoneType('TR');
+      setQuarryCode('');
+      setQuarryName('');
+      setName('');
+      setNameAr('');
+      setDescription('');
+      setDefaultUnit('M2');
+      setCategory('');
+      setStatus('active');
+    }
+  }, [editProd, open]);
+
+  const handleClose = useCallback(() => {
+    if (showNew) dispatch(actions.invToggleNewProduct());
+    dispatch(actions.invSetEditProduct(null));
+  }, [dispatch, showNew]);
+
+  const handleSubmit = async () => {
+    if (!stoneType || !quarryCode.trim()) return;
+    setBusy(true);
+    const productCode = `${stoneType}${quarryCode.trim().padStart(2, '0')}`.toUpperCase();
+    const payload = {
+      stoneType,
+      quarryCode: quarryCode.trim(),
+      quarryName: quarryName.trim() || undefined,
+      name:        name.trim()        || undefined,
+      nameAr:      nameAr.trim()      || undefined,
+      description: description.trim() || undefined,
+      defaultUnit,
+      category:    category.trim()    || undefined,
+      status,
+    };
+    try {
+      if (isEdit) {
+        await dispatch(updateProduct({
+          authCtx, axiosGlobal,
+          id: editProd._id,
+          data: payload,
+        })).unwrap();
+      } else {
+        await dispatch(createProduct({
+          authCtx, axiosGlobal,
+          data: { ...payload, code: productCode },
+        })).unwrap();
+      }
+      handleClose();
+    } catch {
+      // errors dispatched as snackBar inside thunks
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Derived product code preview
+  const codePreview = stoneType && quarryCode.trim()
+    ? `${stoneType}${quarryCode.trim().padStart(2, '0')}`.toUpperCase()
+    : '—';
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem' }}>
+        {isEdit ? `Edit product — ${editProd?.code}` : 'New product (stone variety)'}
+      </DialogTitle>
+
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
+
+        {/* Stone type + quarry code */}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <TextField
+            select
+            label="Stone type"
+            size="small"
+            value={stoneType}
+            onChange={(e) => setStoneType(e.target.value)}
+            sx={{ flex: 1 }}
+          >
+            {stoneTypes.length > 0
+              ? stoneTypes.map((st) => (
+                  <MenuItem key={st.code} value={st.code}>
+                    {st.code} — {st.name}
+                  </MenuItem>
+                ))
+              : [
+                  ['TR','Travertine'],['MA','Marble'],['GR','Granite'],['ON','Onyx'],
+                  ['QU','Chinese Quartz'],['LI','Limestone'],['BA','Basalt'],['OT','Other'],
+                ].map(([k, v]) => <MenuItem key={k} value={k}>{k} — {v}</MenuItem>)
+            }
+          </TextField>
+
+          <TextField
+            label="Quarry code"
+            size="small"
+            value={quarryCode}
+            onChange={(e) => setQuarryCode(e.target.value.replace(/\D/g, '').slice(0, 2))}
+            placeholder="e.g. 45"
+            inputProps={{ maxLength: 2, inputMode: 'numeric', style: { fontFamily: 'monospace', letterSpacing: 2 } }}
+            sx={{ width: 130 }}
+            helperText={`Code: ${codePreview}`}
+          />
+        </Box>
+
+        {/* Quarry name */}
+        <TextField
+          label="Quarry / colour name"
+          size="small"
+          fullWidth
+          value={quarryName}
+          onChange={(e) => setQuarryName(e.target.value)}
+          placeholder="e.g. Beige NR, Armani Grey"
+        />
+
+        <Divider />
+
+        {/* Display names */}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <TextField
+            label="Product name"
+            size="small"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            sx={{ flex: 1 }}
+            placeholder="e.g. Travertine Silver Platinum"
+          />
+          <TextField
+            label="Arabic name"
+            size="small"
+            value={nameAr}
+            onChange={(e) => setNameAr(e.target.value)}
+            sx={{ flex: 1 }}
+            inputProps={{ dir: 'rtl' }}
+          />
+        </Box>
+
+        {/* Description */}
+        <TextField
+          label="Description"
+          size="small"
+          fullWidth
+          multiline
+          minRows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+
+        <Divider />
+
+        {/* Unit + category + status */}
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <TextField
+            select
+            label="Default unit"
+            size="small"
+            value={defaultUnit}
+            onChange={(e) => setDefaultUnit(e.target.value)}
+            sx={{ flex: 1 }}
+          >
+            {units.length > 0
+              ? units.map((u) => <MenuItem key={u.code} value={u.code}>{u.code}</MenuItem>)
+              : ['M2','ML','PCS','SQFT','LNFT'].map((u) => <MenuItem key={u} value={u}>{u}</MenuItem>)
+            }
+          </TextField>
+
+          <TextField
+            label="Category"
+            size="small"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            sx={{ flex: 1 }}
+            placeholder="e.g. Tiles, Slabs"
+          />
+
+          <TextField
+            select
+            label="Status"
+            size="small"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            sx={{ width: 130 }}
+          >
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="archived">Archived</MenuItem>
+          </TextField>
+        </Box>
+
+        {!isEdit && (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Product code will be <strong>{codePreview}</strong>. Variants (SKUs) are added after creation.
+          </Typography>
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={handleClose} size="small" disabled={busy}>Cancel</Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          size="small"
+          disabled={busy || !stoneType || !quarryCode.trim()}
+          startIcon={busy ? <CircularProgress size={12} color="inherit" /> : null}
+        >
+          {isEdit ? 'Save changes' : 'Create product'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default ProductForm;

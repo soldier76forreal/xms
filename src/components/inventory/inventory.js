@@ -19,6 +19,7 @@ import {
 import SkeletonWrapper from '../../tools/loader/skeletonWrapper';
 import ProductCard from './productCard';
 import ShowProduct from './showProduct';
+import ProductForm from './productForm';
 
 const Inventory = () => {
   const authCtx    = useContext(AuthContext);
@@ -216,6 +217,9 @@ const Inventory = () => {
           </Box>
         )}
       </SkeletonWrapper>
+
+      {/* Product form (new/edit) — always rendered so it can open from Redux state */}
+      <ProductForm />
     </Box>
   );
 };

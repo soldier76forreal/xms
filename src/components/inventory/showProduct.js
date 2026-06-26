@@ -8,6 +8,8 @@ import SkeletonWrapper from '../../tools/loader/skeletonWrapper';
 import ProductHeader from './sections/productHeader';
 import SpecPanel from './sections/specPanel';
 import VariantsTable from './sections/variantsTable';
+import VariantForm from './variantForm';
+import ProductForm from './productForm';
 
 const ShowProduct = ({ productId, onBack }) => {
   const authCtx     = useContext(AuthContext);
@@ -45,8 +47,7 @@ const ShowProduct = ({ productId, onBack }) => {
               onAddVariant={handleAddVariant}
             />
 
-            {/* Spec panel — only if product has variants with spec (show first variant's spec as sample)
-                or product-level spec fields if the product has embedded spec */}
+            {/* Spec panel — shows first active variant's spec as the variety spec sample */}
             {variants.length > 0 && variants[0]?.spec && (
               <SpecPanel
                 spec={variants[0].spec}
@@ -62,6 +63,10 @@ const ShowProduct = ({ productId, onBack }) => {
           </>
         )}
       </SkeletonWrapper>
+
+      {/* Forms — rendered outside SkeletonWrapper so they're always in DOM when open */}
+      <VariantForm productId={productId} />
+      <ProductForm />
     </Box>
   );
 };
