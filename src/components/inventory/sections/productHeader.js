@@ -21,15 +21,13 @@ function formatQty(num) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(num);
 }
 
-const ProductHeader = ({ product, onBack, onEdit, onAddVariant }) => {
+const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accent = STONE_ACCENT[product?.stoneType] || '#888';
 
   const unitEntries = Object.entries(product?.totalsByUnit || {}).filter(([, qty]) => qty > 0);
-  const coverUrl = product?.coverMediaId
-    ? `/uploads/thumb-${product.coverMediaId}`
-    : null;
+  const coverUrl = coverThumbUrl || null;
 
   return (
     <Box>

@@ -1,4 +1,4 @@
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useState, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import { useDispatch, useSelector } from 'react-redux';
 import AuthContext from '../authAndConnections/auth';
@@ -8,6 +8,7 @@ import SkeletonWrapper from '../../tools/loader/skeletonWrapper';
 import ProductHeader from './sections/productHeader';
 import SpecPanel from './sections/specPanel';
 import VariantsTable from './sections/variantsTable';
+import MediaGallery from './sections/mediaGallery';
 import VariantForm from './variantForm';
 import ProductForm from './productForm';
 
@@ -16,24 +17,49 @@ const ShowProduct = ({ productId, onBack }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
 
-  const product        = useSelector((s) => s.invCurrentProduct);
-  const loading        = useSelector((s) => s.invCurrentProductLoading);
-  const variants       = useSelector((s) => s.invVariants);
-  const invRefreshKey  = useSelector((s) => s.invRefreshKey);
+  const product       = useSelector((s) => s.invCurrentProduct);
+  const loading       = useSelector((s) => s.invCurrentProductLoading);
+  const variants      = useSelector((s) => s.invVariants);
+  const invRefreshKey = useSelector((s) => s.invRefreshKey);
+
+  // Media managed locally — not in Redux (product-specific, short-lived)
+  const [media, setMedia]             = useState([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+
+  const fetchMedia = useCallback(async () => {
+    if (!productId) return;
+    setMediaLoading(true);
+    try {
+      const res = await authCtx.jwtInst({
+        method: 'get',
+        url: `${axiosGlobal.defaultTargetApi}/inventory/media`,
+        params: { attachedToType: 'inventoryProduct', attachedToId: productId },
+      });
+      setMedia(res.data.data || []);
+    } catch {
+      // non-fatal
+    } finally {
+      setMediaLoading(false);
+    }
+  }, [productId, authCtx, axiosGlobal]);
 
   useEffect(() => {
     if (!productId) return;
     dispatch(fetchProduct({ authCtx, axiosGlobal, id: productId }));
     dispatch(fetchVariants({ authCtx, axiosGlobal, productId }));
+    fetchMedia();
   }, [productId, invRefreshKey]);
 
-  const handleEdit = () => {
-    dispatch(actions.invSetEditProduct(product));
-  };
+  const handleEdit = () => dispatch(actions.invSetEditProduct(product));
+  const handleAddVariant = () => dispatch(actions.invToggleNewVariant());
 
-  const handleAddVariant = () => {
-    dispatch(actions.invToggleNewVariant());
-  };
+  // Derive cover thumbnail from local media list
+  const coverFile = product?.coverMediaId
+    ? media.find((f) => String(f._id) === String(product.coverMediaId))
+    : null;
+  const coverThumbUrl = coverFile?.thumbnail
+    ? `${axiosGlobal.defaultTargetApi}/uploads/${coverFile.thumbnail}`
+    : null;
 
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto', px: { xs: 2, sm: 3 }, py: 3 }}>
@@ -42,17 +68,14 @@ const ShowProduct = ({ productId, onBack }) => {
           <>
             <ProductHeader
               product={product}
+              coverThumbUrl={coverThumbUrl}
               onBack={onBack}
               onEdit={handleEdit}
               onAddVariant={handleAddVariant}
             />
 
-            {/* Spec panel — shows first active variant's spec as the variety spec sample */}
             {variants.length > 0 && variants[0]?.spec && (
-              <SpecPanel
-                spec={variants[0].spec}
-                productCode={product.code}
-              />
+              <SpecPanel spec={variants[0].spec} productCode={product.code} />
             )}
 
             <VariantsTable
@@ -60,11 +83,18 @@ const ShowProduct = ({ productId, onBack }) => {
               productId={product._id}
               onAddVariant={handleAddVariant}
             />
+
+            <MediaGallery
+              productId={product._id}
+              coverMediaId={product.coverMediaId}
+              media={media}
+              loading={mediaLoading}
+              onRefresh={fetchMedia}
+            />
           </>
         )}
       </SkeletonWrapper>
 
-      {/* Forms — rendered outside SkeletonWrapper so they're always in DOM when open */}
       <VariantForm productId={productId} />
       <ProductForm />
     </Box>

@@ -19,10 +19,13 @@ function formatQty(num) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(num);
 }
 
-const ProductCard = ({ product, onClick }) => {
+const ProductCard = ({ product, onClick, apiBase }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accent = STONE_ACCENT[product.stoneType] || '#888';
+  const thumbUrl = product.coverThumbnail && apiBase
+    ? `${apiBase}/uploads/${product.coverThumbnail}`
+    : null;
 
   const unitEntries = Object.entries(product.totalsByUnit || {}).filter(([, qty]) => qty > 0);
 
@@ -56,10 +59,10 @@ const ProductCard = ({ product, onClick }) => {
           justifyContent: 'center',
         }}
       >
-        {product.coverMediaId ? (
+        {thumbUrl ? (
           <Box
             component="img"
-            src={`/uploads/thumb-${product.coverMediaId}`}
+            src={thumbUrl}
             alt=""
             sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) => { e.target.style.display = 'none'; }}

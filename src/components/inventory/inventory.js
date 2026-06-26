@@ -211,6 +211,7 @@ const Inventory = () => {
               <ProductCard
                 key={product._id}
                 product={product}
+                apiBase={axiosGlobal.defaultTargetApi}
                 onClick={() => setSelectedProductId(product._id)}
               />
             ))}
