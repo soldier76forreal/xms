@@ -112,7 +112,7 @@ const ProductForm = () => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem' }}>
+      <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
         {isEdit ? `Edit product — ${editProd?.code}` : 'New product (stone variety)'}
       </DialogTitle>
 

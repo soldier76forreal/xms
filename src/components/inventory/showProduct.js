@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import { useDispatch, useSelector } from 'react-redux';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { fetchProduct, fetchVariants, actions } from '../../store/store';
+import { fetchProduct, fetchVariants, fetchCategories, actions } from '../../store/store';
 import SkeletonWrapper from '../../tools/loader/skeletonWrapper';
 import ProductHeader from './sections/productHeader';
 import SpecPanel from './sections/specPanel';
@@ -11,6 +11,7 @@ import VariantsTable from './sections/variantsTable';
 import MediaGallery from './sections/mediaGallery';
 import VariantForm from './variantForm';
 import ProductForm from './productForm';
+import VariantDetail from './variantDetail';
 
 const ShowProduct = ({ productId, onBack }) => {
   const authCtx     = useContext(AuthContext);
@@ -47,6 +48,7 @@ const ShowProduct = ({ productId, onBack }) => {
     if (!productId) return;
     dispatch(fetchProduct({ authCtx, axiosGlobal, id: productId }));
     dispatch(fetchVariants({ authCtx, axiosGlobal, productId }));
+    dispatch(fetchCategories({ authCtx, axiosGlobal }));
     fetchMedia();
   }, [productId, invRefreshKey]);
 
@@ -97,6 +99,7 @@ const ShowProduct = ({ productId, onBack }) => {
 
       <VariantForm productId={productId} />
       <ProductForm />
+      <VariantDetail />
     </Box>
   );
 };

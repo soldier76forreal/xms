@@ -11,6 +11,10 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import Select from '@mui/material/Select';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
 import { useDispatch, useSelector } from 'react-redux';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -78,16 +82,18 @@ const VariantForm = ({ productId }) => {
   const open        = useSelector((s) => s.invShowNewVariant);
   const editVariant = useSelector((s) => s.invEditVariant);
   const units       = useSelector((s) => s.invLookups.units) || [];
+  const categories  = useSelector((s) => s.invCategories) || [];
 
   const isEdit = Boolean(editVariant);
 
-  const [code,     setCode]     = useState('');
-  const [unit,     setUnit]     = useState('M2');
-  const [quantity, setQuantity] = useState('');
-  const [price,    setPrice]    = useState('');
-  const [status,   setStatus]   = useState('active');
-  const [busy,     setBusy]     = useState(false);
-  const [parsed,   setParsed]   = useState(null);
+  const [code,           setCode]           = useState('');
+  const [unit,           setUnit]           = useState('M2');
+  const [quantity,       setQuantity]       = useState('');
+  const [price,          setPrice]          = useState('');
+  const [status,         setStatus]         = useState('active');
+  const [selectedCats,   setSelectedCats]   = useState([]);
+  const [busy,           setBusy]           = useState(false);
+  const [parsed,         setParsed]         = useState(null);
 
   // Populate on edit
   useEffect(() => {
@@ -98,12 +104,14 @@ const VariantForm = ({ productId }) => {
       setParsed(parseStoneCode(editVariant.code));
       setQuantity('');
       setPrice('');
+      setSelectedCats((editVariant.categories || []).map((c) => typeof c === 'object' ? c._id : c));
     } else {
       setCode('');
       setUnit('M2');
       setQuantity('');
       setPrice('');
       setStatus('active');
+      setSelectedCats([]);
       setParsed(null);
     }
   }, [editVariant, open]);
@@ -131,7 +139,7 @@ const VariantForm = ({ productId }) => {
           authCtx, axiosGlobal,
           id: editVariant._id,
           productId,
-          data: { code: code.trim().toUpperCase(), unit, status },
+          data: { code: code.trim().toUpperCase(), unit, status, categories: selectedCats },
         })).unwrap();
       } else {
         await dispatch(createVariant({
@@ -143,6 +151,7 @@ const VariantForm = ({ productId }) => {
             quantity: quantity !== '' ? parseFloat(quantity) : 0,
             price:    price    !== '' ? parseFloat(price)    : undefined,
             currency: 'AED',
+            categories: selectedCats,
           },
         })).unwrap();
       }
@@ -158,7 +167,7 @@ const VariantForm = ({ productId }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem' }}>
+      <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
         {isEdit ? `Edit variant — ${editVariant?.code}` : 'Add variant'}
       </DialogTitle>
 
@@ -244,6 +253,31 @@ const VariantForm = ({ productId }) => {
             <MenuItem value="active">Active</MenuItem>
             <MenuItem value="archived">Archived</MenuItem>
           </TextField>
+        )}
+
+        {/* Category multi-select */}
+        {categories.length > 0 && (
+          <FormControl size="small" fullWidth>
+            <InputLabel>Categories</InputLabel>
+            <Select
+              multiple
+              value={selectedCats}
+              onChange={(e) => setSelectedCats(e.target.value)}
+              input={<OutlinedInput label="Categories" />}
+              renderValue={(selected) => (
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                  {selected.map((id) => {
+                    const cat = categories.find((c) => c._id === id);
+                    return <Chip key={id} label={cat?.name || id} size="small" sx={{ height: 20, fontSize: '0.7rem' }} />;
+                  })}
+                </Box>
+              )}
+            >
+              {categories.map((cat) => (
+                <MenuItem key={cat._id} value={cat._id}>{cat.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         )}
 
         {isEdit && (

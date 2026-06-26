@@ -504,6 +504,9 @@ export const fetchVariants = createAsyncThunk('inventory/fetchVariants', async (
   }
 });
 
+const toast = (dispatch, msg, type = 'success') =>
+  dispatch(actions.setShowSnackBar({ status: true, msg, type }));
+
 export const createProduct = createAsyncThunk('inventory/createProduct', async (theData, { dispatch }) => {
   const response = await theData.authCtx.jwtInst({
     method: 'post',
@@ -511,6 +514,7 @@ export const createProduct = createAsyncThunk('inventory/createProduct', async (
     data: theData.data,
   });
   dispatch(actions.invRefresh());
+  toast(dispatch, 'Product created');
   return response.data.data;
 });
 
@@ -521,6 +525,7 @@ export const updateProduct = createAsyncThunk('inventory/updateProduct', async (
     data: theData.data,
   });
   dispatch(actions.invRefresh());
+  if (!theData.silent) toast(dispatch, 'Product updated');
   return response.data.data;
 });
 
@@ -530,8 +535,8 @@ export const createVariant = createAsyncThunk('inventory/createVariant', async (
     url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants`,
     data: theData.data,
   });
-  // Refresh the parent product detail after adding a variant
   dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.data.productId }));
+  toast(dispatch, 'Variant added');
   return response.data;
 });
 
@@ -542,7 +547,17 @@ export const updateVariant = createAsyncThunk('inventory/updateVariant', async (
     data: theData.data,
   });
   dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  toast(dispatch, 'Variant updated');
   return response.data.data;
+});
+
+export const deleteVariant = createAsyncThunk('inventory/deleteVariant', async (theData, { dispatch }) => {
+  await theData.authCtx.jwtInst({
+    method: 'delete',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.id}`,
+  });
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  toast(dispatch, 'Variant deleted');
 });
 
 export const adjustStock = createAsyncThunk('inventory/adjustStock', async (theData, { dispatch }) => {
@@ -552,6 +567,7 @@ export const adjustStock = createAsyncThunk('inventory/adjustStock', async (theD
     data: { delta: theData.delta, reason: theData.reason },
   });
   dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  toast(dispatch, `Stock adjusted (${theData.delta > 0 ? '+' : ''}${theData.delta})`);
   return response.data.data;
 });
 
@@ -562,6 +578,7 @@ export const updatePrice = createAsyncThunk('inventory/updatePrice', async (theD
     data: { price: theData.price, currency: theData.currency || 'AED' },
   });
   dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  toast(dispatch, `Price updated to ${theData.price} AED`);
   return response.data.data;
 });
 
@@ -577,6 +594,7 @@ export const uploadInventoryMedia = createAsyncThunk('inventory/uploadMedia', as
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  toast(dispatch, 'Media uploaded');
   return response.data.data;
 });
 
@@ -586,6 +604,7 @@ export const deleteInventoryMedia = createAsyncThunk('inventory/deleteMedia', as
     url: `${theData.axiosGlobal.defaultTargetApi}/inventory/media/${theData.fileId}`,
   });
   dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  toast(dispatch, 'Media deleted');
 });
 
 export const fetchInventoryLogs = createAsyncThunk('inventory/fetchLogs', async (theData, { dispatch }) => {
@@ -618,7 +637,7 @@ export const parseInventoryCode = createAsyncThunk('inventory/parseCode', async 
 });
 
 export const fetchInventoryLookups = createAsyncThunk('inventory/fetchLookups', async (theData, { dispatch, getState }) => {
-  if (getState().invLookupsLoaded) return; // already cached
+  if (getState().invLookupsLoaded) return;
   try {
     const response = await theData.authCtx.jwtInst({
       method: 'get',
@@ -628,6 +647,50 @@ export const fetchInventoryLookups = createAsyncThunk('inventory/fetchLookups', 
   } catch (err) {
     console.error(err);
   }
+});
+
+export const fetchInvStats = createAsyncThunk('inventory/fetchStats', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/stats`,
+    });
+    dispatch(actions.invSetStats(response.data));
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+export const fetchCategories = createAsyncThunk('inventory/fetchCategories', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/categories`,
+    });
+    dispatch(actions.invSetCategories(response.data.data));
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+export const createCategory = createAsyncThunk('inventory/createCategory', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/categories`,
+    data: { name: theData.name, description: theData.description },
+  });
+  dispatch(fetchCategories({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal }));
+  toast(dispatch, `Category "${theData.name}" created`);
+  return response.data.data;
+});
+
+export const deleteCategory = createAsyncThunk('inventory/deleteCategory', async (theData, { dispatch }) => {
+  await theData.authCtx.jwtInst({
+    method: 'delete',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/categories/${theData.id}`,
+  });
+  dispatch(fetchCategories({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal }));
+  toast(dispatch, 'Category deleted');
 });
 
 //------------------------------inventory end
@@ -699,6 +762,10 @@ const dataSlice = createSlice({
     invEditProduct: null,
     invShowNewVariant: false,
     invEditVariant: null,
+    invCurrentVariant: null,
+    invShowVariantDetail: false,
+    invCategories: [],
+    invStats: null,
   },
   reducers: {
     //------------------------------file manager start
@@ -1333,6 +1400,10 @@ const dataSlice = createSlice({
     invSetEditProduct(state, action)        { state.invEditProduct = action.payload; },
     invToggleNewVariant(state)              { state.invShowNewVariant = !state.invShowNewVariant; },
     invSetEditVariant(state, action)        { state.invEditVariant = action.payload; },
+    invSetCurrentVariant(state, action)     { state.invCurrentVariant = action.payload; },
+    invToggleVariantDetail(state)           { state.invShowVariantDetail = !state.invShowVariantDetail; },
+    invSetCategories(state, action)         { state.invCategories = action.payload; },
+    invSetStats(state, action)              { state.invStats = action.payload; },
     //------------------------------inventory
 
   },
