@@ -458,28 +458,6 @@ export const getInvoices = createAsyncThunk('overallAssets/getInvoices', async (
     });
   //------------------------------job report end
 
-  //------------------------------inventory start
-    export const getProductsTree = createAsyncThunk(
-      "inventory/getProductsTree",
-      async (theData, { rejectWithValue }) => {
-        try {
-          const response = await theData.authCtx.jwtInst({
-            method: "get",
-            url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/tree`,
-            headers: {
-              "Content-Type": "application/json"
-            }
-          });
-
-          return Array.isArray(response.data?.data) ? response.data.data : [];
-        } catch (err) {
-          return rejectWithValue(
-            err.response?.data?.message || "Failed to fetch products"
-          );
-        }
-      }
-    );
-  //------------------------------inventory end
 
 
 
@@ -528,14 +506,6 @@ const dataSlice = createSlice({
     editInvoice:false,
     misHasMore:false,
     misLoading:{loading:false , retry:false},
-    //------------------------------inventory
-    newRootProduct:false,
-    newSubProduct:false,
-    productsTree: [],
-    productLoading: false,
-    productError: null,
-    productRefresh:'', 
-    selectedRootProduct:null
   },
   reducers: {
     //------------------------------file manager start
@@ -1051,14 +1021,6 @@ const dataSlice = createSlice({
 
 
 
-    //------------------------------product start
-      toggleNewRootProduct(state , action){
-        state.newRootProduct = !state.newRootProduct
-      },
-      toggleNewSubProduct(state , action){
-        state.newSubProduct = !state.newSubProduct
-      },
-    //------------------------------product end
 
 
 
@@ -1163,17 +1125,6 @@ const dataSlice = createSlice({
     //------------------------------Mis
     
     
-    //------------------------------inventory list
-      productRefresh(state , action){
-        state.productRefresh = Math.random()
-      },
-      setSelectedRootProduct(state , action){
-        state.selectedRootProduct = action.payload
-      },
-      setProductsTree(state , action){
-        state.productsTree = Array.isArray(action.payload) ? action.payload : [];
-      },
-    //------------------------------inventory list
   },
   extraReducers:(builder) =>{
     //------------------------------file manager start
@@ -1201,20 +1152,6 @@ const dataSlice = createSlice({
     //------------------------------file manager end
 
     
-      // ================= INVENTORY =================
-  builder
-    .addCase(getProductsTree.pending, (state) => {
-      state.productLoading = true;
-      state.productError = null;
-    })
-    .addCase(getProductsTree.fulfilled, (state, action) => {
-      state.productLoading = false;
-      state.productsTree = Array.isArray(action.payload) ? action.payload : [];
-    })
-    .addCase(getProductsTree.rejected, (state, action) => {
-      state.productLoading = false;
-      state.productError = action.payload;
-    });
 
 
 

@@ -28,8 +28,6 @@ import { useDispatch } from 'react-redux';
 import PageSection from '../../contextApi/pageSection';
 import MainJobReport from '../jobReport/mainJobReport';
 import Projects from '../projectManager/projects';
-import Products from '../inventory/products';
-
 
 
   
@@ -103,8 +101,6 @@ const Main = () =>{
                 <MainJobReport></MainJobReport>
               :pageSection.selectedSection === 4?
                 <Projects></Projects>
-              :pageSection.selectedSection === 5?
-                <Products></Products>
               :null}
             </div>
         </Fragment>
