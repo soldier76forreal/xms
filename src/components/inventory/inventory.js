@@ -18,6 +18,7 @@ import {
 } from '../../store/store';
 import SkeletonWrapper from '../../tools/loader/skeletonWrapper';
 import ProductCard from './productCard';
+import ShowProduct from './showProduct';
 
 const Inventory = () => {
   const authCtx    = useContext(AuthContext);
@@ -29,6 +30,8 @@ const Inventory = () => {
   const invLoading     = useSelector((s) => s.invLoading);
   const invRefreshKey  = useSelector((s) => s.invRefreshKey);
   const invLookups     = useSelector((s) => s.invLookups);
+
+  const [selectedProductId, setSelectedProductId] = useState(null);
 
   const [search, setSearch]           = useState('');
   const [stoneFilter, setStoneFilter] = useState('');   // '' = All
@@ -63,6 +66,16 @@ const Inventory = () => {
   const handleNewProduct = useCallback(() => {
     dispatch(actions.invToggleNewProduct());
   }, [dispatch]);
+
+  // If a product is selected, render the detail page instead of the list
+  if (selectedProductId) {
+    return (
+      <ShowProduct
+        productId={selectedProductId}
+        onBack={() => setSelectedProductId(null)}
+      />
+    );
+  }
 
   // Simple stats derived from current page
   const uniqueStones = [...new Set(invProducts.map((p) => p.stoneType))].length;
@@ -197,10 +210,7 @@ const Inventory = () => {
               <ProductCard
                 key={product._id}
                 product={product}
-                onClick={() => {
-                  // Navigation to detail handled in Session 14
-                  console.log('open product', product._id);
-                }}
+                onClick={() => setSelectedProductId(product._id)}
               />
             ))}
           </Box>
