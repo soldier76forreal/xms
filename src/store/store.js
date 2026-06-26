@@ -459,6 +459,180 @@ export const getInvoices = createAsyncThunk('overallAssets/getInvoices', async (
   //------------------------------job report end
 
 
+//------------------------------inventory start
+
+export const fetchProducts = createAsyncThunk('inventory/fetchProducts', async (theData, { dispatch }) => {
+  dispatch(actions.invSetLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products`,
+      params: theData.params || {},
+    });
+    dispatch(actions.invSetProducts({ data: response.data.data, total: response.data.total }));
+  } catch (err) {
+    dispatch(actions.invSetError(err?.response?.data?.message || 'Failed to load products'));
+  } finally {
+    dispatch(actions.invSetLoading(false));
+  }
+});
+
+export const fetchProduct = createAsyncThunk('inventory/fetchProduct', async (theData, { dispatch }) => {
+  dispatch(actions.invSetCurrentProductLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.id}`,
+    });
+    dispatch(actions.invSetCurrentProduct(response.data.data));
+  } catch (err) {
+    dispatch(actions.invSetCurrentProduct(null));
+  } finally {
+    dispatch(actions.invSetCurrentProductLoading(false));
+  }
+});
+
+export const fetchVariants = createAsyncThunk('inventory/fetchVariants', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.productId}/variants`,
+    });
+    dispatch(actions.invSetVariants(response.data.data));
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+export const createProduct = createAsyncThunk('inventory/createProduct', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products`,
+    data: theData.data,
+  });
+  dispatch(actions.invRefresh());
+  return response.data.data;
+});
+
+export const updateProduct = createAsyncThunk('inventory/updateProduct', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.id}`,
+    data: theData.data,
+  });
+  dispatch(actions.invRefresh());
+  return response.data.data;
+});
+
+export const createVariant = createAsyncThunk('inventory/createVariant', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants`,
+    data: theData.data,
+  });
+  // Refresh the parent product detail after adding a variant
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.data.productId }));
+  return response.data;
+});
+
+export const updateVariant = createAsyncThunk('inventory/updateVariant', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.id}`,
+    data: theData.data,
+  });
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  return response.data.data;
+});
+
+export const adjustStock = createAsyncThunk('inventory/adjustStock', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.id}/adjust`,
+    data: { delta: theData.delta, reason: theData.reason },
+  });
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  return response.data.data;
+});
+
+export const updatePrice = createAsyncThunk('inventory/updatePrice', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.id}/price`,
+    data: { price: theData.price, currency: theData.currency || 'AED' },
+  });
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  return response.data.data;
+});
+
+export const uploadInventoryMedia = createAsyncThunk('inventory/uploadMedia', async (theData, { dispatch }) => {
+  const url = theData.subjectType === 'variant'
+    ? `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.subjectId}/media`
+    : `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.subjectId}/media`;
+
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url,
+    data: theData.formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  return response.data.data;
+});
+
+export const deleteInventoryMedia = createAsyncThunk('inventory/deleteMedia', async (theData, { dispatch }) => {
+  await theData.authCtx.jwtInst({
+    method: 'delete',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/media/${theData.fileId}`,
+  });
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+});
+
+export const fetchInventoryLogs = createAsyncThunk('inventory/fetchLogs', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.productId}/logs`,
+      params: theData.params || {},
+    });
+    dispatch(actions.invSetLogs({ data: response.data.data, total: response.data.total }));
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+export const parseInventoryCode = createAsyncThunk('inventory/parseCode', async (theData, { dispatch }) => {
+  dispatch(actions.invSetParsedCodeLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/parse-code`,
+      data: { code: theData.code },
+    });
+    dispatch(actions.invSetParsedCode(response.data.parsed));
+  } catch (err) {
+    dispatch(actions.invSetParsedCode(null));
+  } finally {
+    dispatch(actions.invSetParsedCodeLoading(false));
+  }
+});
+
+export const fetchInventoryLookups = createAsyncThunk('inventory/fetchLookups', async (theData, { dispatch, getState }) => {
+  if (getState().invLookupsLoaded) return; // already cached
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/lookups`,
+    });
+    dispatch(actions.invSetLookups(response.data));
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+//------------------------------inventory end
+
+
 
 
 const dataSlice = createSlice({
@@ -506,6 +680,25 @@ const dataSlice = createSlice({
     editInvoice:false,
     misHasMore:false,
     misLoading:{loading:false , retry:false},
+    //------------------------------inventory
+    invProducts: [],
+    invTotal: 0,
+    invLoading: false,
+    invError: null,
+    invRefreshKey: '',
+    invCurrentProduct: null,
+    invCurrentProductLoading: false,
+    invVariants: [],
+    invLogs: [],
+    invLogsTotal: 0,
+    invLookups: { stoneTypes: [], grades: [], units: [], quarries: [] },
+    invLookupsLoaded: false,
+    invParsedCode: null,
+    invParsedCodeLoading: false,
+    invShowNewProduct: false,
+    invEditProduct: null,
+    invShowNewVariant: false,
+    invEditVariant: null,
   },
   reducers: {
     //------------------------------file manager start
@@ -1123,8 +1316,25 @@ const dataSlice = createSlice({
     
   },
     //------------------------------Mis
-    
-    
+
+    //------------------------------inventory
+    invSetLoading(state, action)            { state.invLoading = action.payload; },
+    invSetError(state, action)              { state.invError = action.payload; },
+    invSetProducts(state, action)           { state.invProducts = action.payload.data; state.invTotal = action.payload.total; },
+    invRefresh(state)                       { state.invRefreshKey = Math.random().toString(); },
+    invSetCurrentProduct(state, action)     { state.invCurrentProduct = action.payload; },
+    invSetCurrentProductLoading(state, action) { state.invCurrentProductLoading = action.payload; },
+    invSetVariants(state, action)           { state.invVariants = action.payload; },
+    invSetLogs(state, action)               { state.invLogs = action.payload.data; state.invLogsTotal = action.payload.total; },
+    invSetLookups(state, action)            { state.invLookups = action.payload; state.invLookupsLoaded = true; },
+    invSetParsedCode(state, action)         { state.invParsedCode = action.payload; },
+    invSetParsedCodeLoading(state, action)  { state.invParsedCodeLoading = action.payload; },
+    invToggleNewProduct(state)              { state.invShowNewProduct = !state.invShowNewProduct; },
+    invSetEditProduct(state, action)        { state.invEditProduct = action.payload; },
+    invToggleNewVariant(state)              { state.invShowNewVariant = !state.invShowNewVariant; },
+    invSetEditVariant(state, action)        { state.invEditVariant = action.payload; },
+    //------------------------------inventory
+
   },
   extraReducers:(builder) =>{
     //------------------------------file manager start
