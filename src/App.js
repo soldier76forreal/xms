@@ -15,7 +15,7 @@ import { useContext, useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import AxiosGlobal from './components/authAndConnections/axiosGlobalUrl';
-import { fetchData, getAllTags, getContacts, getCustomers, getFilter, getInvoices, getProductsTree, userProfileData } from './store/store';
+import { fetchData, getAllTags, getContacts, getCustomers, getFilter, getInvoices, userProfileData } from './store/store';
 import { useDispatch, useSelector } from 'react-redux';
 import ShowTheLink from './components/fileManager/showTheLink';
 import { useHistory, useLocation, Link } from "react-router-dom";
@@ -35,7 +35,6 @@ const ThemedApp = () => {
   const crmRefresh = useSelector((state) => state.crmRefresh);
   const misRefresh = useSelector((state) => state.misRefresh);
   const refreshTag = useSelector((state) => state.refreshTag);
-  const productRefresh = useSelector((state) => state.productRefresh);
   const userProfileRefresh = useSelector((state) => state.userProfileRefresh);
 
   if (localStorage.getItem('accessToken') === 'undefined') {
@@ -71,10 +70,6 @@ const ThemedApp = () => {
   useEffect(() => {
     dispatch(getInvoices({ authCtx, axiosGlobal }));
   }, [misRefresh]);
-
-  useEffect(() => {
-    dispatch(getProductsTree({ authCtx, axiosGlobal }));
-  }, [productRefresh]);
 
   return (
     <ThemeProvider theme={themeMode === 'light' ? lightTheme : darkTheme}>
