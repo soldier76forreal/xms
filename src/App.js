@@ -19,7 +19,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import ShowTheLink from './components/fileManager/showTheLink';
 import { useHistory, useLocation, Link } from "react-router-dom";
 import SnackBar from './tools/navs/snackBar';
-import Projects from './components/projectManager/projects';
 
 // Inner component so it can consume ThemeCtx after the provider mounts
 const ThemedApp = () => {
@@ -97,23 +96,7 @@ const ThemedApp = () => {
           )}
 
           {authCtx.isLoggedIn === true ? (
-            <Route path="/jobReport">
-              <Main />
-            </Route>
-          ) : (
-            <Redirect to="/logIn" />
-          )}
-
-          {authCtx.isLoggedIn === true ? (
             <Route path="/crm">
-              <Main />
-            </Route>
-          ) : (
-            <Redirect to="/logIn" />
-          )}
-
-          {authCtx.isLoggedIn === true ? (
-            <Route path="/projects">
               <Main />
             </Route>
           ) : (

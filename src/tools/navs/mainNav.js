@@ -107,29 +107,30 @@ const MainNavPortal = (props) => {
       <AppBar position="fixed" dir="ltr">
         <Toolbar sx={{ gap: 1 }}>
 
-          {/* Hamburger / back */}
+          {/* Hamburger / back — mobile only; the Phase 7 icon rail covers desktop */}
           <IconButton
             color="inherit"
             edge="start"
             onClick={leftSideNav.left ? toggleDrawer('left', false) : toggleDrawer('left', true)}
-            sx={{ mr: 0.5 }}
+            sx={{ mr: 0.5, display: { xs: 'inline-flex', md: 'none' } }}
           >
             {leftSideNav.left ? <ArrowBackIcon /> : <MenuIcon />}
           </IconButton>
 
-          {/* Search — centre, grows to fill available space */}
-          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', maxWidth: 440, mx: 'auto' }}>
+          {/* Search — centre, grows to fill available space; condenses on phones */}
+          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', maxWidth: { xs: 200, sm: 320, md: 440 }, mx: 'auto', minWidth: 0 }}>
             <SearchBar />
           </Box>
 
           {/* Right-side action buttons */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.5 } }}>
 
-            {/* Upload / in-progress indicator */}
+            {/* Upload / in-progress indicator — on phones only shown while an upload is running */}
             <Tooltip title="Uploads">
               <IconButton
                 color="inherit"
                 onClick={() => dispatch(actions.toggleDownloadNavMenu())}
+                sx={{ display: { xs: onGoingUpload === true ? 'inline-flex' : 'none', sm: 'inline-flex' } }}
               >
                 {onGoingUpload === true ? (
                   <Lottie style={{ width: 28, height: 28 }} animationData={UploadArrowAnimation} loop />
@@ -156,9 +157,9 @@ const MainNavPortal = (props) => {
               </IconButton>
             </Tooltip>
 
-            {/* Messages */}
+            {/* Messages — hidden on phones (top bar condenses; feature is a placeholder) */}
             <Tooltip title="Messages">
-              <IconButton color="inherit">
+              <IconButton color="inherit" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
                 <Badge badgeContent={0} color="error">
                   <EmailIcon />
                 </Badge>
@@ -172,7 +173,7 @@ const MainNavPortal = (props) => {
               </IconButton>
             </Tooltip>
 
-            {/* Profile avatar */}
+            {/* Profile avatar — mobile only; on desktop it lives at the bottom of the icon rail (Phase 7) */}
             <Tooltip title="Profile">
               <IconButton
                 id="demo-positioned-button"
@@ -180,7 +181,7 @@ const MainNavPortal = (props) => {
                 aria-haspopup="true"
                 aria-expanded={open ? 'true' : undefined}
                 onClick={handleClick}
-                sx={{ p: 0.5 }}
+                sx={{ p: 0.5, display: { xs: 'inline-flex', md: 'none' } }}
               >
                 <Avatar
                   alt="Profile"

@@ -24,7 +24,7 @@ const BranchSwitcher = () => {
           value={activeBranchId || ''}
           onChange={(e) => setActiveBranchId(e.target.value)}
           sx={{
-            fontSize: '0.78rem', height: 30, minWidth: 120,
+            fontSize: '0.78rem', height: 30, minWidth: { xs: 84, sm: 120 },
             color: isDark ? 'rgba(255,255,255,0.87)' : 'inherit',
             '& .MuiOutlinedInput-notchedOutline': { borderColor: isDark ? 'rgba(255,255,255,0.15)' : undefined },
             '& .MuiSvgIcon-root': { color: isDark ? 'rgba(255,255,255,0.5)' : undefined },

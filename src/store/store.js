@@ -97,53 +97,8 @@ export const uploadFile = createAsyncThunk('getFilesAndFolders/uploadFile', asyn
               }
             }  
           }
-      }else if(uploadQueue[i].uploadType === 'jobReport'){
-        dispatch(actions.setOnGoingUpload(true))
-
-        dispatch(actions.setQueueCount({lastCount:i}))
-
-        if(uploadQueue[i].uploaded !== true){
-          if(uploadQueue[i].cancel === false){
-
-            dispatch(actions.updateUploadStatus({index:i , status:true}))
-            
-            const formData = new FormData();
-            formData.append('files' , uploadQueue[i].file);
-            formData.append('supFolder' , 'root')
-            // dispatch(actions.cancelToken({index:i , token:cancelToken}))
-
-            try{
-                const response = await theData.authCtx.jwtInst({
-                    method:'post',
-                    url:`${theData.axiosGlobal.defaultTargetApi}/files/jobReportUpload`,
-                    data:formData ,
-                    cancelToken:uploadQueue[i].cancelToken.token,
-                    //progress bar precentage
-                    onUploadProgress: data => {                           
-                        dispatch(actions.updateProgress({index:i , progress:Math.round((100 * data.loaded) / data.total)}))
-                        
-                      },
-                    config: { headers: {'Content-Type': 'multipart/form-data' }}
-                })
-                dispatch(actions.updateUploadStatus({index:i , status:false}))
-                dispatch(actions.updateUploadOveralStatus({index:i , status:true}))
-                const data = await response.data;
-                dispatch(actions.setJobReportProfile(data))                
-            }catch(error){
-              if (axios.isCancel(error)) {
-
-              } else {
-                // Handle other errors
-              }
-              console.log(error)
-              dispatch(actions.updateUploadError({index:i , error:{status:true , msg:error}}))
-              dispatch(actions.updateUploadOveralStatus({index:i , status:false}))
-
-            }
-          }  
-        }
       }
-    
+
     }
     dispatch(actions.refresh())
 
@@ -329,7 +284,6 @@ export const userProfileData = createAsyncThunk('overallAssets/profileData', asy
         url:`${theData.axiosGlobal.defaultTargetApi}/users/userProfileData`,
         config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
       })
-      dispatch(actions.setJobReportTitles(response.data.jobReportPresets))
       dispatch(actions.setUserProfile(response.data))
 
   }catch(err){
@@ -775,23 +729,6 @@ export const deleteReadyToUpload = createAsyncThunk('overallAssets/deleteReadyTo
   //------------------------------contact list
 
 
-  //------------------------------job report start
-      export const getSubmitedJobReports = createAsyncThunk('contact/getJobReportForCurrentUser', async (theData, { dispatch , getState } ) => {
-        try{
-            const response = await theData.authCtx.jwtInst({
-              method:'get',
-              url:`${theData.axiosGlobal.defaultTargetApi}/jobReport/getJobReportForCurrentUser`,
-              config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
-            })
-            dispatch(actions.setJobReportsForPerson(response.data))
-        }catch(err){
-            console.log(err);
-        }
-
-    });
-  //------------------------------job report end
-
-
 //------------------------------inventory start
 
 export const fetchProducts = createAsyncThunk('inventory/fetchProducts', async (theData, { dispatch }) => {
@@ -1110,15 +1047,6 @@ const dataSlice = createSlice({
     contactList : {sa:[],inv:[],req:[] , all:[] , allAll:[] , lenght:0},
 
 
-    //------------------------------job report start
-    jobReportsForPerson:[],
-    jobReportTitles:[],
-
-    //------------------------------job report end
-
-    //------------------------------overall assets
-
-    jobReportUploadedFile:[],
     //------------------------------crm (Phase 5)
     crmCustomers: [],
     crmTotal: 0,
@@ -1144,7 +1072,6 @@ const dataSlice = createSlice({
     dmReadyToUploadLoading: false,
     dmSelectedReadyToUpload: null,
     dmRefreshKey: 0,
-    newProject:false,
     //------------------------------mis
     misRefresh:'',
     invoicesToShow:[],
@@ -1476,9 +1403,6 @@ const dataSlice = createSlice({
         state.filterCrm = action.payload.filterMemory.crm
         state.filterMis = action.payload.filterMemory.mis
       },
-      setJobReportTitles(state , action){
-        state.jobReportTitles = action.payload
-      },
       setShowSnackBar(state , action){
         state.showSnackBar = {status:action.payload.status,msg:action.payload.msg,type:action.payload.type}
       },
@@ -1489,18 +1413,6 @@ const dataSlice = createSlice({
         state.userProfile = action.payload
       },
     //------------------------------overall assets end
-
-
-
-    //------------------------------job report start
-      setJobReportProfile(state , action){
-        state.jobReportUploadedFile.push(action.payload)
-      },
-      setJobReportsForPerson(state , action){
-        state.jobReportsForPerson = action.payload
-      },
-    //------------------------------job report end
-
 
 
 
@@ -1651,9 +1563,6 @@ const dataSlice = createSlice({
         state.dmRefreshKey = state.dmRefreshKey + 1;
       },
     //------------------------------digital marketing reducers end
-      toggleProject(state , action){
-        state.newProject = !state.newProject
-      },
       toggleDownloadNavMenu(state , action){
         state.downloadNavMenu = !state.downloadNavMenu
       },

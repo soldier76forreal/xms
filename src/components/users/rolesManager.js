@@ -274,8 +274,6 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
             { id: 'mis',       label: 'Invoices'   },
             { id: 'inventory', label: 'Inventory'  },
             { id: 'files',     label: 'Files'      },
-            { id: 'jobReport', label: 'Job Report' },
-            { id: 'projects',  label: 'Projects'   },
             { id: 'tasks',     label: 'Tasks'      },
           ].map(({ id, label }) => {
             const current = dataScopes[id] || 'all';
