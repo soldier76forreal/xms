@@ -22,7 +22,6 @@ import MultiSelect from '../../tools/inputs/multiSelect';
 import IconBotton from '../../tools/buttons/iconBtn';
 import AddIcon from '@mui/icons-material/Add';
 import CustomSelect from '../../tools/inputs/customSelect';
-import { usePdf } from '@mikecousins/react-pdf';
 
 
 const PdfViewPortal = (props) =>{
