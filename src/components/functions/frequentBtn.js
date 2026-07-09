@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { ExternalLink } from "react-external-link";
 import { useDispatch } from "react-redux";
-import { actions, frequentBtnClickForCrmAxios } from "../../store/store";
+import { actions } from "../../store/store";
 import AuthContext from "../authAndConnections/auth";
 import AxiosGlobal from "../authAndConnections/axiosGlobalUrl";
 import { Call, Email, Facebook, Instagram, LinkedIn, Web, WhatsApp } from "@mui/icons-material";
@@ -124,12 +124,6 @@ const FrequentBtn = (props) => {
         <ExternalLink
             onClick={(e) => {
                 e.stopPropagation();
-                dispatch(frequentBtnClickForCrmAxios({ 
-                    authCtx, 
-                    axiosCtx, 
-                    customerId: props.data?._id, 
-                    btn: activeConfig.id 
-                }));
                 dispatch(actions.setTargetDocForCommunication({
                     status: true,
                     docItSelf: props.data,

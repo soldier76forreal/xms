@@ -30,20 +30,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: YekanRegular !important;
-  background-color: #ffffff !important;
 }
 
 code {
   font-family: YekanRegular;
 }
 
-h1,
-h2,
-h3,
-h3 {
-  margin: 0px !important;
-  padding: 0px !important;
-}
 
 #speedDial {
   position: fixed;
@@ -61,11 +53,7 @@ h3 {
   z-index: 100000;
 }
 
-::-webkit-scrollbar {
-  width: 0px !important;
-  display: none;
-  background: transparent !important; /* make scrollbar transparent */
-}
+/* scrollbar style controlled by MUI CssBaseline in theme.js */
 
 #mainFiles {
   width: 100%;

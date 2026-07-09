@@ -16,9 +16,12 @@ import Select from '@mui/material/Select';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { createVariant, updateVariant, actions } from '../../store/store';
+import AddIcon from '@mui/icons-material/Add';
+import { createVariant, updateVariant, createCategory, actions } from '../../store/store';
 import { parseStoneCode } from './util/codeParser';
 
 const UNIT_LABELS = { M2: 'm² (square metre)', ML: 'ml (linear metre)', PCS: 'pcs (pieces)', SQFT: 'ft² (sq. foot)', LNFT: 'lnft (linear foot)' };
@@ -78,13 +81,17 @@ const VariantForm = ({ productId }) => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
+  const theme       = useTheme();
+  const isMobile    = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const open        = useSelector((s) => s.invShowNewVariant);
+  const showNew     = useSelector((s) => s.invShowNewVariant);
   const editVariant = useSelector((s) => s.invEditVariant);
   const units       = useSelector((s) => s.invLookups.units) || [];
   const categories  = useSelector((s) => s.invCategories) || [];
+  const invVariants = useSelector((s) => s.invVariants) || [];
 
   const isEdit = Boolean(editVariant);
+  const open   = showNew || isEdit;
 
   const [code,           setCode]           = useState('');
   const [unit,           setUnit]           = useState('M2');
@@ -92,6 +99,8 @@ const VariantForm = ({ productId }) => {
   const [price,          setPrice]          = useState('');
   const [status,         setStatus]         = useState('active');
   const [selectedCats,   setSelectedCats]   = useState([]);
+  const [newCatName,     setNewCatName]     = useState('');
+  const [catBusy,        setCatBusy]        = useState(false);
   const [busy,           setBusy]           = useState(false);
   const [parsed,         setParsed]         = useState(null);
 
@@ -114,6 +123,7 @@ const VariantForm = ({ productId }) => {
       setSelectedCats([]);
       setParsed(null);
     }
+    setNewCatName('');
   }, [editVariant, open]);
 
   // Live parse on code change (debounced 350ms)
@@ -126,9 +136,9 @@ const VariantForm = ({ productId }) => {
   }, [code]);
 
   const handleClose = useCallback(() => {
-    dispatch(actions.invToggleNewVariant());
+    if (showNew) dispatch(actions.invToggleNewVariant());
     dispatch(actions.invSetEditVariant(null));
-  }, [dispatch]);
+  }, [dispatch, showNew]);
 
   const handleSubmit = async () => {
     if (!code.trim()) return;
@@ -165,8 +175,28 @@ const VariantForm = ({ productId }) => {
 
   const codeValid = parsed?.valid === true || (!parsed && code.length === 0);
 
+  const isDuplicateVariant = !isEdit && Boolean(code.trim()) &&
+    invVariants.some((v) => v.code === code.trim().toUpperCase() && !v.deleteDate && v.status !== 'archived');
+
+  const catNameExists = Boolean(
+    newCatName.trim() && categories.some((c) => c.name.toLowerCase() === newCatName.trim().toLowerCase())
+  );
+
+  const handleCreateCategory = async () => {
+    const name = newCatName.trim();
+    if (!name || catNameExists) return;
+    setCatBusy(true);
+    try {
+      const newCat = await dispatch(createCategory({ authCtx, axiosGlobal, name })).unwrap();
+      if (newCat?._id) setSelectedCats((prev) => [...prev, String(newCat._id)]);
+      setNewCatName('');
+    } catch { } finally {
+      setCatBusy(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
         {isEdit ? `Edit variant — ${editVariant?.code}` : 'Add variant'}
       </DialogTitle>
@@ -189,6 +219,11 @@ const VariantForm = ({ productId }) => {
             <Box sx={{ mt: 1 }}>
               <ParsePreview parsed={parsed} />
             </Box>
+          )}
+          {isDuplicateVariant && (
+            <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600, display: 'block', mt: 0.5 }}>
+              ⚠ Variant {code.trim().toUpperCase()} already exists in this product.
+            </Typography>
           )}
         </Box>
 
@@ -280,6 +315,30 @@ const VariantForm = ({ productId }) => {
           </FormControl>
         )}
 
+        {/* Inline new category creator */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+          <TextField
+            label="Add new category"
+            size="small"
+            value={newCatName}
+            onChange={(e) => setNewCatName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCategory(); }}
+            sx={{ flex: 1 }}
+            error={catNameExists}
+            helperText={catNameExists ? 'Already exists — select it above' : ''}
+          />
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleCreateCategory}
+            disabled={!newCatName.trim() || catNameExists || catBusy}
+            startIcon={catBusy ? <CircularProgress size={12} color="inherit" /> : <AddIcon sx={{ fontSize: 14 }} />}
+            sx={{ minWidth: 80, height: 40, flexShrink: 0 }}
+          >
+            Add
+          </Button>
+        </Box>
+
         {isEdit && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             To adjust quantity or price, use the stock-adjust / price buttons on the variants table.
@@ -293,7 +352,7 @@ const VariantForm = ({ productId }) => {
           onClick={handleSubmit}
           variant="contained"
           size="small"
-          disabled={busy || !code.trim() || (parsed && !parsed.valid)}
+          disabled={busy || !code.trim() || (parsed && !parsed.valid) || Boolean(isDuplicateVariant)}
           startIcon={busy ? <CircularProgress size={12} color="inherit" /> : null}
         >
           {isEdit ? 'Save changes' : 'Add variant'}

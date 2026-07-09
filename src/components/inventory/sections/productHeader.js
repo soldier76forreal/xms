@@ -7,6 +7,9 @@ import { useTheme } from '@mui/material/styles';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageIcon from '@mui/icons-material/Image';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import Tooltip from '@mui/material/Tooltip';
 
 const STONE_ACCENT = {
   TR: '#c49a6c', MA: '#90afc5', GR: '#7a7a7a', ON: '#c9a84c',
@@ -21,7 +24,7 @@ function formatQty(num) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(num);
 }
 
-const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant }) => {
+const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, fullView, onToggleFullView }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accent = STONE_ACCENT[product?.stoneType] || '#888';
@@ -32,19 +35,32 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant })
   return (
     <Box>
       {/* Back + Edit row */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <IconButton size="small" onClick={onBack} sx={{ mr: 0.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'nowrap' }}>
+        <IconButton size="small" onClick={onBack} sx={{ mr: 0.5, flexShrink: 0 }}>
           <ArrowBackIosNewIcon sx={{ fontSize: 14 }} />
         </IconButton>
-        <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1 }}>
+        <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1, minWidth: 0 }} noWrap>
           Inventory
         </Typography>
+        {onToggleFullView && (
+          <Tooltip title={fullView ? 'Collapse to sidebar' : 'Open in full view'}>
+            <IconButton
+              size="small"
+              onClick={onToggleFullView}
+              sx={{ display: { xs: 'none', md: 'inline-flex' }, flexShrink: 0 }}
+            >
+              {fullView
+                ? <CloseFullscreenIcon sx={{ fontSize: 14 }} />
+                : <OpenInFullIcon sx={{ fontSize: 14 }} />}
+            </IconButton>
+          </Tooltip>
+        )}
         <Button
           size="small"
           variant="outlined"
           startIcon={<EditIcon sx={{ fontSize: 14 }} />}
           onClick={onEdit}
-          sx={{ borderRadius: 2, fontSize: '0.75rem' }}
+          sx={{ borderRadius: 2, fontSize: '0.75rem', flexShrink: 0 }}
         >
           Edit
         </Button>
@@ -52,9 +68,10 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant })
           size="small"
           variant="contained"
           onClick={onAddVariant}
-          sx={{ borderRadius: 2, fontSize: '0.75rem' }}
+          sx={{ borderRadius: 2, fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}
         >
-          + Add variant
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>+ Add variant</Box>
+          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>+ Variant</Box>
         </Button>
       </Box>
 
@@ -78,12 +95,14 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant })
         <Box
           sx={{
             width: { xs: 100, sm: 140 },
+            height: '100%',
+            maxHeight: 105,
             flexShrink: 0,
             bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: 110,
+            overflow: 'hidden',
           }}
         >
           {coverUrl ? (
@@ -91,7 +110,7 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant })
               component="img"
               src={coverUrl}
               alt=""
-              sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              sx={{ width: '100%', height: '100%', maxHeight: 105, objectFit: 'cover' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           ) : (

@@ -42,28 +42,32 @@ function MiniVariantRow({ variant }) {
     : `${spec.lengthCm}×${spec.widthCm}cm·${spec.thicknessMm}mm`;
   const finish = [spec.cut, spec.fill, spec.finish].filter(Boolean).join('/');
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, px: 2 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, px: 2, minWidth: 0 }}>
       <Typography variant="caption"
-        sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.75rem', flex: 1.5, minWidth: 0 }}
+        sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.75rem', flexShrink: 0, maxWidth: { xs: 140, sm: 'none' } }}
         noWrap>
         {variant.code}
       </Typography>
-      <Chip label={spec.gradeName || spec.grade || '?'} size="small"
-        sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700, bgcolor: gc + '22', color: gc, border: 'none', px: 0.25 }} />
-      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.7rem', flex: 1.5 }} noWrap>
+      <Chip label={spec.grade || '?'} size="small"
+        sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700, bgcolor: gc + '22', color: gc, border: 'none', px: 0.25, flexShrink: 0 }} />
+      <Typography variant="caption"
+        sx={{ color: 'text.secondary', fontSize: '0.7rem', display: { xs: 'none', sm: 'block' }, flex: 1 }} noWrap>
         {dims}
       </Typography>
       {finish && (
-        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.68rem' }}>{finish}</Typography>
+        <Typography variant="caption"
+          sx={{ color: 'text.disabled', fontSize: '0.68rem', display: { xs: 'none', sm: 'block' }, flexShrink: 0 }}>
+          {finish}
+        </Typography>
       )}
-      <Typography variant="caption" sx={{ fontWeight: 600, ml: 'auto' }}>
+      <Typography variant="caption" sx={{ fontWeight: 600, ml: 'auto', flexShrink: 0 }}>
         {formatQty(variant.quantity)} {UNIT_LABELS[variant.unit] || variant.unit}
       </Typography>
     </Box>
   );
 }
 
-const ProductCard = ({ product, onClick, apiBase }) => {
+const ProductCard = ({ product, onClick, apiBase, selected }) => {
   const theme    = useTheme();
   const isDark   = theme.palette.mode === 'dark';
   const dispatch = useDispatch();
@@ -112,10 +116,10 @@ const ProductCard = ({ product, onClick, apiBase }) => {
   return (
     <Box
       sx={{
-        border: '1.5px solid', borderColor: 'divider', borderRadius: '14px',
+        border: '1.5px solid', borderColor: selected ? 'text.primary' : 'divider', borderRadius: '14px',
         overflow: 'hidden', bgcolor: 'background.paper',
         transition: 'border-color 0.15s',
-        '&:hover': { borderColor: 'text.disabled' },
+        '&:hover': { borderColor: selected ? 'text.primary' : 'text.disabled' },
       }}
     >
       {/* Main card row */}
@@ -126,10 +130,10 @@ const ProductCard = ({ product, onClick, apiBase }) => {
         {/* Stone-type accent bar */}
         <Box sx={{ width: 4, flexShrink: 0, bgcolor: accent }} />
 
-        {/* Cover thumbnail — fixed 72×72 */}
+        {/* Cover thumbnail */}
         <Box
           sx={{
-            width: 72, height: 72, flexShrink: 0,
+            width: 72, height: '100%', maxHeight: 105, flexShrink: 0,
             bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden',
@@ -137,7 +141,7 @@ const ProductCard = ({ product, onClick, apiBase }) => {
         >
           {thumbUrl ? (
             <Box component="img" src={thumbUrl} alt=""
-              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              sx={{ width: '100%', height: '100%', maxHeight: 105, objectFit: 'cover', display: 'block' }}
               onError={(e) => { e.target.style.display = 'none'; }} />
           ) : (
             <ImageIcon sx={{ color: 'text.disabled', fontSize: 28 }} />

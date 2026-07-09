@@ -24,7 +24,8 @@ export default function SnackBar() {
       onClose={handleClose}
       TransitionProps={{ onExited: handleExited }}
     >
-      <Alert onClose={handleClose} severity={showSnackBar.type} sx={{ width: '100%' }}>
+      {/* type is '' in the initial/reset state — fall back to a valid severity */}
+      <Alert onClose={handleClose} severity={showSnackBar.type || 'info'} sx={{ width: '100%' }}>
         {showSnackBar.msg}
       </Alert>
     </Snackbar>

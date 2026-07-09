@@ -23,7 +23,7 @@ import LeftSideNav from "./leftSideNav";
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import AuthContext from "../../components/authAndConnections/auth";
 import AxiosGlobal from "../../components/authAndConnections/axiosGlobalUrl";
-import Notfications from "../../components/mis/notfications";
+import NotificationCenter from "../../components/users/notificationCenter";
 const FileManagerNav = (props) =>{
     const [showNotfication , setShowNotfication] = useState(false);
     const [notifCount , setNotifCount] = useState();
@@ -59,7 +59,7 @@ const FileManagerNav = (props) =>{
       };
     return(
         <Fragment>
-            <Notfications notifCount={(e)=>{setNotifCount(e)}}  setShowNotfication={setShowNotfication} showNotfication={showNotfication}></Notfications>
+            <NotificationCenter open={showNotfication} onClose={()=>setShowNotfication(false)} onUnreadCountChange={(count)=>setNotifCount(count)} />
             <NormalMenuForProfile logOut={logOut} handleClick={handleClick} handleClose={handleClose} open={open} anchorEl={anchorEl} setAnchorEl={setAnchorEl}></NormalMenuForProfile>
             <LeftSideNav toggleDrawer={toggleDrawer} setLeftSideNav={setLeftSideNav} leftSideNav={leftSideNav}></LeftSideNav>
             <div  className={Style.navDiv}>

@@ -8,8 +8,11 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useDispatch, useSelector } from 'react-redux';
 import { actions } from '../../store/store';
+import VariantMediaBatch from './sections/variantMediaBatch';
 
 const UNIT_LABELS   = { M2: 'm²', ML: 'ml', PCS: 'pcs', SQFT: 'ft²', LNFT: 'lnft' };
 const GRADE_COLOR   = { Q: '#c49a6c', QS: '#c49a6c', W: '#90afc5', E: '#6fa46f', R: '#aaaaaa', T: '#888888' };
@@ -35,8 +38,10 @@ function Row({ label, value }) {
 
 const VariantDetail = () => {
   const dispatch = useDispatch();
-  const open    = useSelector((s) => s.invShowVariantDetail);
-  const variant = useSelector((s) => s.invCurrentVariant);
+  const open     = useSelector((s) => s.invShowVariantDetail);
+  const variant  = useSelector((s) => s.invCurrentVariant);
+  const theme    = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleClose = useCallback(() => {
     dispatch(actions.invToggleVariantDetail());
@@ -64,7 +69,7 @@ const VariantDetail = () => {
   ].filter(Boolean);
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
         Variant detail
       </DialogTitle>
@@ -143,6 +148,8 @@ const VariantDetail = () => {
             </Box>
           </Box>
         )}
+
+        <VariantMediaBatch variantId={variant._id} productId={variant.productId} variantCode={variant.code} />
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2.5 }}>

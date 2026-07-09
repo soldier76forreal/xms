@@ -1,4 +1,4 @@
-import { Fragment, useContext, useState } from "react";
+import { Fragment, useContext, useState, useEffect } from "react";
 import ReactDom from 'react-dom';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -25,18 +25,19 @@ import ThemeCtx from "../../contextApi/themeContext";
 
 import NormalMenuForProfile from './normalMenuForProfile';
 import LeftSideNav from "./leftSideNav";
-import Notfications from "../../components/mis/notfications";
 import FilterModal from "./filterModal";
 import SearchBar from "./searchModule";
 import DownloadNavigation from "./downloadNavigation";
+import NotificationCenter from "../../components/users/notificationCenter";
+import BranchSwitcher from "./branchSwitcher";
 
 import { useDispatch, useSelector } from "react-redux";
 import { actions } from "../../store/store";
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 
 const MainNavPortal = (props) => {
-  const [showNotfication, setShowNotfication] = useState(false);
-  const [notifCount, setNotifCount] = useState();
+  const [notifOpen,   setNotifOpen]   = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [openFilterModal, setOpenFilterModal] = useState(false);
 
   const authContext = useContext(AuthContext);
@@ -49,6 +50,17 @@ const MainNavPortal = (props) => {
   const onGoingUpload = useSelector((state) => state.onGoingUpload);
 
   const [leftSideNav, setLeftSideNav] = useState({ left: false });
+
+  // Real-time unread count from socket (new notifications arrive even when panel is closed)
+  useEffect(() => {
+    const socket = authContext.socket;
+    if (!socket) return;
+    const handler = () => {
+      setUnreadCount(prev => prev + 1);
+    };
+    socket.on('notification:new', handler);
+    return () => socket.off('notification:new', handler);
+  }, [authContext.socket]);
 
   const toggleDrawer = (anchor, open) => (event) => {
     if (event?.type === 'keydown' && (event.key === 'Tab' || event.key === 'Shift')) return;
@@ -69,11 +81,14 @@ const MainNavPortal = (props) => {
     <Fragment>
       <FilterModal setOpenFilterModal={setOpenFilterModal} openFilterModal={openFilterModal} />
       <DownloadNavigation />
-      <Notfications
-        notifCount={(e) => setNotifCount(e)}
-        setShowNotfication={setShowNotfication}
-        showNotfication={showNotfication}
+
+      {/* New notification center drawer */}
+      <NotificationCenter
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        onUnreadCountChange={(count) => setUnreadCount(count)}
       />
+
       <NormalMenuForProfile
         logOut={logOut}
         handleClick={handleClick}
@@ -124,13 +139,18 @@ const MainNavPortal = (props) => {
               </IconButton>
             </Tooltip>
 
-            {/* Notifications */}
+            <BranchSwitcher />
+
+            {/* Notifications — the single fixed element across all sections */}
             <Tooltip title="Notifications">
               <IconButton
                 color="inherit"
-                onClick={() => setShowNotfication((prev) => !prev)}
+                onClick={() => {
+                  setNotifOpen(true);
+                  setUnreadCount(0); // panel fetch will set the real count
+                }}
               >
-                <Badge badgeContent={notifCount} color="error">
+                <Badge badgeContent={unreadCount > 0 ? unreadCount : null} color="error" max={99}>
                   <NotificationsIcon />
                 </Badge>
               </IconButton>

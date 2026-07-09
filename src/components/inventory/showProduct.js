@@ -12,8 +12,10 @@ import MediaGallery from './sections/mediaGallery';
 import VariantForm from './variantForm';
 import ProductForm from './productForm';
 import VariantDetail from './variantDetail';
+import ChangeLog from './sections/changeLog';
+import ProductInvoices from './sections/productInvoices';
 
-const ShowProduct = ({ productId, onBack }) => {
+const ShowProduct = ({ productId, onBack, fullView, onToggleFullView }) => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -64,7 +66,7 @@ const ShowProduct = ({ productId, onBack }) => {
     : null;
 
   return (
-    <Box sx={{ maxWidth: 900, mx: 'auto', px: { xs: 2, sm: 3 }, py: 3 }}>
+    <Box sx={{ maxWidth: '100%', mx: 'auto', px: { xs: 1.5, sm: 2.5 }, py: { xs: 2, sm: 2.5 } }}>
       <SkeletonWrapper loading={loading} variant="card" count={1}>
         {product && (
           <>
@@ -74,11 +76,11 @@ const ShowProduct = ({ productId, onBack }) => {
               onBack={onBack}
               onEdit={handleEdit}
               onAddVariant={handleAddVariant}
+              fullView={fullView}
+              onToggleFullView={onToggleFullView}
             />
 
-            {variants.length > 0 && variants[0]?.spec && (
-              <SpecPanel spec={variants[0].spec} productCode={product.code} />
-            )}
+            <SpecPanel product={product} variants={variants} />
 
             <VariantsTable
               variants={variants}
@@ -93,6 +95,10 @@ const ShowProduct = ({ productId, onBack }) => {
               loading={mediaLoading}
               onRefresh={fetchMedia}
             />
+
+            <ProductInvoices productId={product._id} productCode={product.code} />
+
+            <ChangeLog productId={product._id} />
           </>
         )}
       </SkeletonWrapper>

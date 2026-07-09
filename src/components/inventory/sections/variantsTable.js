@@ -184,23 +184,15 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
 
   return (
     <>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '32px 2.5fr 0.8fr 1fr 1fr auto' },
-          gap: { xs: 1, sm: 1.5 },
-          alignItems: 'center',
-          py: 1.5,
-          px: 2,
-          '&:hover': { bgcolor: 'action.hover' },
-          transition: 'background 0.1s',
-        }}
-      >
-        {/* Checkbox */}
-        <Checkbox size="small" checked={selected} onChange={() => onSelect(variant._id)}
-          sx={{ p: 0.25 }} />
+      {/* Desktop row (sm+) */}
+      <Box sx={{
+        display: { xs: 'none', sm: 'grid' },
+        gridTemplateColumns: '32px 2.5fr 0.8fr 1fr 1fr auto',
+        gap: 1.5, alignItems: 'center', py: 1.5, px: 2,
+        '&:hover': { bgcolor: 'action.hover' }, transition: 'background 0.1s',
+      }}>
+        <Checkbox size="small" checked={selected} onChange={() => onSelect(variant._id)} sx={{ p: 0.25 }} />
 
-        {/* Code + spec */}
         <Box>
           <Typography variant="body2"
             sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.82rem', letterSpacing: 0.5 }}>
@@ -216,22 +208,16 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
               </Typography>
             )}
             {spec.unsized && (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {spec.thicknessMm} mm slab
-              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{spec.thicknessMm} mm slab</Typography>
             )}
           </Box>
-          <Box sx={{ mt: 0.5 }}>
-            <FinishChips cut={spec.cut} fill={spec.fill} finish={spec.finish} />
-          </Box>
+          <Box sx={{ mt: 0.5 }}><FinishChips cut={spec.cut} fill={spec.fill} finish={spec.finish} /></Box>
         </Box>
 
-        {/* Unit */}
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {UNIT_LABELS[variant.unit] || variant.unit}
         </Typography>
 
-        {/* Quantity */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>{formatQty(variant.quantity)}</Typography>
           <Tooltip title="Adjust stock">
@@ -241,11 +227,8 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
           </Tooltip>
         </Box>
 
-        {/* Price */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Typography variant="body2">
-            {variant.price != null ? `${variant.price} AED` : '—'}
-          </Typography>
+          <Typography variant="body2">{variant.price != null ? `${variant.price} AED` : '—'}</Typography>
           <Tooltip title="Edit price">
             <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setPriceOpen(true)}>
               <EditIcon sx={{ fontSize: 12 }} />
@@ -253,12 +236,9 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
           </Tooltip>
         </Box>
 
-        {/* Row actions */}
         <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
           <Tooltip title="View details">
-            <IconButton size="small" onClick={handleViewDetail}>
-              <OpenInNewIcon sx={{ fontSize: 14 }} />
-            </IconButton>
+            <IconButton size="small" onClick={handleViewDetail}><OpenInNewIcon sx={{ fontSize: 14 }} /></IconButton>
           </Tooltip>
           <Tooltip title="Edit variant">
             <IconButton size="small" onClick={() => dispatch(actions.invSetEditVariant(variant))}>
@@ -270,6 +250,63 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
               <DeleteIcon sx={{ fontSize: 14 }} />
             </IconButton>
           </Tooltip>
+        </Box>
+      </Box>
+
+      {/* Mobile card (xs only) */}
+      <Box sx={{
+        display: { xs: 'flex', sm: 'none' },
+        alignItems: 'flex-start', gap: 1, py: 1.25, px: 1.5,
+        '&:hover': { bgcolor: 'action.hover' }, transition: 'background 0.1s',
+      }}>
+        <Checkbox size="small" checked={selected} onChange={() => onSelect(variant._id)} sx={{ p: 0.25, mt: 0.25 }} />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          {/* Top row: code + grade */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5, flexWrap: 'wrap' }}>
+            <Typography variant="body2"
+              sx={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem', letterSpacing: 0.5 }}>
+              {variant.code}
+            </Typography>
+            <Chip label={spec.grade || '?'} size="small"
+              sx={{ height: 18, fontSize: '0.62rem', fontWeight: 700,
+                bgcolor: gradeColor + '22', color: gradeColor, border: 'none', px: 0.5 }} />
+          </Box>
+          {/* Dims + finish */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5, flexWrap: 'wrap' }}>
+            {!spec.unsized && spec.lengthCm != null && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {spec.lengthCm}×{spec.widthCm}cm·{spec.thicknessMm}mm
+              </Typography>
+            )}
+            {spec.unsized && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{spec.thicknessMm}mm slab</Typography>
+            )}
+            <FinishChips cut={spec.cut} fill={spec.fill} finish={spec.finish} />
+          </Box>
+          {/* Bottom row: qty + price + actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+            <Typography variant="caption" sx={{ fontWeight: 600 }}>
+              {formatQty(variant.quantity)} {UNIT_LABELS[variant.unit] || variant.unit}
+            </Typography>
+            <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setStockOpen(true)}>
+              <AddCircleOutlineIcon sx={{ fontSize: 13 }} />
+            </IconButton>
+            <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
+              {variant.price != null ? `${variant.price} AED` : '—'}
+            </Typography>
+            <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setPriceOpen(true)}>
+              <EditIcon sx={{ fontSize: 12 }} />
+            </IconButton>
+            <Box sx={{ ml: 'auto', display: 'flex', gap: 0.25 }}>
+              <IconButton size="small" onClick={handleViewDetail}><OpenInNewIcon sx={{ fontSize: 13 }} /></IconButton>
+              <IconButton size="small" onClick={() => dispatch(actions.invSetEditVariant(variant))}>
+                <EditIcon sx={{ fontSize: 13 }} />
+              </IconButton>
+              <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => onDeleteSingle(variant)}>
+                <DeleteIcon sx={{ fontSize: 13 }} />
+              </IconButton>
+            </Box>
+          </Box>
         </Box>
       </Box>
 
@@ -320,10 +357,10 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
     <Box sx={{ border: '1.5px solid', borderColor: 'divider', borderRadius: '14px',
       bgcolor: 'background.paper', overflow: 'hidden', mb: 3 }}>
 
-      {/* Table header */}
-      <Box sx={{ display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: '32px 2.5fr 0.8fr 1fr 1fr auto' },
-        gap: { xs: 1, sm: 1.5 }, px: 2, py: 1,
+      {/* Table header — hidden on mobile (card layout has no column headers) */}
+      <Box sx={{ display: { xs: 'none', sm: 'grid' },
+        gridTemplateColumns: '32px 2.5fr 0.8fr 1fr 1fr auto',
+        gap: 1.5, px: 2, py: 1,
         borderBottom: '1.5px solid', borderColor: 'divider',
         alignItems: 'center' }}>
         <Checkbox size="small" sx={{ p: 0.25 }}
@@ -333,18 +370,30 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
           Variant (SKU)
         </Typography>
-        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled', display: { xs: 'none', sm: 'block' } }}>
+        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
           Unit
         </Typography>
-        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled', display: { xs: 'none', sm: 'block' } }}>
+        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
           Qty
         </Typography>
-        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled', display: { xs: 'none', sm: 'block' } }}>
+        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
           Price
         </Typography>
-        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled', display: { xs: 'none', sm: 'block' } }}>
+        <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
           Edit
         </Typography>
+      </Box>
+      {/* Mobile select-all row */}
+      <Box sx={{
+        display: { xs: 'flex', sm: 'none' },
+        alignItems: 'center', px: 1.5, py: 0.5,
+        borderBottom: '1.5px solid', borderColor: 'divider',
+      }}>
+        <Checkbox size="small" sx={{ p: 0.25 }}
+          checked={active.length > 0 && selected.length === active.length}
+          indeterminate={selected.length > 0 && selected.length < active.length}
+          onChange={toggleAll} />
+        <Typography variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>Select all</Typography>
       </Box>
 
       {/* Bulk action bar */}

@@ -7,23 +7,37 @@ import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
+import Select from '@mui/material/Select';
+import InputLabel from '@mui/material/InputLabel';
+import FormControl from '@mui/material/FormControl';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import AddIcon from '@mui/icons-material/Add';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { createProduct, updateProduct, actions } from '../../store/store';
+import { createProduct, updateProduct, createCategory, actions } from '../../store/store';
+import { useBranch } from '../../contextApi/BranchContext';
 
 const ProductForm = () => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
+  const { activeBranchId } = useBranch();
+  const theme       = useTheme();
+  const isMobile    = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const showNew    = useSelector((s) => s.invShowNewProduct);
-  const editProd   = useSelector((s) => s.invEditProduct);
-  const stoneTypes = useSelector((s) => s.invLookups.stoneTypes) || [];
-  const units      = useSelector((s) => s.invLookups.units)      || [];
+  const showNew       = useSelector((s) => s.invShowNewProduct);
+  const editProd      = useSelector((s) => s.invEditProduct);
+  const stoneTypes    = useSelector((s) => s.invLookups.stoneTypes) || [];
+  const units         = useSelector((s) => s.invLookups.units)      || [];
+  const invCategories = useSelector((s) => s.invCategories)          || [];
+  const invProducts   = useSelector((s) => s.invProducts)            || [];
 
   const open   = showNew || Boolean(editProd);
   const isEdit = Boolean(editProd);
@@ -37,6 +51,8 @@ const ProductForm = () => {
   const [defaultUnit,  setDefaultUnit]  = useState('M2');
   const [category,     setCategory]     = useState('');
   const [status,       setStatus]       = useState('active');
+  const [newCatName,   setNewCatName]   = useState('');
+  const [catBusy,      setCatBusy]      = useState(false);
   const [busy,         setBusy]         = useState(false);
 
   // Populate when editing
@@ -62,6 +78,7 @@ const ProductForm = () => {
       setCategory('');
       setStatus('active');
     }
+    setNewCatName('');
   }, [editProd, open]);
 
   const handleClose = useCallback(() => {
@@ -75,7 +92,7 @@ const ProductForm = () => {
     const productCode = `${stoneType}${quarryCode.trim().padStart(2, '0')}`.toUpperCase();
     const payload = {
       stoneType,
-      quarryCode: quarryCode.trim(),
+      quarryCode: quarryCode.trim().padStart(2, '0'),
       quarryName: quarryName.trim() || undefined,
       name:        name.trim()        || undefined,
       nameAr:      nameAr.trim()      || undefined,
@@ -94,7 +111,7 @@ const ProductForm = () => {
       } else {
         await dispatch(createProduct({
           authCtx, axiosGlobal,
-          data: { ...payload, code: productCode },
+          data: { ...payload, code: productCode, branchId: activeBranchId },
         })).unwrap();
       }
       handleClose();
@@ -110,8 +127,26 @@ const ProductForm = () => {
     ? `${stoneType}${quarryCode.trim().padStart(2, '0')}`.toUpperCase()
     : '—';
 
+  const isDuplicate   = !isEdit && codePreview !== '—' && invProducts.some((p) => p.code === codePreview);
+  const catNameExists = Boolean(
+    newCatName.trim() && invCategories.some((c) => c.name.toLowerCase() === newCatName.trim().toLowerCase())
+  );
+
+  const handleCreateCategory = async () => {
+    const name = newCatName.trim();
+    if (!name || catNameExists) return;
+    setCatBusy(true);
+    try {
+      await dispatch(createCategory({ authCtx, axiosGlobal, name })).unwrap();
+      setCategory(name);
+      setNewCatName('');
+    } catch { } finally {
+      setCatBusy(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
         {isEdit ? `Edit product — ${editProd?.code}` : 'New product (stone variety)'}
       </DialogTitle>
@@ -214,14 +249,21 @@ const ProductForm = () => {
             }
           </TextField>
 
-          <TextField
-            label="Category"
-            size="small"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            sx={{ flex: 1 }}
-            placeholder="e.g. Tiles, Slabs"
-          />
+          <FormControl size="small" sx={{ flex: 1 }}>
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              input={<OutlinedInput label="Category" />}
+            >
+              <MenuItem value="">None</MenuItem>
+              {invCategories.map((c) => (
+                <MenuItem key={c._id} value={c.name}>
+                  {c.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <TextField
             select
@@ -236,7 +278,37 @@ const ProductForm = () => {
           </TextField>
         </Box>
 
-        {!isEdit && (
+        {/* Inline new category creator */}
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+          <TextField
+            label="Add new category"
+            size="small"
+            value={newCatName}
+            onChange={(e) => setNewCatName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCategory(); }}
+            sx={{ flex: 1 }}
+            error={catNameExists}
+            helperText={catNameExists ? 'Already exists — select it above' : ''}
+          />
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={handleCreateCategory}
+            disabled={!newCatName.trim() || catNameExists || catBusy}
+            startIcon={catBusy ? <CircularProgress size={12} color="inherit" /> : <AddIcon sx={{ fontSize: 14 }} />}
+            sx={{ minWidth: 80, height: 40, flexShrink: 0 }}
+          >
+            Add
+          </Button>
+        </Box>
+
+        {isDuplicate && (
+          <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
+            ⚠ Product {codePreview} already exists. Choose a different stone type or quarry code.
+          </Typography>
+        )}
+
+        {!isEdit && !isDuplicate && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Product code will be <strong>{codePreview}</strong>. Variants (SKUs) are added after creation.
           </Typography>
@@ -249,7 +321,7 @@ const ProductForm = () => {
           onClick={handleSubmit}
           variant="contained"
           size="small"
-          disabled={busy || !stoneType || !quarryCode.trim()}
+          disabled={busy || !stoneType || !quarryCode.trim() || isDuplicate}
           startIcon={busy ? <CircularProgress size={12} color="inherit" /> : null}
         >
           {isEdit ? 'Save changes' : 'Create product'}

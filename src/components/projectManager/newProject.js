@@ -21,7 +21,6 @@ import { useHistory } from 'react-router-dom';
 import MultiSelect from '../../tools/inputs/multiSelect';
 import IconBotton from '../../tools/buttons/iconBtn';
 import AddIcon from '@mui/icons-material/Add';
-import NewCustomer from '../crm/newCustomer';
 import CustomSelect from '../../tools/inputs/customSelect';
 import { StyledDropZone } from 'react-drop-zone'
 import 'react-drop-zone/dist/styles.css'
@@ -301,7 +300,6 @@ const NewProjectPortal = (props) =>{
         }, [quantity]);
     return(
         <Fragment>
-                <NewCustomer  successToast={props.successToast} setSuccessToast={props.setSuccessToast} newCustomer={newCustomer} setNewCustomer={setNewCustomer}></NewCustomer>
                 <div style={newProjects === true?{display:'block'}:{display:'none'}}  className={newProjects === true? `${Style.newInvoice} ${Style.fadeIn}` : newInvoice === false?`${Style.newInvoice} ${Style.fadeOut}`:null}>
                     <div className={Style.topSection}>
                         <div onClick={()=>{dispatch(actions.toggleProject()); history.push('#closeProjects')}} className={Style.backBtn}><ArrowBackIosIcon className={Style.arrowIcon} sx={{color:'#000' , fontSize:'30px'}}></ArrowBackIosIcon></div>
@@ -316,7 +314,7 @@ const NewProjectPortal = (props) =>{
                                             <CustomSelect value={customer} options={allCustomer}  onChange={(e)=>{setCustomer(e.id)}} selectType='customers' placeholder="Customer"></CustomSelect>
                                         </Col>
                                         <Col style={{padding:'10px 0px 0px 5px' , zIndex:'2000'} } sm={2} md={2} lg={2} xl={2} xxl={2} xs={2}>
-                                            <button onClick={()=>{dispatch(actions.toggleNewCustomer())}} style={{width:'100%' , height:'100%', backgroundColor:'black' , borderRadius:'5px' , border:'none'}}><Add sx={{color:'white'}}></Add></button>
+                                            <button disabled style={{width:'100%' , height:'100%', backgroundColor:'black' , borderRadius:'5px' , border:'none'}}><Add sx={{color:'white'}}></Add></button>
                                         </Col>
                                     </Row>
                                     <Row style={{marginBottom:'10px'}} className="g-0">
@@ -565,7 +563,7 @@ const NewProjectPortal = (props) =>{
                                                 <Row style={{marginBottom:'10px',marginTop:'30px'}} className="g-0">
                                                     <div style={{display:'flex',height:'40px' , width:'100%',justifyContent:'center',alignItems:'center'}}>
                                                         <div style={{margin:'0px auto 0px 0px'}}>Address</div>
-                                                        <div style={{height:'40px', width:'70px'}}><button onClick={()=>{dispatch(actions.toggleNewCustomer())}} style={{width:'100%' , height:'100%', backgroundColor:'black' , borderRadius:'5px' , border:'none'}}><Add sx={{color:'white'}}></Add></button></div>
+                                                        <div style={{height:'40px', width:'70px'}}><button disabled style={{width:'100%' , height:'100%', backgroundColor:'black' , borderRadius:'5px' , border:'none'}}><Add sx={{color:'white'}}></Add></button></div>
                                                     </div>
                                                 </Row>
                                                 <Row style={{marginBottom:'10px',marginTop:'30px'}} className="g-0">

@@ -3,19 +3,18 @@ import { ThemeProvider, CssBaseline } from '@mui/material';
 import { lightTheme, darkTheme } from './theme/theme';
 import { ThemeContextProvider } from './contextApi/themeContext';
 import ThemeCtx from './contextApi/themeContext';
+import { PermissionProvider } from './contextApi/PermissionContext';
+import { BranchProvider } from './contextApi/BranchContext';
 
-import Crm from './components/crm/crm';
-import NewCustomer from './components/crm/newCustomer';
 import Main from './components/main/main';
 import Mis from './components/mis/mis';
-import Users from './components/mis/users';
 import LogIn from './components/authAndConnections/logIn';
 import AuthContext from './components/authAndConnections/auth';
 import { useContext, useEffect, useState } from 'react';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import AxiosGlobal from './components/authAndConnections/axiosGlobalUrl';
-import { fetchData, getAllTags, getContacts, getCustomers, getFilter, getInvoices, userProfileData } from './store/store';
+import { fetchData, getAllTags, getContacts, getFilter, userProfileData } from './store/store';
 import { useDispatch, useSelector } from 'react-redux';
 import ShowTheLink from './components/fileManager/showTheLink';
 import { useHistory, useLocation, Link } from "react-router-dom";
@@ -32,7 +31,6 @@ const ThemedApp = () => {
   const dispatch = useDispatch();
   const refresh = useSelector((state) => state.refresh);
   const history = useHistory();
-  const crmRefresh = useSelector((state) => state.crmRefresh);
   const misRefresh = useSelector((state) => state.misRefresh);
   const refreshTag = useSelector((state) => state.refreshTag);
   const userProfileRefresh = useSelector((state) => state.userProfileRefresh);
@@ -53,11 +51,7 @@ const ThemedApp = () => {
 
   useEffect(() => {
     dispatch(getFilter({ authCtx, axiosGlobal }));
-  }, [crmRefresh, misRefresh]);
-
-  useEffect(() => {
-    dispatch(getCustomers({ authCtx, axiosGlobal }));
-  }, [crmRefresh]);
+  }, [misRefresh]);
 
   useEffect(() => {
     dispatch(getAllTags({ authCtx, axiosGlobal }));
@@ -67,100 +61,95 @@ const ThemedApp = () => {
     dispatch(userProfileData({ authCtx, axiosGlobal }));
   }, [userProfileRefresh]);
 
-  useEffect(() => {
-    dispatch(getInvoices({ authCtx, axiosGlobal }));
-  }, [misRefresh]);
-
   return (
     <ThemeProvider theme={themeMode === 'light' ? lightTheme : darkTheme}>
       <CssBaseline />
-      <SnackBar />
-
-      <Switch>
-        <Route path="/logIn" exact>
-          {authCtx.isLoggedIn === true ? <Redirect to="/" /> : <LogIn />}
-        </Route>
-
-        {authCtx.isLoggedIn === true ? (
-          <Route exact path="/">
-            <Main />
+      <PermissionProvider>
+      <BranchProvider>
+        <SnackBar />
+        <Switch>
+          <Route path="/logIn" exact>
+            {authCtx.isLoggedIn === true ? <Redirect to="/" /> : <LogIn />}
           </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
 
-        {authCtx.isLoggedIn === true ? (
-          <Route exact path="/newCustomer">
-            <NewCustomer />
+          {authCtx.isLoggedIn === true ? (
+            <Route exact path="/">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/files">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/mis">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/jobReport">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/crm">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/projects">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/inventory">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true ? (
+            <Route exact path="/users">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/digitalMarketing">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          <Route path="/showLink">
+            <ShowTheLink />
           </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
-
-        {authCtx.isLoggedIn === true ? (
-          <Route path="/files">
-            <Main />
-          </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
-
-        {authCtx.isLoggedIn === true ? (
-          <Route path="/mis">
-            <Main />
-          </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
-
-        {authCtx.isLoggedIn === true ? (
-          <Route path="/jobReport">
-            <Main />
-          </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
-
-        {authCtx.isLoggedIn === true ? (
-          <Route path="/crm">
-            <Main />
-          </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
-
-        {authCtx.isLoggedIn === true ? (
-          <Route path="/projects">
-            <Main />
-          </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
-
-        {authCtx.isLoggedIn === true ? (
-          <Route path="/inventory">
-            <Main />
-          </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
-
-        {authCtx.isLoggedIn === true ? (
-          <Route exact path="/users">
-            {authCtx.access.includes('sa') === true ? (
-              <Users />
-            ) : (
-              <Redirect to="/" />
-            )}
-          </Route>
-        ) : (
-          <Redirect to="/logIn" />
-        )}
-
-        <Route path="/showLink">
-          <ShowTheLink />
-        </Route>
-      </Switch>
+        </Switch>
+      </BranchProvider>
+      </PermissionProvider>
     </ThemeProvider>
   );
 };

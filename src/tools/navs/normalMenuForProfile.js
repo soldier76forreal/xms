@@ -101,10 +101,11 @@ var reg;
                     for(var i=0 ; webSections.listOfSections.length >i; i++){
                         if(webSections.listOfSections[i].value === data){
                             return(
-                              <Chip size="small" sx={{color:'rgb(255, 255, 255)' , borderColor:'white', margin:'2px' , fontSize:'12px', paddingTop:'2px'}} label={webSections.listOfSections[i].jobTitle} variant="outlined" />
+                              <Chip key={data} size="small" sx={{color:'rgb(255, 255, 255)' , borderColor:'white', margin:'2px' , fontSize:'12px', paddingTop:'2px'}} label={webSections.listOfSections[i].jobTitle} variant="outlined" />
                             )
                         }
                     }
+                    return null;
                   })}
           </div>
           <div style={{width:'260px' , display:'flex' ,position:'absolute' , padding:'0px 10px 10px 10px' , bottom:'0px'}}>

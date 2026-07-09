@@ -21,7 +21,6 @@ import { useHistory } from 'react-router-dom';
 import MultiSelect from '../../tools/inputs/multiSelect';
 import IconBotton from '../../tools/buttons/iconBtn';
 import AddIcon from '@mui/icons-material/Add';
-import NewCustomer from '../crm/newCustomer';
 import CustomSelect from '../../tools/inputs/customSelect';
 import { usePdf } from '@mikecousins/react-pdf';
 

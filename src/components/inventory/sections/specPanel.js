@@ -3,104 +3,171 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 
-const GRADE_LABEL = { Q: 'Super', QS: 'Super+', W: 'Momtaz', E: 'Grade 1', R: 'Grade 2', T: 'Grade 3' };
-const CUT_LABEL   = { V: 'Veincut', C: 'Crosscut' };
-const FILL_LABEL  = { F: 'Filled', U: 'Unfilled' };
-const FINISH_LABEL = { P: 'Polished', H: 'Honed' };
+const UNIT_LABELS = { M2: 'm²', ML: 'ml', PCS: 'pcs', SQFT: 'ft²', LNFT: 'lnft' };
+const GRADE_COLOR = { Q: '#c49a6c', QS: '#c49a6c', W: '#90afc5', E: '#6fa46f', R: '#aaaaaa', T: '#888888' };
 
-function SpecRow({ label, value }) {
-  if (value == null || value === '') return null;
+function formatQty(n) {
+  if (n == null) return '0';
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(n);
+}
+
+function SpecRow({ label, children }) {
+  if (!children) return null;
   return (
-    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-      <Typography variant="caption" sx={{ color: 'text.disabled', minWidth: 90, flexShrink: 0 }}>
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, py: 0.5 }}>
+      <Typography
+        variant="caption"
+        sx={{ color: 'text.disabled', minWidth: 110, flexShrink: 0, pt: 0.3, lineHeight: 1.6 }}
+      >
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-        {value}
-      </Typography>
+      <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
     </Box>
   );
 }
 
-function FinishChips({ cut, fill, finish }) {
-  const chips = [];
-  if (cut)    chips.push({ key: 'cut',    label: CUT_LABEL[cut] || cut });
-  if (fill)   chips.push({ key: 'fill',   label: FILL_LABEL[fill] || fill });
-  if (finish) chips.push({ key: 'finish', label: FINISH_LABEL[finish] || finish });
-  if (chips.length === 0) return <Typography variant="body2" sx={{ fontWeight: 500 }}>—</Typography>;
-  return (
-    <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-      {chips.map((c) => (
-        <Chip key={c.key} label={c.label} size="small"
-          sx={{ height: 22, fontSize: '0.72rem', fontWeight: 500 }} />
-      ))}
-    </Box>
+const SpecPanel = ({ product, variants }) => {
+  if (!product) return null;
+
+  const activeVariants = (variants || []).filter((v) => !v.deleteDate && v.status !== 'archived');
+
+  // Unique dimensions across all active variants
+  const dimMap = new Map();
+  for (const v of activeVariants) {
+    const s = v.spec;
+    if (!s) continue;
+    if (s.unsized) {
+      dimMap.set(`slab-${s.thicknessMm}`, { unsized: true, thicknessMm: s.thicknessMm });
+    } else if (s.lengthCm != null && s.widthCm != null && s.thicknessMm != null) {
+      dimMap.set(`${s.lengthCm}-${s.widthCm}-${s.thicknessMm}`, {
+        lengthCm: s.lengthCm, widthCm: s.widthCm, thicknessMm: s.thicknessMm,
+      });
+    }
+  }
+  const dims = [...dimMap.values()].sort((a, b) =>
+    (b.lengthCm || 0) - (a.lengthCm || 0)
   );
-}
 
-const SpecPanel = ({ spec, productCode }) => {
-  if (!spec) return null;
+  // Unique grades across all active variants
+  const gradeMap = new Map();
+  for (const v of activeVariants) {
+    const s = v.spec;
+    if (s?.grade) gradeMap.set(s.grade, s.gradeName || s.grade);
+  }
+  const grades = [...gradeMap.entries()];
 
-  const dims = spec.unsized
-    ? `Unsized slab — thickness ${spec.thicknessMm} mm`
-    : `${spec.lengthCm} × ${spec.widthCm} cm · ${spec.thicknessMm} mm thick`;
+  // Overall quantities (pre-computed rollup on product)
+  const unitEntries = Object.entries(product.totalsByUnit || {}).filter(([, qty]) => qty > 0);
 
   return (
     <Box
       sx={{
-        border: '1.5px solid',
-        borderColor: 'divider',
-        borderRadius: '14px',
-        bgcolor: 'background.paper',
-        p: 2.5,
-        mb: 3,
+        border: '1.5px solid', borderColor: 'divider', borderRadius: '14px',
+        bgcolor: 'background.paper', p: 2.5, mb: 3,
       }}
     >
-      <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'text.disabled', display: 'block', mb: 1.5 }}>
+      <Typography
+        variant="caption"
+        sx={{ fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'text.disabled', display: 'block', mb: 1.5 }}
+      >
         Specification
       </Typography>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-        {productCode && <SpecRow label="Product code" value={productCode} />}
-        <SpecRow label="Stone" value={spec.stoneTypeName || spec.stoneType} />
-        <SpecRow label="Quarry" value={spec.quarryCode} />
-        <SpecRow label="Grade" value={spec.gradeName ? `${spec.grade} — ${spec.gradeName}` : spec.grade} />
-        <SpecRow label="Dimensions" value={dims} />
-      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
 
-      <Divider sx={{ my: 1.5 }} />
-
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-        <Typography variant="caption" sx={{ color: 'text.disabled', minWidth: 90, flexShrink: 0 }}>
-          Finish
-        </Typography>
-        <FinishChips cut={spec.cut} fill={spec.fill} finish={spec.finish} />
-      </Box>
-
-      {spec.raw && (
-        <Box sx={{ mt: 1.5 }}>
-          <Typography variant="caption" sx={{ color: 'text.disabled', minWidth: 90, display: 'inline-block' }}>
-            Raw code
+        {/* Identity */}
+        <SpecRow label="Product code">
+          <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: 0.5 }}>
+            {product.code}
           </Typography>
-          <Typography
-            variant="caption"
-            component="code"
-            sx={{ fontFamily: 'monospace', fontWeight: 600, letterSpacing: 0.5, ml: 1 }}
-          >
-            {spec.raw}
-          </Typography>
-        </Box>
-      )}
+        </SpecRow>
 
-      {spec.parseWarnings?.length > 0 && (
-        <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-          {spec.parseWarnings.map((w, i) => (
-            <Typography key={i} variant="caption" sx={{ color: 'warning.main', fontSize: '0.7rem' }}>
-              ⚠ {w}
+        {product.name && (
+          <SpecRow label="Name">
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>{product.name}</Typography>
+          </SpecRow>
+        )}
+
+        {product.nameAr && (
+          <SpecRow label="Arabic name">
+            <Typography variant="body2" sx={{ fontWeight: 500, direction: 'rtl' }}>
+              {product.nameAr}
             </Typography>
-          ))}
-        </Box>
-      )}
+          </SpecRow>
+        )}
+
+        <Divider sx={{ my: 1 }} />
+
+        {/* Stock */}
+        <SpecRow label="Overall qty">
+          {unitEntries.length > 0 ? (
+            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+              {unitEntries.map(([unit, qty]) => (
+                <Chip
+                  key={unit}
+                  size="small"
+                  variant="outlined"
+                  label={`${formatQty(qty)} ${UNIT_LABELS[unit] || unit}`}
+                  sx={{ height: 22, fontSize: '0.72rem', fontWeight: 600 }}
+                />
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" sx={{ color: 'text.disabled' }}>No stock</Typography>
+          )}
+        </SpecRow>
+
+        {/* Dimensions */}
+        {dims.length > 0 && (
+          <SpecRow label="Dimensions">
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              {dims.map((d, i) => (
+                <Chip
+                  key={i}
+                  size="small"
+                  label={
+                    d.unsized
+                      ? `Slab ${d.thicknessMm} mm`
+                      : `${d.lengthCm} × ${d.widthCm} cm · ${d.thicknessMm} mm`
+                  }
+                  sx={{ height: 22, fontSize: '0.7rem' }}
+                />
+              ))}
+            </Box>
+          </SpecRow>
+        )}
+
+        {/* Qualities */}
+        {grades.length > 0 && (
+          <SpecRow label="Qualities">
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              {grades.map(([grade, gradeName]) => {
+                const color = GRADE_COLOR[grade] || '#888';
+                return (
+                  <Chip
+                    key={grade}
+                    size="small"
+                    label={`${grade} — ${gradeName}`}
+                    sx={{ height: 22, fontSize: '0.7rem', fontWeight: 600, bgcolor: color + '22', color, border: 'none' }}
+                  />
+                );
+              })}
+            </Box>
+          </SpecRow>
+        )}
+
+        {/* Category */}
+        {product.category && (
+          <SpecRow label="Category">
+            <Chip
+              size="small"
+              label={product.category}
+              sx={{ height: 22, fontSize: '0.72rem' }}
+            />
+          </SpecRow>
+        )}
+
+      </Box>
     </Box>
   );
 };

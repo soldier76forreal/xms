@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext } from 'react';
 import Box from '@mui/material/Box';
 import SwipeableDrawer from '@mui/material/SwipeableDrawer';
 import List from '@mui/material/List';
@@ -15,25 +15,34 @@ import Diversity2Icon from '@mui/icons-material/Diversity2';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import WorkHistoryIcon from '@mui/icons-material/WorkHistory';
 import DataThresholdingIcon from '@mui/icons-material/DataThresholding';
+import MovieIcon from '@mui/icons-material/Movie';
 import { Inventory } from '@mui/icons-material';
 
-import { Link, useHistory } from 'react-router-dom';
-import AuthContext from '../../components/authAndConnections/auth';
+import { useHistory } from 'react-router-dom';
 import PageSection from '../../contextApi/pageSection';
+import { usePermissions } from '../../contextApi/PermissionContext';
 
+// Each item's `permission` is the key required to see it.
+// Omitting `permission` means the item is always visible when logged in.
 const NAV_ITEMS = [
-  { label: 'Invoices',   icon: <ReceiptIcon />,          section: 0, path: '/mis' },
-  { label: 'Customers',  icon: <PeopleAltIcon />,         section: 2, path: '/crm' },
-  { label: 'Files',      icon: <InsertDriveFileIcon />,   section: 1, path: '/files' },
-  { label: 'Job Report', icon: <WorkHistoryIcon />,       section: 3, path: '/jobReport', disabled: true },
-  { label: 'Marketing',  icon: <DataThresholdingIcon />,  section: 4, path: '/projects', disabled: true },
-  { label: 'Inventory',  icon: <Inventory />,             section: 5, path: '/inventory' },
+  { label: 'Invoices',   icon: <ReceiptIcon />,          section: 0, path: '/mis',       permission: 'mis:view' },  // Phase 6: key renamed mis:invoice:view → mis:view
+  { label: 'Customers',  icon: <PeopleAltIcon />,         section: 2, path: '/crm',       permission: 'crm:view' },
+  { label: 'Files',      icon: <InsertDriveFileIcon />,   section: 1, path: '/files',     permission: 'files:view' },
+  { label: 'Job Report', icon: <WorkHistoryIcon />,       section: 3, path: '/jobReport', permission: 'jobReport:view', disabled: true },
+  { label: 'Marketing',  icon: <DataThresholdingIcon />,  section: 4, path: '/projects',  permission: 'projects:view',  disabled: true },
+  { label: 'Inventory',  icon: <Inventory />,             section: 5, path: '/inventory', permission: 'inventory:view' },
+  { label: 'People',     icon: <Diversity2Icon />,        section: 6, path: '/users',     permission: 'users:view' },
+  { label: 'Digital Marketing', icon: <MovieIcon />,       section: 7, path: '/digitalMarketing', permission: 'digitalMarketing:view' },
 ];
 
 export default function LeftSideNav(props) {
-  const authContext = useContext(AuthContext);
   const pageSection = useContext(PageSection);
-  const history = useHistory();
+  const history     = useHistory();
+  const { can }     = usePermissions();
+
+  // Filter by permission — items with no permission field are always shown.
+  // Mirrors permission-aware nav described in CLAUDE.md Phase 4.
+  const visibleItems = NAV_ITEMS.filter(item => !item.permission || can(item.permission));
 
   const drawerContent = (anchor) => (
     <Box
@@ -56,8 +65,10 @@ export default function LeftSideNav(props) {
           </Typography>
         </ListItem>
 
-        {/* Main nav items */}
-        {NAV_ITEMS.map((item) => (
+        <Divider sx={{ mb: 0.5 }} />
+
+        {/* Main nav items — permission-filtered */}
+        {visibleItems.map((item) => (
           <ListItem key={item.section} disablePadding>
             <ListItemButton
               selected={pageSection.selectedSection === item.section}
@@ -85,45 +96,6 @@ export default function LeftSideNav(props) {
             </ListItemButton>
           </ListItem>
         ))}
-
-        <Divider sx={{ my: 1 }} />
-
-        {/* People — super admin only */}
-        <ListItem disablePadding>
-          {authContext.access.includes('sa') ? (
-            <ListItemButton
-              component={Link}
-              to="/users"
-              sx={{
-                borderRadius: 2,
-                mx: 1,
-                color: 'text.primary',
-                textDecoration: 'none',
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>
-                <Diversity2Icon />
-              </ListItemIcon>
-              <ListItemText
-                primary="People"
-                primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-              />
-            </ListItemButton>
-          ) : (
-            <ListItemButton
-              disabled
-              sx={{ borderRadius: 2, mx: 1 }}
-            >
-              <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>
-                <Diversity2Icon />
-              </ListItemIcon>
-              <ListItemText
-                primary="People"
-                primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-              />
-            </ListItemButton>
-          )}
-        </ListItem>
       </List>
     </Box>
   );

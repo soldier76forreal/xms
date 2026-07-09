@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>XMS — Offline</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<style>
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: #060606; color: #fff;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+  }
+  .card { text-align: center; padding: 32px; max-width: 360px; }
+  img { width: 72px; height: auto; margin-bottom: 16px; opacity: 0.9; }
+  h1 { font-size: 1.1rem; font-weight: 700; margin: 0 0 8px; }
+  p { font-size: 0.85rem; color: rgba(255,255,255,0.55); margin: 0 0 20px; }
+  button {
+    background: #fff; color: #000; border: none; border-radius: 8px;
+    padding: 8px 20px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  }
+  button:hover { opacity: 0.9; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <img src="/icon-192x192.png" alt="LMC"/>
+    <h1>You're offline</h1>
+    <p>XMS can't reach the server right now. Check your connection and try again.</p>
+    <button onclick="window.location.reload()">Retry</button>
+  </div>
+</body>
+</html>
