@@ -392,7 +392,11 @@ const LogIn = () => {
                   onChange={e => handleDigitChange(i, e.target.value)}
                   onKeyDown={e => handleDigitKeyDown(i, e)}
                   onPaste={i === 0 ? handleDigitPaste : undefined}
-                  inputProps={{ maxLength: 1, inputMode: 'numeric', style: { textAlign: 'center', fontSize: '1.2rem', fontWeight: 700, padding: '8px 0' } }}
+                  inputProps={{ maxLength: 1, inputMode: 'numeric',
+                    // color forced inline: the login page is always dark-styled, but the
+                    // app theme may be LIGHT — the global MuiOutlinedInput override would
+                    // otherwise paint these digits black-on-dark (invisible)
+                    style: { textAlign: 'center', fontSize: '1.2rem', fontWeight: 700, padding: '8px 0', color: '#ffffff' } }}
                   sx={{
                     width: { xs: 40, sm: 44 },
                     '& .MuiOutlinedInput-root': {

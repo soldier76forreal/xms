@@ -17,6 +17,7 @@ import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import { useBranch } from '../../contextApi/BranchContext';
 
 // ── "Send to" — hand an invoice/pre-invoice to one or more users ──────────────
 // PUT /mis/invoices/:id/assign { assignedTo:[userIds] } — full replace (so it
@@ -30,6 +31,8 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
   const theme       = useTheme();
   const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
   const isDark      = theme.palette.mode === 'dark';
+  const { activeBranchId } = useBranch();
+  const currentUserId = String(authCtx.decode?.id || authCtx.decode?._id || '');
 
   const T = {
     DIALOG_BG: isDark ? '#0d0d0d'                : theme.palette.background.paper,
@@ -70,14 +73,17 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
       const res = await authCtx.jwtInst({
         method: 'get',
         url: `${axiosGlobal.defaultTargetApi}/users`,
-        params: { search: debounced },
+        // Scoped to the doc's branch — users from other branches can't see the
+        // doc anyway (requireBranch), so offering them would be misleading.
+        params: { search: debounced, branchId: activeBranchId },
       });
-      setUsers(res.data.data || []);
+      // The sender themself is excluded — you can't "send" a doc to yourself.
+      setUsers((res.data.data || []).filter(u => String(u._id) !== currentUserId));
     } catch {
       setUsers([]);
     }
     setLoading(false);
-  }, [open, debounced, authCtx.jwtInst, axiosGlobal.defaultTargetApi]);
+  }, [open, debounced, authCtx.jwtInst, axiosGlobal.defaultTargetApi, activeBranchId, currentUserId]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 

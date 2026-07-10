@@ -1,7 +1,7 @@
 // XMS service worker — app-shell caching for a fast/offline-capable load.
 // Bump CACHE_NAME on any change to this file's caching strategy so old
 // clients pick up the new behavior instead of running stale cached logic.
-const CACHE_NAME = 'xms-cache-v2';
+const CACHE_NAME = 'xms-cache-v3';
 
 // Precached at install — the app shell + icons. NOT the hashed /static/js
 // and /static/css bundles (their exact filenames change per build and are
@@ -56,21 +56,42 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Same-origin static assets (hashed /static/js, /static/css, images, fonts,
-  // icons) — cache-first. CRA fingerprints these filenames per build, so a
-  // cache-first hit can never serve stale code; a new deploy just gets new
-  // filenames the cache hasn't seen yet.
+  // Same-origin static assets. Cache-first is ONLY safe for content-hashed
+  // filenames (CRA production emits main.<8-hex>.js etc.) — a hashed hit can
+  // never be stale. The DEV server's bundle.js / *.chunk.js are NOT hashed;
+  // cache-first on those served a frozen old build (the "UI jumped back to the
+  // pre-redesign nav after switching branch" bug, incl. the 400s from the old
+  // bundle sending no branchId). Unhashed assets go network-first instead.
+  const isFingerprinted = /\.[0-9a-f]{8,}\./i.test(url.pathname);
+
+  if (isFingerprinted) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response && response.status === 200 && response.type === 'basic') {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        }).catch(() => cached);
+      })
+    );
+    return;
+  }
+
+  // Unhashed same-origin asset — network-first, cached copy only as an
+  // offline fallback so a dev bundle or icon can never go permanently stale.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
+    fetch(request)
+      .then((response) => {
         if (response && response.status === 200 && response.type === 'basic') {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         }
         return response;
-      }).catch(() => cached);
-    })
+      })
+      .catch(() => caches.match(request))
   );
 });
 

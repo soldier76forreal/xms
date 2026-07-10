@@ -7,16 +7,19 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import SendIcon from '@mui/icons-material/Send';
 import MicIcon from '@mui/icons-material/Mic';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import PlayCircleIcon from '@mui/icons-material/PlayCircle';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchRawContentChat, sendRawContentChatMessage, actions } from '../../store/store';
+import MediaViewer, { resolveMediaKind } from './mediaViewer';
 
 const fmtTime = (d) => {
   const dt = new Date(d);
@@ -39,8 +42,10 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
   const [loading, setLoading]   = useState(true);
   const [body, setBody]         = useState('');
   const [sending, setSending]   = useState(false);
+  const [sendProgress, setSendProgress] = useState(null);   // 0-100 while an attachment uploads
   const [recording, setRecording] = useState(false);
   const [recordError, setRecordError] = useState('');
+  const [viewerMedia, setViewerMedia] = useState(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef        = useRef([]);
   const scrollRef         = useRef(null);
@@ -74,13 +79,20 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages.length]);
 
-  const sendMessage = async (payload) => {
+  const sendMessage = async (payload, withProgress = false) => {
     setSending(true);
+    if (withProgress) setSendProgress(0);
     try {
-      await dispatch(sendRawContentChatMessage({ authCtx, axiosGlobal, id: rawContentId, formData: payload })).unwrap();
+      await dispatch(sendRawContentChatMessage({
+        authCtx, axiosGlobal, id: rawContentId, formData: payload,
+        onProgress: withProgress
+          ? (e) => setSendProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null)
+          : undefined,
+      })).unwrap();
       setBody('');
     } catch (_) { /* snackbar already dispatched */ }
     setSending(false);
+    setSendProgress(null);
   };
 
   const handleSendText = () => {
@@ -96,7 +108,7 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
     if (!file) return;
     const fd = new FormData();
     fd.append('file', file);
-    sendMessage(fd);
+    sendMessage(fd, true);
   };
 
   const startRecording = async () => {
@@ -112,7 +124,7 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
         const fd = new FormData();
         fd.append('file', file);
-        sendMessage(fd);
+        sendMessage(fd, true);
       };
       recorder.start();
       mediaRecorderRef.current = recorder;
@@ -126,7 +138,15 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
     setRecording(false);
   };
 
-  const openFile = (diskName) => diskName && window.open(`${axiosGlobal.defaultTargetApi}/uploads/${diskName}`, '_blank');
+  // All media opens IN-APP (MediaViewer) — never a browser tab.
+  const viewFile = (diskName, name, kindHint) => {
+    if (!diskName) return;
+    setViewerMedia({
+      url: `${axiosGlobal.defaultTargetApi}/uploads/${diskName}`,
+      name: name || diskName,
+      kind: kindHint || resolveMediaKind(name || diskName),
+    });
+  };
 
   return (
     <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${T.BD}` }}>
@@ -162,13 +182,37 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
                 {m.type === 'voice' && (
                   <audio controls src={`${axiosGlobal.defaultTargetApi}/uploads/${m.fileDiskName}`} style={{ height: 32, maxWidth: 200 }} />
                 )}
-                {m.type === 'file' && (
-                  <Typography onClick={() => openFile(m.fileDiskName)}
-                    sx={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer',
-                      '&:hover': { textDecoration: 'underline' } }}>
-                    <InsertDriveFileIcon sx={{ fontSize: 14 }} /> {m.fileName}
-                  </Typography>
-                )}
+                {m.type === 'file' && (() => {
+                  // Telegram-style inline previews: images and videos render in
+                  // the bubble; anything else is a row that opens the viewer.
+                  const kind = resolveMediaKind(m.fileName || m.fileDiskName || '');
+                  const url  = `${axiosGlobal.defaultTargetApi}/uploads/${m.fileDiskName}`;
+                  if (kind === 'image') {
+                    return <Box component="img" src={url} alt={m.fileName}
+                      onClick={() => viewFile(m.fileDiskName, m.fileName, 'image')}
+                      sx={{ maxWidth: 220, maxHeight: 220, borderRadius: '10px', cursor: 'pointer', display: 'block' }} />;
+                  }
+                  if (kind === 'video') {
+                    return (
+                      <Box onClick={() => viewFile(m.fileDiskName, m.fileName, 'video')}
+                        sx={{ position: 'relative', cursor: 'pointer', maxWidth: 220, borderRadius: '10px', overflow: 'hidden', bgcolor: '#000' }}>
+                        <Box component="video" src={`${url}#t=0.1`} muted preload="metadata"
+                          sx={{ width: '100%', maxHeight: 180, display: 'block', objectFit: 'cover' }} />
+                        <PlayCircleIcon sx={{ position: 'absolute', inset: 0, m: 'auto', fontSize: 34, color: 'rgba(255,255,255,0.9)' }} />
+                      </Box>
+                    );
+                  }
+                  if (kind === 'audio') {
+                    return <audio controls src={url} style={{ height: 32, maxWidth: 200 }} />;
+                  }
+                  return (
+                    <Typography onClick={() => viewFile(m.fileDiskName, m.fileName, kind)}
+                      sx={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer',
+                        '&:hover': { textDecoration: 'underline' } }}>
+                      <InsertDriveFileIcon sx={{ fontSize: 14 }} /> {m.fileName}
+                    </Typography>
+                  );
+                })()}
               </Box>
               <Typography sx={{ fontSize: '0.62rem', color: T.TEXT_TER, mt: 0.25 }}>{fmtTime(m.date)}</Typography>
             </Box>
@@ -179,6 +223,14 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
       {can('digitalMarketing:rawContent:chat') && (
         <Box>
           {recordError && <Typography sx={{ fontSize: '0.7rem', color: '#EA005A', mb: 0.5 }}>{recordError}</Typography>}
+          {sendProgress !== null && (
+            <Box sx={{ mb: 0.75 }}>
+              <LinearProgress variant="determinate" value={sendProgress} sx={{ borderRadius: 2, height: 5 }} />
+              <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, mt: 0.25 }}>
+                Uploading… {sendProgress}%
+              </Typography>
+            </Box>
+          )}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Tooltip title={recording ? 'Stop recording' : 'Record a voice message'}>
               <IconButton size="small" onClick={recording ? stopRecording : startRecording}
@@ -204,6 +256,8 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
           </Box>
         </Box>
       )}
+
+      <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
     </Box>
   );
 }

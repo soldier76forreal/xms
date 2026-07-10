@@ -19,12 +19,27 @@ import MicIcon from '@mui/icons-material/Mic';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
 
+import LinearProgress from '@mui/material/LinearProgress';
+
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { createRawContent } from '../../store/store';
+import ConfirmDialog from '../../tools/modal/confirmDialog';
+import MediaViewer from './mediaViewer';
 
 const USE_CASES = ['Anything', 'Ad campaign', 'Organic post', 'Product showcase', 'Behind the scenes', 'Announcement'];
 const PLATFORMS = ['Anything', 'Instagram', 'TikTok', 'YouTube', 'Facebook', 'LinkedIn', 'X'];
+const LANGUAGES = ['English', 'Arabic', 'Farsi'];
+
+// Local (not-yet-uploaded) File → viewer kind, from its MIME type.
+const kindFromFile = (file) => {
+  const t = file?.type || '';
+  if (t.startsWith('image/')) return 'image';
+  if (t.startsWith('video/')) return 'video';
+  if (t.startsWith('audio/')) return 'audio';
+  if (t === 'application/pdf') return 'pdf';
+  return 'other';
+};
 
 let localKeyCounter = 0;
 const nextLocalKey = () => `f${Date.now()}_${localKeyCounter++}`;
@@ -58,8 +73,11 @@ export default function RawContentForm({ open, onClose }) {
   const [platform, setPlatform] = useState('Anything');
   const [pendingFiles, setPendingFiles] = useState([]);   // [{ key, file, description, voiceFile }]
   const [saving, setSaving]     = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);   // 0-100 during submit
   const [error, setError]       = useState('');
   const [recordingKey, setRecordingKey] = useState(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [viewerMedia, setViewerMedia] = useState(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef        = useRef([]);
   const replaceInputRef  = useRef(null);
@@ -71,7 +89,11 @@ export default function RawContentForm({ open, onClose }) {
   };
 
   const handleClose = () => {
-    if (pendingFiles.length && !window.confirm('Discard this raw content batch?')) return;
+    if (pendingFiles.length) { setConfirmDiscard(true); return; }
+    resetForm();
+    onClose();
+  };
+  const discardAndClose = () => {
     resetForm();
     onClose();
   };
@@ -99,9 +121,9 @@ export default function RawContentForm({ open, onClose }) {
     setPendingFiles((prev) => prev.map((f) => (f.key === replaceTargetKey.current ? { ...f, file } : f)));
   };
 
+  // Preview a not-yet-uploaded file IN-APP via an object URL — no browser tab.
   const openPreview = (file) => {
-    const url = URL.createObjectURL(file);
-    window.open(url, '_blank', 'noopener');
+    setViewerMedia({ url: URL.createObjectURL(file), name: file.name, kind: kindFromFile(file) });
   };
 
   const startVoiceDescription = async (key) => {
@@ -148,13 +170,18 @@ export default function RawContentForm({ open, onClose }) {
       formData.append('voiceDescriptionFlags', JSON.stringify(voiceFlags));
       pendingFiles.forEach((f) => { if (f.voiceFile) formData.append('voiceDescriptions', f.voiceFile); });
 
-      await dispatch(createRawContent({ authCtx, axiosGlobal, formData })).unwrap();
+      setUploadProgress(0);
+      await dispatch(createRawContent({
+        authCtx, axiosGlobal, formData,
+        onProgress: (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
+      })).unwrap();
       resetForm();
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to upload');
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -215,9 +242,9 @@ export default function RawContentForm({ open, onClose }) {
                     value={f.description} onChange={(e) => updateDescription(f.key, e.target.value)}
                     sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '8px', fontSize: '0.78rem' } }} />
                   {f.voiceFile && !((recordingKey === f.key)) ? (
-                    <Tooltip title="Voice description recorded">
-                      <PlayCircleIcon sx={{ fontSize: 20, color: '#81c784', flexShrink: 0 }}
-                        onClick={() => window.open(URL.createObjectURL(f.voiceFile), '_blank')} />
+                    <Tooltip title="Play voice description">
+                      <PlayCircleIcon sx={{ fontSize: 20, color: '#81c784', flexShrink: 0, cursor: 'pointer' }}
+                        onClick={() => setViewerMedia({ url: URL.createObjectURL(f.voiceFile), name: 'Voice description', kind: 'audio' })} />
                     </Tooltip>
                   ) : (
                     <Tooltip title={recordingKey === f.key ? 'Stop recording' : 'Record a voice description'}>
@@ -237,9 +264,13 @@ export default function RawContentForm({ open, onClose }) {
         <Divider sx={{ borderColor: T.DIVIDER }} />
 
         {/* ── Batch-level fields ── */}
-        <TextField label="Language" size="small" fullWidth value={language}
+        <TextField select label="Language" size="small" fullWidth value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
+          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
+          SelectProps={{ native: true }}>
+          <option value="">Select language…</option>
+          {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+        </TextField>
 
         <TextField select label="Suggested use case" size="small" fullWidth value={useCase}
           onChange={(e) => setUseCase(e.target.value)}
@@ -258,15 +289,37 @@ export default function RawContentForm({ open, onClose }) {
         {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, px: 3, pb: 2.5, pt: 1.5, borderTop: `1px solid ${T.DIVIDER}` }}>
-        <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>Cancel</Button>
-        <Box sx={{ flexGrow: 1 }} />
-        <Button onClick={handleSave} disabled={saving} variant="contained"
-          startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
-          sx={{ borderRadius: '8px', px: 3, textTransform: 'none', fontWeight: 700 }}>
-          {saving ? 'Uploading…' : 'Upload batch'}
-        </Button>
+      <Box sx={{ px: 3, pb: 2.5, pt: 1.5, borderTop: `1px solid ${T.DIVIDER}` }}>
+        {uploadProgress !== null && (
+          <Box sx={{ mb: 1.25 }}>
+            <LinearProgress variant="determinate" value={uploadProgress} sx={{ borderRadius: 2, height: 6 }} />
+            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.5 }}>
+              Uploading batch… {uploadProgress}%
+            </Typography>
+          </Box>
+        )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>Cancel</Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <Button onClick={handleSave} disabled={saving} variant="contained"
+            startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+            sx={{ borderRadius: '8px', px: 3, textTransform: 'none', fontWeight: 700 }}>
+            {saving ? 'Uploading…' : 'Upload batch'}
+          </Button>
+        </Box>
       </Box>
+
+      <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        onConfirm={discardAndClose}
+        title="Discard batch"
+        message="Discard this raw content batch? Selected files and descriptions will be lost."
+        confirmLabel="Discard"
+        destructive
+      />
     </Drawer>
   );
 }

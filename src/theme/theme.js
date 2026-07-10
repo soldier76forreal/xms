@@ -31,7 +31,7 @@ const componentOverrides = (mode) => {
       styleOverrides: {
         '*': { boxSizing: 'border-box' },
         body: {
-          backgroundColor: isLight ? '#FAFAFA' : '#0F0F0F',
+          backgroundColor: isLight ? '#FAFAFA' : '#060606',
           color: isLight ? '#000000' : '#FFFFFF',
         },
         // Thin, neutral scrollbar
@@ -107,13 +107,13 @@ const componentOverrides = (mode) => {
       styleOverrides: {
         root: {
           borderRadius: 10,
-          backgroundColor: isLight ? '#FFFFFF' : '#1A1A1A',
+          backgroundColor: isLight ? '#FFFFFF' : 'rgba(255,255,255,0.05)',
           '& .MuiOutlinedInput-notchedOutline': {
-            borderColor: isLight ? '#E0E0E0' : '#3A3A3A',
+            borderColor: isLight ? '#E0E0E0' : 'rgba(255,255,255,0.1)',
             borderWidth: '1.5px',
           },
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: isLight ? '#BBBBBB' : '#555555',
+            borderColor: isLight ? '#BBBBBB' : 'rgba(255,255,255,0.22)',
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
             borderColor: isLight ? '#000000' : '#FFFFFF',
@@ -132,7 +132,7 @@ const componentOverrides = (mode) => {
       styleOverrides: {
         root: {
           fontSize: '0.8125rem',
-          color: isLight ? '#666666' : '#AAAAAA',
+          color: isLight ? '#666666' : 'rgba(255,255,255,0.45)',
           '&.Mui-focused': {
             color: isLight ? '#000000' : '#FFFFFF',
           },
@@ -149,8 +149,8 @@ const componentOverrides = (mode) => {
       styleOverrides: {
         root: {
           borderRadius: 14,
-          border: isLight ? '1.5px solid #EBEBEB' : '1.5px solid #2A2A2A',
-          backgroundColor: isLight ? '#FFFFFF' : '#1A1A1A',
+          border: isLight ? '1.5px solid #EBEBEB' : '1.5px solid rgba(255,255,255,0.1)',
+          backgroundColor: isLight ? '#FFFFFF' : '#181818',
           boxShadow: 'none',
         },
       },
@@ -164,7 +164,7 @@ const componentOverrides = (mode) => {
           backgroundImage: 'none',
         },
         outlined: {
-          border: isLight ? '1.5px solid #EBEBEB' : '1.5px solid #2A2A2A',
+          border: isLight ? '1.5px solid #EBEBEB' : '1.5px solid rgba(255,255,255,0.1)',
         },
       },
     },
@@ -172,7 +172,7 @@ const componentOverrides = (mode) => {
     MuiDivider: {
       styleOverrides: {
         root: {
-          borderColor: isLight ? '#EBEBEB' : '#2A2A2A',
+          borderColor: isLight ? '#EBEBEB' : 'rgba(255,255,255,0.07)',
         },
       },
     },
@@ -191,7 +191,7 @@ const componentOverrides = (mode) => {
       styleOverrides: {
         paper: {
           borderRadius: 14,
-          border: isLight ? '1.5px solid #EBEBEB' : '1.5px solid #2A2A2A',
+          border: isLight ? '1.5px solid #EBEBEB' : '1.5px solid rgba(255,255,255,0.1)',
         },
       },
     },
@@ -225,15 +225,15 @@ const componentOverrides = (mode) => {
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottom: isLight ? '1px solid #EBEBEB' : '1px solid #2A2A2A',
+          borderBottom: isLight ? '1px solid #EBEBEB' : '1px solid rgba(255,255,255,0.07)',
           fontSize: '0.875rem',
           padding: '12px 16px',
         },
         head: {
           fontWeight: 600,
           fontSize: '0.8125rem',
-          color: isLight ? '#666666' : '#AAAAAA',
-          backgroundColor: isLight ? '#FAFAFA' : '#141414',
+          color: isLight ? '#666666' : 'rgba(255,255,255,0.45)',
+          backgroundColor: isLight ? '#FAFAFA' : '#111111',
         },
       },
     },
@@ -269,8 +269,8 @@ const componentOverrides = (mode) => {
       defaultProps: { elevation: 0 },
       styleOverrides: {
         root: {
-          backgroundColor: isLight ? '#FFFFFF' : '#0F0F0F',
-          borderBottom: isLight ? '1.5px solid #EBEBEB' : '1.5px solid #2A2A2A',
+          backgroundColor: isLight ? '#FFFFFF' : '#0d0d0d',
+          borderBottom: isLight ? '1.5px solid #EBEBEB' : '1.5px solid rgba(255,255,255,0.07)',
           color: isLight ? '#000000' : '#FFFFFF',
         },
       },
@@ -317,9 +317,13 @@ export const darkTheme = createTheme({
     mode: 'dark',
     primary: { main: '#FFFFFF', contrastText: '#000000' },
     secondary: { main: '#AAAAAA', contrastText: '#000000' },
-    background: { default: '#0F0F0F', paper: '#1A1A1A' },
-    text: { primary: '#FFFFFF', secondary: '#AAAAAA', disabled: '#555555' },
-    divider: '#2A2A2A',
+    // Dark tiers per the documented design language: app #060606 · panel #0d0d0d
+    // · surface #111 · card #181818. The old values (#0F0F0F/#1A1A1A/#2A2A2A)
+    // made theme-driven sections (Inventory) look mismatched next to the newer
+    // hardcoded ones ("mixed theme").
+    background: { default: '#060606', paper: '#111111' },
+    text: { primary: '#FFFFFF', secondary: 'rgba(255,255,255,0.45)', disabled: 'rgba(255,255,255,0.2)' },
+    divider: 'rgba(255,255,255,0.07)',
     error: { main: '#FF4D8D', contrastText: '#FFFFFF' },
     action: {
       hover: 'rgba(255,255,255,0.08)',

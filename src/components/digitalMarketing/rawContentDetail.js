@@ -8,6 +8,7 @@ import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Skeleton from '@mui/material/Skeleton';
+import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
@@ -22,6 +23,8 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchRawContent, updateRawContent, deleteRawContent } from '../../store/store';
 import RawContentChat from './rawContentChat';
 import ReadyToUploadForm from './readyToUploadForm';
+import ConfirmDialog from '../../tools/modal/confirmDialog';
+import MediaViewer, { resolveMediaKind } from './mediaViewer';
 
 const STATUS_META = {
   working_on_it:   { label: 'Working on it', color: '#64b5f6' },
@@ -54,6 +57,10 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   const [editingDesc, setEditingDesc] = useState(null);   // fileId being edited
   const [descDraft, setDescDraft] = useState('');
   const [readyFormOpen, setReadyFormOpen] = useState(false);
+  const [confirmRemoveFile, setConfirmRemoveFile] = useState(null);   // fileId pending removal
+  const [confirmDeleteBatch, setConfirmDeleteBatch] = useState(false);
+  const [viewerMedia, setViewerMedia] = useState(null);   // { url, name, kind }
+  const [addProgress, setAddProgress] = useState(null);   // 0-100 while "Add files" uploads
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,7 +77,6 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   };
 
   const removeFile = async (fileId) => {
-    if (!window.confirm('Remove this file from the batch?')) return;
     const fd = new FormData();
     fd.append('removeFileIds', JSON.stringify([fileId]));
     await dispatch(updateRawContent({ authCtx, axiosGlobal, id, formData: fd }));
@@ -83,7 +89,12 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
     files.forEach((f) => fd.append('files', f));
     fd.append('descriptions', JSON.stringify(files.map(() => '')));
     fd.append('voiceDescriptionFlags', JSON.stringify(files.map(() => false)));
-    await dispatch(updateRawContent({ authCtx, axiosGlobal, id, formData: fd }));
+    setAddProgress(0);
+    await dispatch(updateRawContent({
+      authCtx, axiosGlobal, id, formData: fd,
+      onProgress: (e) => setAddProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
+    }));
+    setAddProgress(null);
   };
 
   const saveDescription = async (fileId) => {
@@ -95,14 +106,20 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this raw content batch? This cannot be undone.')) return;
     await dispatch(deleteRawContent({ authCtx, axiosGlobal, id }));
     onDeleted && onDeleted();
   };
 
-  // Files are served statically from /uploads/<diskName> — there is no generic
-  // GET /files/:id route, so we always open by the snapshotted disk filename.
-  const openFile = (diskName) => diskName && window.open(`${axiosGlobal.defaultTargetApi}/uploads/${diskName}`, '_blank');
+  // Files are served statically from /uploads/<diskName>. Viewing happens
+  // IN-APP via MediaViewer — never window.open / a browser tab.
+  const viewFile = (diskName, name, kindHint) => {
+    if (!diskName) return;
+    setViewerMedia({
+      url: `${axiosGlobal.defaultTargetApi}/uploads/${diskName}`,
+      name: name || diskName,
+      kind: kindHint || resolveMediaKind(name || diskName),
+    });
+  };
 
   if (loading || !doc || String(doc._id) !== String(id)) {
     return (
@@ -162,7 +179,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
         )}
 
         {can('digitalMarketing:rawContent:delete') && (
-          <Button size="small" startIcon={<DeleteOutlineIcon sx={{ fontSize: 13 }} />} onClick={handleDelete}
+          <Button size="small" startIcon={<DeleteOutlineIcon sx={{ fontSize: 13 }} />} onClick={() => setConfirmDeleteBatch(true)}
             sx={{ fontSize: '0.7rem', textTransform: 'none', color: '#EA005A', mt: 1, px: 0 }}>
             Delete batch
           </Button>
@@ -180,16 +197,37 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
             {(doc.files || []).map((f) => (
               <Box key={f.fileId} sx={{ p: 1.25, borderRadius: '10px', bgcolor: T.CTRL_BG, border: `1px solid ${T.BD}` }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <InsertDriveFileIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />
-                  <Typography onClick={() => openFile(f.diskName)}
+                  {/* inline thumbnail for images/videos; icon for the rest — click opens the in-app viewer */}
+                  {(() => {
+                    const kind = resolveMediaKind(f.name || f.diskName || '');
+                    const url  = f.diskName ? `${axiosGlobal.defaultTargetApi}/uploads/${f.diskName}` : null;
+                    if (kind === 'image' && url) {
+                      return <Box component="img" src={url} alt="" onClick={() => viewFile(f.diskName, f.name, kind)}
+                        sx={{ width: 34, height: 34, borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', flexShrink: 0 }} />;
+                    }
+                    if (kind === 'video' && url) {
+                      return (
+                        <Box onClick={() => viewFile(f.diskName, f.name, kind)}
+                          sx={{ position: 'relative', width: 34, height: 34, borderRadius: '6px', overflow: 'hidden',
+                            cursor: 'pointer', flexShrink: 0, bgcolor: '#000' }}>
+                          <Box component="video" src={`${url}#t=0.1`} muted preload="metadata"
+                            sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <PlayCircleIcon sx={{ position: 'absolute', inset: 0, m: 'auto', fontSize: 18, color: 'rgba(255,255,255,0.9)' }} />
+                        </Box>
+                      );
+                    }
+                    return <InsertDriveFileIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />;
+                  })()}
+                  <Typography onClick={() => viewFile(f.diskName, f.name)}
                     sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, flexGrow: 1, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}
                     noWrap>
-                    <OpenInNewIcon sx={{ fontSize: 12, flexShrink: 0 }} /> {f.name || 'Open file'}
+                    <OpenInNewIcon sx={{ fontSize: 12, flexShrink: 0 }} /> {f.name || 'Preview file'}
                   </Typography>
                   {f.voiceDescriptionDiskName && (
                     <Tooltip title="Play voice description">
-                      <IconButton size="small" onClick={() => openFile(f.voiceDescriptionDiskName)}
+                      <IconButton size="small"
+                        onClick={() => viewFile(f.voiceDescriptionDiskName, 'Voice description', 'audio')}
                         sx={{ color: '#81c784', width: 24, height: 24 }}>
                         <PlayCircleIcon sx={{ fontSize: 16 }} />
                       </IconButton>
@@ -197,7 +235,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
                   )}
                   {can('digitalMarketing:rawContent:edit') && (
                     <Tooltip title="Remove">
-                      <IconButton size="small" onClick={() => removeFile(f.fileId)} sx={{ color: '#EA005A', width: 24, height: 24 }}>
+                      <IconButton size="small" onClick={() => setConfirmRemoveFile(f.fileId)} sx={{ color: '#EA005A', width: 24, height: 24 }}>
                         <DeleteOutlineIcon sx={{ fontSize: 15 }} />
                       </IconButton>
                     </Tooltip>
@@ -221,11 +259,22 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
           </Box>
 
           {can('digitalMarketing:rawContent:edit') && (
-            <Button component="label" size="small" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
-              sx={{ mt: 1.25, fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>
-              Add files
-              <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
-            </Button>
+            <>
+              <Button component="label" size="small" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
+                disabled={addProgress !== null}
+                sx={{ mt: 1.25, fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>
+                Add files
+                <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
+              </Button>
+              {addProgress !== null && (
+                <Box sx={{ mt: 0.75 }}>
+                  <LinearProgress variant="determinate" value={addProgress} sx={{ borderRadius: 2, height: 5 }} />
+                  <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, mt: 0.25 }}>
+                    Uploading… {addProgress}%
+                  </Typography>
+                </Box>
+              )}
+            </>
           )}
         </Box>
 
@@ -236,6 +285,27 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
       </Box>
 
       <ReadyToUploadForm open={readyFormOpen} onClose={() => setReadyFormOpen(false)} rawContentId={doc._id} />
+
+      <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
+
+      <ConfirmDialog
+        open={Boolean(confirmRemoveFile)}
+        onClose={() => setConfirmRemoveFile(null)}
+        onConfirm={() => removeFile(confirmRemoveFile)}
+        title="Remove file"
+        message="Remove this file from the batch?"
+        confirmLabel="Remove"
+        destructive
+      />
+      <ConfirmDialog
+        open={confirmDeleteBatch}
+        onClose={() => setConfirmDeleteBatch(false)}
+        onConfirm={handleDelete}
+        title="Delete batch"
+        message="Delete this raw content batch? This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+      />
     </Box>
   );
 }

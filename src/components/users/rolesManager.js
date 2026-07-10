@@ -74,6 +74,15 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
   const [dataScopes,  setDataScopes]  = useState({});
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState('');
+  const [expandedMods, setExpandedMods] = useState(new Set());   // collapsed by default — headers show counts
+
+  const toggleModuleExpand = (mod) => {
+    setExpandedMods(prev => {
+      const next = new Set(prev);
+      next.has(mod) ? next.delete(mod) : next.add(mod);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -180,7 +189,9 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
 
       <Divider sx={{ borderColor: T.DIVIDER, flexShrink: 0 }} />
 
-      {/* ── Permissions — grows to fill remaining space ── */}
+      {/* ── ONE unified scroll area: collapsible permission groups + data
+           visibility. Replaces the old cramped layout (an always-expanded
+           permission list squeezed above a 280px sub-scroll). ── */}
       <Box sx={{ px: 3, pt: 1.5, pb: 0.5, flexShrink: 0 }}>
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1 }}>
           Permissions · {selected.size} selected
@@ -188,9 +199,9 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
       </Box>
 
       <Box sx={{
-        flex: 1, overflowY: 'auto', px: 3, pb: 1,
+        flex: 1, overflowY: 'auto', px: 3, pb: 1.5,
         minHeight: 0, // required for flex children to shrink below content size
-        display: 'flex', flexDirection: 'column', gap: 2,
+        display: 'flex', flexDirection: 'column', gap: 0.75,
         '&::-webkit-scrollbar': { width: 4 },
         '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
         '&::-webkit-scrollbar-thumb': {
@@ -209,57 +220,65 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
         ) : (
           Object.entries(byModule).map(([mod, perms]) => {
             const keys        = perms.map(p => p.key);
-            const allChecked  = keys.every(k => selected.has(k));
-            const someChecked = !allChecked && keys.some(k => selected.has(k));
+            const checkedCount = keys.filter(k => selected.has(k)).length;
+            const allChecked  = checkedCount === keys.length;
+            const someChecked = !allChecked && checkedCount > 0;
+            const expanded    = expandedMods.has(mod);
             return (
-              <Box key={mod}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.75, cursor: 'pointer' }}
-                  onClick={() => toggleModule(keys)}>
+              <Box key={mod} sx={{
+                border: `1px solid ${T.CARD_BD}`, borderRadius: '10px',
+                bgcolor: T.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)',
+                overflow: 'hidden', flexShrink: 0,
+              }}>
+                {/* Module header — checkbox selects all; the rest toggles expand */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.75, cursor: 'pointer',
+                  '&:hover': { bgcolor: T.HVR_BG } }}
+                  onClick={() => toggleModuleExpand(mod)}>
                   <Checkbox
                     size="small" checked={allChecked} indeterminate={someChecked}
+                    onClick={(e) => { e.stopPropagation(); toggleModule(keys); }}
                     sx={{ p: 0, color: T.TEXT_TER,
                       '&.Mui-checked': { color: T.TEXT_PRI },
                       '&.MuiCheckbox-indeterminate': { color: T.TEXT_SEC },
                     }}
                   />
-                  <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_SEC,
-                    textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+                  <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_PRI, flexGrow: 1,
+                    textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700 }}>
                     {mod}
                   </Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: checkedCount ? T.TEXT_SEC : T.TEXT_TER, fontWeight: 600 }}>
+                    {checkedCount}/{keys.length}
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_TER, width: 14, textAlign: 'center' }}>
+                    {expanded ? '▾' : '▸'}
+                  </Typography>
                 </Box>
-                <Box sx={{ pl: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                  {perms.map(p => (
-                    <Box key={p.key}
-                      onClick={() => togglePerm(p.key)}
-                      sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', py: 0.25,
-                        borderRadius: '6px',
-                        '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' } }}>
-                      <Checkbox size="small" checked={selected.has(p.key)}
-                        sx={{ p: '2px', color: T.TEXT_TER, '&.Mui-checked': { color: T.TEXT_PRI } }} />
-                      <Typography sx={{ fontSize: '0.78rem', color: selected.has(p.key) ? T.TEXT_PRI : T.TEXT_SEC }}>
-                        {p.key.substring(p.key.indexOf(':') + 1)}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
+                {expanded && (
+                  <Box sx={{ px: 1.25, pb: 0.75, display: 'flex', flexDirection: 'column', gap: 0.25,
+                    borderTop: `1px solid ${T.DIVIDER}`, pt: 0.5 }}>
+                    {perms.map(p => (
+                      <Box key={p.key}
+                        onClick={() => togglePerm(p.key)}
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', py: 0.25,
+                          borderRadius: '6px',
+                          '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' } }}>
+                        <Checkbox size="small" checked={selected.has(p.key)}
+                          sx={{ p: '2px', color: T.TEXT_TER, '&.Mui-checked': { color: T.TEXT_PRI } }} />
+                        <Typography sx={{ fontSize: '0.78rem', color: selected.has(p.key) ? T.TEXT_PRI : T.TEXT_SEC }}>
+                          {p.key.substring(p.key.indexOf(':') + 1)}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
               </Box>
             );
           })
         )}
-      </Box>
 
-      <Divider sx={{ borderColor: T.DIVIDER, flexShrink: 0 }} />
+        <Divider sx={{ borderColor: T.DIVIDER, my: 1.5 }} />
 
-      {/* ── Data Visibility + error (fixed bottom section, independently scrollable) ── */}
-      <Box sx={{
-        flexShrink: 0, px: 3, pt: 2, pb: 1.5,
-        maxHeight: 280, overflowY: 'auto',
-        '&::-webkit-scrollbar': { width: 4 },
-        '&::-webkit-scrollbar-thumb': {
-          bgcolor: T.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)',
-          borderRadius: 2,
-        },
-      }}>
+        {/* ── Data Visibility — same scroll region, no more 280px sub-scroll ── */}
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER,
           textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>
           Data Visibility · per section

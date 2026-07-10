@@ -130,10 +130,11 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
         {/* Stone-type accent bar */}
         <Box sx={{ width: 4, flexShrink: 0, bgcolor: accent }} />
 
-        {/* Cover thumbnail */}
+        {/* Cover thumbnail — alignSelf:stretch (not height:100%) so the image
+            area always fills the card's real height, placeholder included */}
         <Box
           sx={{
-            width: 72, height: '100%', maxHeight: 105, flexShrink: 0,
+            width: 72, alignSelf: 'stretch', flexShrink: 0,
             bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden',
@@ -141,7 +142,7 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
         >
           {thumbUrl ? (
             <Box component="img" src={thumbUrl} alt=""
-              sx={{ width: '100%', height: '100%', maxHeight: 105, objectFit: 'cover', display: 'block' }}
+              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               onError={(e) => { e.target.style.display = 'none'; }} />
           ) : (
             <ImageIcon sx={{ color: 'text.disabled', fontSize: 28 }} />

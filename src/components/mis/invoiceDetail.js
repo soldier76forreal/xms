@@ -161,12 +161,17 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
             </Tooltip>
           )}
           {(live.assignedTo || []).length > 0 && (
-            <Tooltip title={`Sent to ${live.assignedTo.length} user(s)`}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <Tooltip title={`${live.assignedByName ? `Sent by ${live.assignedByName}` : 'Sent'} to ${live.assignedTo.length} user(s)`}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                 <PeopleAltIcon sx={{ fontSize: 14, color: T.TEXT_TER }} />
                 <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: T.TEXT_TER }}>
                   {live.assignedTo.length}
                 </Typography>
+                {live.assignedByName && (
+                  <Typography sx={{ fontSize: '0.68rem', color: '#64b5f6', fontWeight: 600 }}>
+                    · from {live.assignedByName}
+                  </Typography>
+                )}
               </Box>
             </Tooltip>
           )}

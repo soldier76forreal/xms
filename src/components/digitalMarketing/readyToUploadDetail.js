@@ -8,6 +8,7 @@ import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Skeleton from '@mui/material/Skeleton';
+import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
@@ -19,6 +20,8 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchReadyToUpload, updateReadyToUpload, deleteReadyToUpload } from '../../store/store';
+import ConfirmDialog from '../../tools/modal/confirmDialog';
+import MediaViewer, { resolveMediaKind } from './mediaViewer';
 
 export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
   const theme  = useTheme();
@@ -42,6 +45,10 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
   const [loading, setLoading] = useState(true);
   const [caption, setCaption] = useState('');
   const [captionDirty, setCaptionDirty] = useState(false);
+  const [confirmRemoveFile, setConfirmRemoveFile] = useState(null);
+  const [confirmDeleteRecord, setConfirmDeleteRecord] = useState(false);
+  const [viewerMedia, setViewerMedia] = useState(null);
+  const [addProgress, setAddProgress] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,7 +68,6 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
   };
 
   const removeFile = async (fileId) => {
-    if (!window.confirm('Remove this file?')) return;
     const fd = new FormData();
     fd.append('removeFileIds', JSON.stringify([fileId]));
     await dispatch(updateReadyToUpload({ authCtx, axiosGlobal, id, formData: fd }));
@@ -72,16 +78,28 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
     if (!files.length) return;
     const fd = new FormData();
     files.forEach((f) => fd.append('files', f));
-    await dispatch(updateReadyToUpload({ authCtx, axiosGlobal, id, formData: fd }));
+    setAddProgress(0);
+    await dispatch(updateReadyToUpload({
+      authCtx, axiosGlobal, id, formData: fd,
+      onProgress: (e) => setAddProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
+    }));
+    setAddProgress(null);
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this ready-to-upload record? This cannot be undone.')) return;
     await dispatch(deleteReadyToUpload({ authCtx, axiosGlobal, id }));
     onDeleted && onDeleted();
   };
 
-  const openFile = (diskName) => diskName && window.open(`${axiosGlobal.defaultTargetApi}/uploads/${diskName}`, '_blank');
+  // In-app viewer — never window.open.
+  const viewFile = (diskName, name, kindHint) => {
+    if (!diskName) return;
+    setViewerMedia({
+      url: `${axiosGlobal.defaultTargetApi}/uploads/${diskName}`,
+      name: name || diskName,
+      kind: kindHint || resolveMediaKind(name || diskName),
+    });
+  };
 
   if (loading || !doc || String(doc._id) !== String(id)) {
     return (
@@ -121,7 +139,7 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
         )}
 
         {can('digitalMarketing:readyToUpload:delete') && (
-          <Button size="small" startIcon={<DeleteOutlineIcon sx={{ fontSize: 13 }} />} onClick={handleDelete}
+          <Button size="small" startIcon={<DeleteOutlineIcon sx={{ fontSize: 13 }} />} onClick={() => setConfirmDeleteRecord(true)}
             sx={{ fontSize: '0.7rem', textTransform: 'none', color: '#EA005A', mt: 1, px: 0 }}>
             Delete record
           </Button>
@@ -140,14 +158,14 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
               {(f.mimetype || '').startsWith('video/')
                 ? <MovieIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />
                 : <InsertDriveFileIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />}
-              <Typography onClick={() => openFile(f.diskName)} noWrap
+              <Typography onClick={() => viewFile(f.diskName, f.name)} noWrap
                 sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, flexGrow: 1, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}>
-                <OpenInNewIcon sx={{ fontSize: 12, flexShrink: 0 }} /> {f.name || 'Open file'}
+                <OpenInNewIcon sx={{ fontSize: 12, flexShrink: 0 }} /> {f.name || 'Preview file'}
               </Typography>
               {can('digitalMarketing:readyToUpload:edit') && (
                 <Tooltip title="Remove">
-                  <IconButton size="small" onClick={() => removeFile(f.fileId)} sx={{ color: '#EA005A', width: 24, height: 24 }}>
+                  <IconButton size="small" onClick={() => setConfirmRemoveFile(f.fileId)} sx={{ color: '#EA005A', width: 24, height: 24 }}>
                     <DeleteOutlineIcon sx={{ fontSize: 15 }} />
                   </IconButton>
                 </Tooltip>
@@ -157,11 +175,22 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
         </Box>
 
         {can('digitalMarketing:readyToUpload:edit') && (
-          <Button component="label" size="small" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
-            sx={{ mb: 2, fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>
-            Add files
-            <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
-          </Button>
+          <Box sx={{ mb: 2 }}>
+            <Button component="label" size="small" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
+              disabled={addProgress !== null}
+              sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>
+              Add files
+              <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
+            </Button>
+            {addProgress !== null && (
+              <Box sx={{ mt: 0.75 }}>
+                <LinearProgress variant="determinate" value={addProgress} sx={{ borderRadius: 2, height: 5 }} />
+                <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, mt: 0.25 }}>
+                  Uploading… {addProgress}%
+                </Typography>
+              </Box>
+            )}
+          </Box>
         )}
 
         <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
@@ -174,6 +203,27 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
           onBlur={saveCaption}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px', fontSize: '0.8rem' } }} />
       </Box>
+
+      <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
+
+      <ConfirmDialog
+        open={Boolean(confirmRemoveFile)}
+        onClose={() => setConfirmRemoveFile(null)}
+        onConfirm={() => removeFile(confirmRemoveFile)}
+        title="Remove file"
+        message="Remove this file?"
+        confirmLabel="Remove"
+        destructive
+      />
+      <ConfirmDialog
+        open={confirmDeleteRecord}
+        onClose={() => setConfirmDeleteRecord(false)}
+        onConfirm={handleDelete}
+        title="Delete record"
+        message="Delete this ready-to-upload record? This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+      />
     </Box>
   );
 }

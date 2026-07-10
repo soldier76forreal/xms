@@ -56,6 +56,19 @@ function MediaTile({ file, isCover, apiBase, onDelete, onSetCover, deleting }) {
             alt={file.name}
             sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
+        ) : isVideo && fileUrl ? (
+          // No server-side thumbnail (BUG-07: ffprobe missing) — let the browser
+          // render the first frame itself: preload="metadata" + #t=0.1 fetches
+          // only enough of the file to paint a real preview, no extra package.
+          <Box sx={{ position: 'relative', width: '100%', height: '100%', bgcolor: '#000' }}>
+            <Box component="video" src={`${fileUrl}#t=0.1`} muted preload="metadata"
+              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <PlayCircleOutlineIcon sx={{
+              position: 'absolute', inset: 0, m: 'auto',
+              fontSize: 28, color: 'rgba(255,255,255,0.9)',
+              filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.6))',
+            }} />
+          </Box>
         ) : isVideo ? (
           <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <PlayCircleOutlineIcon sx={{ fontSize: 32, color: 'text.disabled' }} />

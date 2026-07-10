@@ -14,11 +14,15 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
+import LinearProgress from '@mui/material/LinearProgress';
+
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { submitReadyToUpload } from '../../store/store';
+import ConfirmDialog from '../../tools/modal/confirmDialog';
 
 const PLACE_OPTIONS = ['Post', 'Reels', 'Story', 'YouTube Short', 'TikTok post', 'Carousel', 'Live'];
+const LANGUAGES = ['English', 'Arabic', 'Farsi'];
 
 // Opened from a raw content record's "Mark ready to upload" action — the ONLY
 // place this form is ever launched from. Submitting atomically creates the
@@ -46,14 +50,17 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
   const [platform, setPlatform] = useState('');
   const [caption, setCaption]   = useState('');
   const [saving, setSaving]     = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError]       = useState('');
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const resetForm = () => { setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setError(''); };
   const handleClose = () => {
-    if (files.length && !window.confirm('Discard this ready-to-upload submission?')) return;
+    if (files.length) { setConfirmDiscard(true); return; }
     resetForm();
     onClose();
   };
+  const discardAndClose = () => { resetForm(); onClose(); };
 
   const addFiles = (fileList) => setFiles((prev) => [...prev, ...Array.from(fileList)]);
   const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
@@ -67,13 +74,18 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
       fd.append('language', language);
       fd.append('platform', platform);
       fd.append('caption', caption);
-      await dispatch(submitReadyToUpload({ authCtx, axiosGlobal, id: rawContentId, formData: fd })).unwrap();
+      setUploadProgress(0);
+      await dispatch(submitReadyToUpload({
+        authCtx, axiosGlobal, id: rawContentId, formData: fd,
+        onProgress: (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
+      })).unwrap();
       resetForm();
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to submit');
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -110,9 +122,13 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
           </Box>
         )}
 
-        <TextField label="Content language" size="small" fullWidth value={language}
+        <TextField select label="Content language" size="small" fullWidth value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
+          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
+          SelectProps={{ native: true }}>
+          <option value="">Select language…</option>
+          {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+        </TextField>
 
         <Autocomplete freeSolo options={PLACE_OPTIONS} value={platform}
           onInputChange={(e, v) => setPlatform(v)}
@@ -128,15 +144,35 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
         {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1, px: 3, pb: 2.5, pt: 1.5, borderTop: `1px solid ${T.DIVIDER}` }}>
-        <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>Cancel</Button>
-        <Box sx={{ flexGrow: 1 }} />
-        <Button onClick={handleSave} disabled={saving} variant="contained" color="success"
-          startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
-          sx={{ borderRadius: '8px', px: 3, textTransform: 'none', fontWeight: 700 }}>
-          {saving ? 'Submitting…' : 'Submit'}
-        </Button>
+      <Box sx={{ px: 3, pb: 2.5, pt: 1.5, borderTop: `1px solid ${T.DIVIDER}` }}>
+        {uploadProgress !== null && (
+          <Box sx={{ mb: 1.25 }}>
+            <LinearProgress variant="determinate" value={uploadProgress} sx={{ borderRadius: 2, height: 6 }} />
+            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_SEC, mt: 0.5 }}>
+              Uploading… {uploadProgress}%
+            </Typography>
+          </Box>
+        )}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>Cancel</Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <Button onClick={handleSave} disabled={saving} variant="contained" color="success"
+            startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+            sx={{ borderRadius: '8px', px: 3, textTransform: 'none', fontWeight: 700 }}>
+            {saving ? 'Submitting…' : 'Submit'}
+          </Button>
+        </Box>
       </Box>
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        onConfirm={discardAndClose}
+        title="Discard submission"
+        message="Discard this ready-to-upload submission? Selected files will be lost."
+        confirmLabel="Discard"
+        destructive
+      />
     </Drawer>
   );
 }

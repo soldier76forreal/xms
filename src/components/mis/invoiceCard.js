@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -16,7 +17,6 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import PaidIcon from '@mui/icons-material/Paid';
 import SendIcon from '@mui/icons-material/Send';
-import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 
 import { usePermissions } from '../../contextApi/PermissionContext';
 
@@ -110,12 +110,14 @@ export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, on
         )}
 
         {(doc.assignedTo || []).length > 0 && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-            <PeopleAltIcon sx={{ fontSize: 12, color: T.TEXT_TER }} />
-            <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: T.TEXT_TER }}>
-              {doc.assignedTo.length}
-            </Typography>
-          </Box>
+          <Tooltip title={doc.assignedByName ? `Sent by ${doc.assignedByName}` : 'Sent'}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+              <SendIcon sx={{ fontSize: 12, color: '#64b5f6' }} />
+              <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: T.TEXT_TER }}>
+                {doc.assignedTo.length}
+              </Typography>
+            </Box>
+          </Tooltip>
         )}
 
         <Box sx={{ flexGrow: 1 }} />

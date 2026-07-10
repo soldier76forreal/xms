@@ -535,6 +535,7 @@ export const createRawContent = createAsyncThunk('overallAssets/createRawContent
       method: 'post',
       url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/raw-contents`,
       data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
     });
     dispatch(actions.dmRawUpsert(response.data));
     dispatch(actions.dmBumpRefresh());
@@ -555,6 +556,7 @@ export const updateRawContent = createAsyncThunk('overallAssets/updateRawContent
       method: 'put',
       url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/raw-contents/${theData.id}`,
       data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
     });
     dispatch(actions.dmRawUpsert(response.data));
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Raw content updated', type: 'success' }));
@@ -587,6 +589,7 @@ export const submitReadyToUpload = createAsyncThunk('overallAssets/submitReadyTo
       method: 'post',
       url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/raw-contents/${theData.id}/ready-to-upload`,
       data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
     });
     dispatch(actions.dmRawUpsert(response.data.rawContent));
     dispatch(actions.dmBumpRefresh());
@@ -627,6 +630,7 @@ export const sendRawContentChatMessage = createAsyncThunk('overallAssets/sendRaw
       method: 'post',
       url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/raw-contents/${theData.id}/chat`,
       data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
     });
     dispatch(actions.dmRawChatPush(response.data));
     return response.data;
@@ -675,6 +679,7 @@ export const updateReadyToUpload = createAsyncThunk('overallAssets/updateReadyTo
       method: 'put',
       url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/ready-to-upload/${theData.id}`,
       data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
     });
     dispatch(actions.dmReadySetSelected(response.data));
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Ready-to-upload content updated', type: 'success' }));

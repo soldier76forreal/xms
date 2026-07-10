@@ -11,53 +11,55 @@ import Tooltip from '@mui/material/Tooltip';
 import MenuIcon from '@mui/icons-material/Menu';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import NotificationsIcon from '@mui/icons-material/Notifications';
-import EmailIcon from '@mui/icons-material/Email';
-import UploadIcon from '@mui/icons-material/Upload';
-import DarkModeIcon from '@mui/icons-material/DarkMode';
-import LightModeIcon from '@mui/icons-material/LightMode';
-
-import Lottie from "lottie-react";
-import UploadArrowAnimation from '../../assets/uploadArrowAnimation.json';
 
 import AuthContext from "../../components/authAndConnections/auth";
 import AxiosGlobal from "../../components/authAndConnections/axiosGlobalUrl";
-import ThemeCtx from "../../contextApi/themeContext";
 
 import NormalMenuForProfile from './normalMenuForProfile';
 import LeftSideNav from "./leftSideNav";
-import FilterModal from "./filterModal";
-import SearchBar from "./searchModule";
 import DownloadNavigation from "./downloadNavigation";
 import NotificationCenter from "../../components/users/notificationCenter";
-import BranchSwitcher from "./branchSwitcher";
 
-import { useDispatch, useSelector } from "react-redux";
-import { actions } from "../../store/store";
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 
+// Top bar (Phase 7) — deliberately minimal: X logo + the notification bell
+// (the one fixed element across every section). Search, Messages, Uploads,
+// theme toggle, and the branch switcher were removed/relocated 2026-07-09 —
+// branch + theme now live in the side rail (desktop) / nav drawer (mobile).
 const MainNavPortal = (props) => {
   const [notifOpen,   setNotifOpen]   = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [openFilterModal, setOpenFilterModal] = useState(false);
 
   const authContext = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
-  const { themeMode, toggleTheme } = useContext(ThemeCtx);
 
   const profileImage = authContext.decode?.profileImage;
-  const dispatch = useDispatch();
-  const navDownloadList = useSelector((state) => state.downloadNavMenu);
-  const onGoingUpload = useSelector((state) => state.onGoingUpload);
 
   const [leftSideNav, setLeftSideNav] = useState({ left: false });
+
+  // Initial unread count — the badge must be correct on page load, not only
+  // after the panel has been opened once.
+  useEffect(() => {
+    if (!authContext.isLoggedIn) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authContext.jwtInst({
+          method: 'get',
+          url: `${axiosGlobal.defaultTargetApi}/notifications`,
+          params: { limit: 1 },
+        });
+        if (!cancelled) setUnreadCount(res.data.unreadCount || 0);
+      } catch { /* badge stays 0 — non-fatal */ }
+    })();
+    return () => { cancelled = true; };
+  }, [authContext.isLoggedIn]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // Real-time unread count from socket (new notifications arrive even when panel is closed)
   useEffect(() => {
     const socket = authContext.socket;
     if (!socket) return;
-    const handler = () => {
-      setUnreadCount(prev => prev + 1);
-    };
+    const handler = () => setUnreadCount(prev => prev + 1);
     socket.on('notification:new', handler);
     return () => socket.off('notification:new', handler);
   }, [authContext.socket]);
@@ -77,12 +79,15 @@ const MainNavPortal = (props) => {
     ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}`
     : ProfilePhoto;
 
+  const logo = (
+    <Box component="img" src="/icon-192x192.png" alt="XMS"
+      sx={{ width: 30, height: 30, borderRadius: '7px', flexShrink: 0 }} />
+  );
+
   return (
     <Fragment>
-      <FilterModal setOpenFilterModal={setOpenFilterModal} openFilterModal={openFilterModal} />
       <DownloadNavigation />
 
-      {/* New notification center drawer */}
       <NotificationCenter
         open={notifOpen}
         onClose={() => setNotifOpen(false)}
@@ -117,30 +122,15 @@ const MainNavPortal = (props) => {
             {leftSideNav.left ? <ArrowBackIcon /> : <MenuIcon />}
           </IconButton>
 
-          {/* Search — centre, grows to fill available space; condenses on phones */}
-          <Box sx={{ flexGrow: 1, display: 'flex', justifyContent: 'center', maxWidth: { xs: 200, sm: 320, md: 440 }, mx: 'auto', minWidth: 0 }}>
-            <SearchBar />
+          {/* X logo — left on desktop */}
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+            {logo}
           </Box>
 
-          {/* Right-side action buttons */}
+          <Box sx={{ flexGrow: 1 }} />
+
+          {/* Right-side actions */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.5 } }}>
-
-            {/* Upload / in-progress indicator — on phones only shown while an upload is running */}
-            <Tooltip title="Uploads">
-              <IconButton
-                color="inherit"
-                onClick={() => dispatch(actions.toggleDownloadNavMenu())}
-                sx={{ display: { xs: onGoingUpload === true ? 'inline-flex' : 'none', sm: 'inline-flex' } }}
-              >
-                {onGoingUpload === true ? (
-                  <Lottie style={{ width: 28, height: 28 }} animationData={UploadArrowAnimation} loop />
-                ) : (
-                  <UploadIcon />
-                )}
-              </IconButton>
-            </Tooltip>
-
-            <BranchSwitcher />
 
             {/* Notifications — the single fixed element across all sections */}
             <Tooltip title="Notifications">
@@ -157,23 +147,7 @@ const MainNavPortal = (props) => {
               </IconButton>
             </Tooltip>
 
-            {/* Messages — hidden on phones (top bar condenses; feature is a placeholder) */}
-            <Tooltip title="Messages">
-              <IconButton color="inherit" sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
-                <Badge badgeContent={0} color="error">
-                  <EmailIcon />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-
-            {/* Dark / Light toggle */}
-            <Tooltip title={themeMode === 'light' ? 'Dark mode' : 'Light mode'}>
-              <IconButton color="inherit" onClick={toggleTheme}>
-                {themeMode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
-              </IconButton>
-            </Tooltip>
-
-            {/* Profile avatar — mobile only; on desktop it lives at the bottom of the icon rail (Phase 7) */}
+            {/* Profile avatar — mobile only; on desktop it lives at the bottom of the icon rail */}
             <Tooltip title="Profile">
               <IconButton
                 id="demo-positioned-button"
@@ -183,13 +157,14 @@ const MainNavPortal = (props) => {
                 onClick={handleClick}
                 sx={{ p: 0.5, display: { xs: 'inline-flex', md: 'none' } }}
               >
-                <Avatar
-                  alt="Profile"
-                  src={avatarSrc}
-                  sx={{ width: 36, height: 36 }}
-                />
+                <Avatar alt="Profile" src={avatarSrc} sx={{ width: 36, height: 36 }} />
               </IconButton>
             </Tooltip>
+
+            {/* X logo — right on mobile */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', ml: 0.5 }}>
+              {logo}
+            </Box>
 
           </Box>
         </Toolbar>

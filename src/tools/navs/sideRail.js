@@ -4,25 +4,32 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Avatar from '@mui/material/Avatar';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import StoreIcon from '@mui/icons-material/Store';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LightModeIcon from '@mui/icons-material/LightMode';
+import CheckIcon from '@mui/icons-material/Check';
 import { useTheme } from '@mui/material/styles';
 import { useHistory } from 'react-router-dom';
 
 import AuthContext from '../../components/authAndConnections/auth';
 import AxiosGlobal from '../../components/authAndConnections/axiosGlobalUrl';
 import PageSection from '../../contextApi/pageSection';
+import ThemeCtx from '../../contextApi/themeContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
+import { useBranch } from '../../contextApi/BranchContext';
 import NormalMenuForProfile from './normalMenuForProfile';
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import { NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED } from './navConfig';
 
-// ── Phase 7 — desktop icon rail (Session 57) ──────────────────────────────────
-// Collapsed (default): ~52px, icons only, tooltips. Expanded: icons + labels.
-// Toggle persisted by the parent (main.js) in localStorage. Items are generated
-// from the permission set. Profile avatar lives at the BOTTOM of the rail —
-// moved out of the top bar on desktop per the Phase 7 spec. Desktop only:
-// mobile keeps the SwipeableDrawer (leftSideNav.js) via the top-bar hamburger.
+// ── Phase 7 — desktop icon rail ───────────────────────────────────────────────
+// Layout (top → bottom): collapse toggle · section items · branch picker ·
+// theme toggle · profile avatar. Branch + theme moved here from the top bar
+// (2026-07-09). Desktop only — mobile keeps the drawer (leftSideNav.js).
 const SideRail = ({ expanded, onToggle }) => {
   const theme       = useTheme();
   const isDark      = theme.palette.mode === 'dark';
@@ -30,13 +37,17 @@ const SideRail = ({ expanded, onToggle }) => {
   const pageSection = useContext(PageSection);
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const { themeMode, toggleTheme } = useContext(ThemeCtx);
   const { can }     = usePermissions();
+  const { branches, activeBranchId, activeBranch, setActiveBranchId } = useBranch();
 
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
   const openProfileMenu  = (e) => setAnchorEl(e.currentTarget);
   const closeProfileMenu = () => setAnchorEl(null);
   const logOut = () => { authCtx.logout(); setAnchorEl(null); };
+
+  const [branchAnchor, setBranchAnchor] = useState(null);
 
   const T = {
     BG:       isDark ? '#0d0d0d'                : theme.palette.background.paper,
@@ -46,6 +57,7 @@ const SideRail = ({ expanded, onToggle }) => {
     LABEL:    isDark ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.65)',
     ACT_BG:   isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
     HVR_BG:   isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+    MENU_BG:  isDark ? '#181818'                : theme.palette.background.paper,
   };
 
   const visibleItems = NAV_ITEMS.filter(item => !item.permission || can(item.permission));
@@ -54,6 +66,31 @@ const SideRail = ({ expanded, onToggle }) => {
   const avatarSrc = profileImage?.filename
     ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}`
     : ProfilePhoto;
+
+  // Shared row shell for the bottom utility rows (branch / theme)
+  const utilRow = (icon, label, onClick, tooltip) => {
+    const row = (
+      <Box onClick={onClick}
+        sx={{
+          display: 'flex', alignItems: 'center', gap: 1.5,
+          mx: '6px', px: '8px', height: 38, borderRadius: '8px',
+          cursor: 'pointer', flexShrink: 0,
+          '&:hover': { bgcolor: T.HVR_BG },
+          transition: 'background-color 0.12s',
+        }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: T.ICON, flexShrink: 0, '& svg': { fontSize: 19 } }}>
+          {icon}
+        </Box>
+        {expanded && (
+          <Typography noWrap sx={{ fontSize: '0.78rem', fontWeight: 500, color: T.LABEL }}>
+            {label}
+          </Typography>
+        )}
+      </Box>
+    );
+    return expanded ? row : <Tooltip title={tooltip || label} placement="right">{row}</Tooltip>;
+  };
 
   return (
     <>
@@ -66,6 +103,28 @@ const SideRail = ({ expanded, onToggle }) => {
         setAnchorEl={setAnchorEl}
       />
 
+      {/* Branch picker menu (works both collapsed + expanded) */}
+      <Menu
+        anchorEl={branchAnchor}
+        open={Boolean(branchAnchor)}
+        onClose={() => setBranchAnchor(null)}
+        anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
+        PaperProps={{ sx: { bgcolor: T.MENU_BG, border: `1px solid ${T.BD}`, borderRadius: '10px', minWidth: 180 } }}
+      >
+        {branches.map((b) => {
+          const active = String(b._id) === String(activeBranchId);
+          return (
+            <MenuItem key={b._id} dense
+              onClick={() => { setActiveBranchId(b._id); setBranchAnchor(null); }}
+              sx={{ fontSize: '0.82rem', gap: 1 }}>
+              <StoreIcon sx={{ fontSize: 15, color: T.ICON }} />
+              <Box sx={{ flexGrow: 1 }}>{b.name}</Box>
+              {active && <CheckIcon sx={{ fontSize: 15 }} />}
+            </MenuItem>
+          );
+        })}
+      </Menu>
+
       <Box sx={{
         display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
@@ -77,8 +136,24 @@ const SideRail = ({ expanded, onToggle }) => {
         overflow: 'hidden',
       }}>
 
+        {/* Collapse toggle — TOP of the rail, always visible */}
+        <Box sx={{ pt: 0.75, pb: 0.5, display: 'flex', justifyContent: expanded ? 'flex-end' : 'center', px: expanded ? 1 : 0 }}>
+          <Tooltip title={expanded ? 'Collapse' : 'Expand'} placement="right">
+            <IconButton size="small" onClick={onToggle}
+              sx={{
+                color: T.ICON, border: `1px solid ${T.BD}`, borderRadius: '8px',
+                width: 30, height: 30,
+                '&:hover': { color: T.ICON_ACT, bgcolor: T.HVR_BG },
+              }}>
+              {expanded ? <ChevronLeftIcon sx={{ fontSize: 17 }} /> : <ChevronRightIcon sx={{ fontSize: 17 }} />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        <Divider sx={{ borderColor: T.BD, mx: '8px', mb: 0.5 }} />
+
         {/* Section items — permission-filtered */}
-        <Box sx={{ flexGrow: 1, pt: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {visibleItems.map((item) => {
             const active = pageSection.selectedSection === item.section;
             const btn = (
@@ -93,7 +168,6 @@ const SideRail = ({ expanded, onToggle }) => {
                   '&:hover': { bgcolor: active ? T.ACT_BG : T.HVR_BG },
                   transition: 'background-color 0.12s',
                 }}>
-                {/* active dot on the rail edge */}
                 {active && (
                   <Box sx={{
                     position: 'absolute', left: '-6px', top: '50%', transform: 'translateY(-50%)',
@@ -124,24 +198,31 @@ const SideRail = ({ expanded, onToggle }) => {
           })}
         </Box>
 
-        {/* Bottom: collapse toggle + profile avatar */}
-        <Box sx={{ pb: 1.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
-          <Tooltip title={expanded ? 'Collapse' : 'Expand'} placement="right">
-            <IconButton size="small" onClick={onToggle}
-              sx={{ color: T.ICON, '&:hover': { color: T.ICON_ACT, bgcolor: T.HVR_BG } }}>
-              {expanded ? <ChevronLeftIcon sx={{ fontSize: 18 }} /> : <ChevronRightIcon sx={{ fontSize: 18 }} />}
-            </IconButton>
-          </Tooltip>
+        {/* Bottom utilities: branch picker · theme toggle · profile */}
+        <Box sx={{ pb: 1.5, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <Divider sx={{ borderColor: T.BD, mx: '8px', mb: 0.5 }} />
+
+          {branches.length > 1 && utilRow(
+            <StoreIcon />,
+            activeBranch?.name || 'Branch',
+            (e) => setBranchAnchor(e.currentTarget),
+            `Branch — ${activeBranch?.name || ''}`
+          )}
+
+          {utilRow(
+            themeMode === 'light' ? <DarkModeIcon /> : <LightModeIcon />,
+            themeMode === 'light' ? 'Dark mode' : 'Light mode',
+            toggleTheme
+          )}
 
           <Tooltip title="Profile" placement="right">
             <Box onClick={openProfileMenu}
               sx={{
                 display: 'flex', alignItems: 'center', gap: 1.25, cursor: 'pointer',
-                borderRadius: '10px', p: '4px',
-                width: expanded ? 'calc(100% - 12px)' : 'auto',
+                borderRadius: '10px', p: '4px', mx: '6px', mt: 0.5,
                 '&:hover': { bgcolor: T.HVR_BG },
               }}>
-              <Avatar alt="Profile" src={avatarSrc} sx={{ width: 32, height: 32, flexShrink: 0 }} />
+              <Avatar alt="Profile" src={avatarSrc} sx={{ width: 30, height: 30, flexShrink: 0 }} />
               {expanded && (
                 <Typography noWrap sx={{ fontSize: '0.78rem', fontWeight: 600, color: T.LABEL }}>
                   {authCtx.decode?.firstName} {authCtx.decode?.lastName}
