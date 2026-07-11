@@ -40,6 +40,12 @@ const componentOverrides = (mode) => {
           backgroundColor: isLight ? '#FAFAFA' : '#060606',
           color: isLight ? '#000000' : '#FFFFFF',
         },
+        // The CRA mount node sits between body and the app — give it the theme
+        // background + full height so it can never show through as white.
+        '#root': {
+          backgroundColor: isLight ? '#FAFAFA' : '#060606',
+          minHeight: '100vh',
+        },
         // Thin, neutral scrollbar
         '::-webkit-scrollbar': { width: 6, height: 6 },
         '::-webkit-scrollbar-track': { background: 'transparent' },

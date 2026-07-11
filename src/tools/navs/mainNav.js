@@ -14,6 +14,7 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 
 import AuthContext from "../../components/authAndConnections/auth";
 import AxiosGlobal from "../../components/authAndConnections/axiosGlobalUrl";
+import ThemeCtx from "../../contextApi/themeContext";
 
 import NormalMenuForProfile from './normalMenuForProfile';
 import LeftSideNav from "./leftSideNav";
@@ -32,6 +33,7 @@ const MainNavPortal = (props) => {
 
   const authContext = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const { themeMode } = useContext(ThemeCtx);
 
   const profileImage = authContext.decode?.profileImage;
 
@@ -79,9 +81,17 @@ const MainNavPortal = (props) => {
     ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}`
     : ProfilePhoto;
 
+  // The X mark (client asset recreated as SVG so it stays crisp and theme-aware):
+  // dark theme = black bold X on a white tile; light theme = inverted.
   const logo = (
-    <Box component="img" src="/icon-192x192.png" alt="XMS"
-      sx={{ width: 30, height: 30, borderRadius: '7px', flexShrink: 0 }} />
+    <Box component="svg" viewBox="0 0 64 64" aria-label="XMS"
+      sx={{ width: 30, height: 30, borderRadius: '7px', flexShrink: 0, display: 'block' }}>
+      <rect width="64" height="64" rx="10"
+        fill={themeMode === 'light' ? '#000000' : '#ffffff'} />
+      <text x="32" y="33" textAnchor="middle" dominantBaseline="central"
+        fontFamily="Inter, Arial, sans-serif" fontWeight="900" fontSize="44"
+        fill={themeMode === 'light' ? '#ffffff' : '#000000'}>X</text>
+    </Box>
   );
 
   return (
@@ -110,7 +120,13 @@ const MainNavPortal = (props) => {
       />
 
       <AppBar position="fixed" dir="ltr">
-        <Toolbar sx={{ gap: 1 }}>
+        <Toolbar sx={{ gap: 1, position: 'relative' }}>
+
+          {/* X logo — dead-center on mobile (absolute so surrounding buttons don't shift it) */}
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, position: 'absolute',
+            left: '50%', transform: 'translateX(-50%)', alignItems: 'center' }}>
+            {logo}
+          </Box>
 
           {/* Hamburger / back — mobile only; the Phase 7 icon rail covers desktop */}
           <IconButton
@@ -160,11 +176,6 @@ const MainNavPortal = (props) => {
                 <Avatar alt="Profile" src={avatarSrc} sx={{ width: 36, height: 36 }} />
               </IconButton>
             </Tooltip>
-
-            {/* X logo — right on mobile */}
-            <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', ml: 0.5 }}>
-              {logo}
-            </Box>
 
           </Box>
         </Toolbar>

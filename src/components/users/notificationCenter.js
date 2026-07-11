@@ -238,9 +238,11 @@ const NotificationCenter = ({ open, onClose, onUnreadCountChange }) => {
             {markingAll ? <CircularProgress size={12} sx={{ color: T.TEXT_SEC }} /> : 'Mark all read'}
           </Button>
         )}
-        <IconButton size="small" onClick={onClose}
-          sx={{ color: T.TEXT_SEC, '&:hover': { color: T.TEXT_PRI, bgcolor: T.HVR_BG } }}>
-          <CloseIcon sx={{ fontSize: 16 }} />
+        <IconButton size="small" onClick={onClose} aria-label="Close notifications"
+          sx={{ color: T.TEXT_SEC, border: `1px solid ${T.CARD_BD}`, borderRadius: '8px',
+            width: 30, height: 30,
+            '&:hover': { color: T.TEXT_PRI, bgcolor: T.HVR_BG } }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </Box>
 
