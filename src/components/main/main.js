@@ -48,6 +48,9 @@ const Main = () => {
     localStorage.setItem(NAV_EXPANDED_KEY, next ? '1' : '0');
     return next;
   });
+  // Collapses the rail after a section is picked — expanding is a deliberate
+  // "show me labels for a moment" action, not a standing layout preference.
+  const collapseNav = () => { setNavExpanded(false); localStorage.setItem(NAV_EXPANDED_KEY, '0'); };
   const railWidth = navExpanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH_COLLAPSED;
 
   // Sync URL → selectedSection so direct navigation / page refresh works —
@@ -82,7 +85,7 @@ const Main = () => {
   return (
     <Fragment>
       <MainNav />
-      <SideRail expanded={navExpanded} onToggle={toggleNav} />
+      <SideRail expanded={navExpanded} onToggle={toggleNav} onNavigate={collapseNav} />
       {/* Content shifts right by the rail width on desktop; rail is hidden on mobile.
           bgcolor + minHeight guarantee the app canvas is theme-dark even under
           sections that don't paint their own full-height background. */}

@@ -30,7 +30,7 @@ import { NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED } from './navConfi
 // Layout (top → bottom): collapse toggle · section items · branch picker ·
 // theme toggle · profile avatar. Branch + theme moved here from the top bar
 // (2026-07-09). Desktop only — mobile keeps the drawer (leftSideNav.js).
-const SideRail = ({ expanded, onToggle }) => {
+const SideRail = ({ expanded, onToggle, onNavigate }) => {
   const theme       = useTheme();
   const isDark      = theme.palette.mode === 'dark';
   const history     = useHistory();
@@ -159,7 +159,7 @@ const SideRail = ({ expanded, onToggle }) => {
             const btn = (
               <Box
                 key={item.section}
-                onClick={() => { pageSection.selectedSectionFunc(item.section); history.push(item.path); }}
+                onClick={() => { pageSection.selectedSectionFunc(item.section); history.push(item.path); onNavigate && onNavigate(); }}
                 sx={{
                   display: 'flex', alignItems: 'center', gap: 1.5,
                   mx: '6px', px: '8px', height: 40, borderRadius: '8px',
