@@ -45,8 +45,9 @@ const LogIn = () => {
   const axiosGlobal = useContext(AxiosGlobal);
   const history     = useHistory();
 
-  const [step,     setStep]     = useState('phone');
+  const [step,     setStep]     = useState('phone');   // 'phone' | 'code' | 'password'
   const [phone,    setPhone]    = useState('');
+  const [password, setPassword] = useState('');
   const [digits,   setDigits]   = useState(Array(OTP_LENGTH).fill(''));
   const [busy,     setBusy]     = useState(false);
   const [error,    setError]    = useState('');
@@ -162,6 +163,41 @@ const LogIn = () => {
       }
       setDigits(Array(OTP_LENGTH).fill(''));
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Password fallback (reinstated 2026-07-11) — for users who can't receive
+  // the OTP SMS. Same lockout as OTP; 10 attempts instead of 5.
+  const handlePasswordLogin = async () => {
+    if (!phone.trim())    { setError('Enter your phone number'); return; }
+    if (!password)        { setError('Enter your password');     return; }
+    setBusy(true); setError(''); setAttLeft(null);
+    try {
+      const res = await authCtx.jwtInst({
+        method: 'post',
+        url: `${axiosGlobal.authTargetApi}/auth/loginPassword`,
+        data: { phoneNumber: phone.trim(), password },
+      });
+      authCtx.login(res.data.accessToken);
+      history.push('/');
+    } catch (err) {
+      const status = err?.response?.status;
+      const data   = err?.response?.data;
+      if (status === 423) {
+        setLocked({ until: data?.lockedUntil });
+        setError(data?.message || 'Account is locked');
+      } else if (status === 400 && data?.attemptsLeft !== undefined) {
+        setAttLeft(data.attemptsLeft);
+        setError(data?.message || 'Incorrect password');
+      } else if (status === 404) {
+        setError('This number is not registered');
+      } else if (status === 403) {
+        setError('Account is not active');
+      } else {
+        setError(data?.message || 'Server error — please try again');
+      }
     } finally {
       setBusy(false);
     }
@@ -369,6 +405,76 @@ const LogIn = () => {
             >
               {busy ? 'Sending…' : 'Send code'}
             </Button>
+
+            {/* Password fallback — for users who can't receive the SMS */}
+            <Typography
+              onClick={() => { setStep('password'); setError(''); setAttLeft(null); }}
+              sx={{ fontSize: '0.75rem', color: TEXT_SEC, textAlign: 'center', cursor: 'pointer',
+                '&:hover': { color: TEXT_PRI, textDecoration: 'underline' } }}>
+              Can't receive the code? Sign in with password
+            </Typography>
+          </>
+        )}
+
+        {/* ── PASSWORD STEP (fallback when OTP SMS can't be received) ───────── */}
+        {step === 'password' && (
+          <>
+            <Typography variant="body2" sx={{ color: TEXT_SEC, textAlign: 'center', lineHeight: 1.7 }}>
+              Sign in with your phone number and password
+            </Typography>
+
+            <TextField
+              fullWidth size="small"
+              placeholder="09xxxxxxxxx"
+              value={phone}
+              onChange={e => { setPhone(e.target.value); setError(''); setLocked(null); }}
+              inputProps={{ inputMode: 'numeric', dir: 'ltr' }}
+              sx={inputSx}
+              autoFocus={!phone}
+            />
+
+            <TextField
+              fullWidth size="small"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setError(''); }}
+              onKeyDown={e => e.key === 'Enter' && handlePasswordLogin()}
+              inputProps={{ dir: 'ltr' }}
+              sx={inputSx}
+              autoFocus={!!phone}
+            />
+
+            {locked && (
+              <Typography variant="caption" sx={{ color: ERR_CLR, textAlign: 'center', display: 'block' }}>
+                Account locked — {lockRemaining()} remaining
+              </Typography>
+            )}
+            {error && !locked && (
+              <Typography variant="caption" sx={{ color: ERR_CLR, textAlign: 'center', display: 'block' }}>
+                {error}{attLeft !== null ? ` — ${attLeft} attempts left` : ''}
+              </Typography>
+            )}
+
+            <Button
+              fullWidth variant="contained" onClick={handlePasswordLogin}
+              disabled={busy || !!locked}
+              startIcon={busy ? <CircularProgress size={14} color="inherit" /> : null}
+              sx={{
+                bgcolor: BTN_BG, color: BTN_CLR, fontWeight: 700, borderRadius: '10px', py: '9px',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.88)' },
+                '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.25)' },
+              }}
+            >
+              {busy ? 'Signing in…' : 'Sign in'}
+            </Button>
+
+            <Typography
+              onClick={() => { setStep('phone'); setPassword(''); setError(''); setAttLeft(null); }}
+              sx={{ fontSize: '0.75rem', color: TEXT_SEC, textAlign: 'center', cursor: 'pointer',
+                '&:hover': { color: TEXT_PRI, textDecoration: 'underline' } }}>
+              Use verification code instead
+            </Typography>
           </>
         )}
 
@@ -467,6 +573,14 @@ const LogIn = () => {
                 Change number
               </Button>
             </Box>
+
+            {/* Password fallback — reachable right where a missing SMS is noticed */}
+            <Typography
+              onClick={() => { setStep('password'); setError(''); setAttLeft(null); setDigits(Array(OTP_LENGTH).fill('')); }}
+              sx={{ fontSize: '0.75rem', color: TEXT_SEC, textAlign: 'center', cursor: 'pointer',
+                '&:hover': { color: TEXT_PRI, textDecoration: 'underline' } }}>
+              Can't receive the code? Sign in with password
+            </Typography>
           </>
         )}
 
