@@ -9,13 +9,13 @@ export default function PrTitle (value){
       
 }
 var prTitles = [
-    {id:'mr' , text:'آقای'},
-    {id:'mis' , text:'خانوم'},
-    {id:'en' , text:'مهندس'},
-    {id:'dr' , text:'دکتر'},
-    {id:'po' , text:'استاد'},
-    {id:'mrDoc' , text:'آقای دکتر'},
-    {id:'misDoc' , text:'خانوم دکتر'},
-    {id:'mrEn' , text:'آقای مهندس'},
-    {id:'misEn' , text:'خانوم مهندس'}
+    {id:'mr' , text:'Mr'},
+    {id:'mis' , text:'Ms'},
+    {id:'en' , text:'Eng'},
+    {id:'dr' , text:'Dr'},
+    {id:'po' , text:'Master'},
+    {id:'mrDoc' , text:'Dr (Mr)'},
+    {id:'misDoc' , text:'Dr (Ms)'},
+    {id:'mrEn' , text:'Eng (Mr)'},
+    {id:'misEn' , text:'Eng (Ms)'}
   ]

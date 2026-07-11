@@ -27,7 +27,7 @@ export default function DropDownMenu(props) {
           <MenuItem value="">
             <em>None</em>
           </MenuItem>
-          <MenuItem value={10}>اوزبکستان</MenuItem>
+          <MenuItem value={10}>Uzbekistan</MenuItem>
           <MenuItem value={20}>Twenty</MenuItem>
           <MenuItem value={30}>Thirty</MenuItem>
         </Select>

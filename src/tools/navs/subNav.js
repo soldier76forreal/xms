@@ -64,7 +64,7 @@ export default function SubNav() {
           variant="fullWidth"
           aria-label="full width tabs example"
         >
-          <Tab sx={{backgroundColor:'#fff' , color:'#000'}} label="درخواست ها/فاکتور ها" {...a11yProps(0)} />
+          <Tab sx={{backgroundColor:'#fff' , color:'#000'}} label="Requests/Invoices" {...a11yProps(0)} />
           <Tab sx={{backgroundColor:'#fff' , color:'#000'}} label="Item Two" {...a11yProps(1)} />
           <Tab sx={{backgroundColor:'#fff' , color:'#000'}} label="Item Three" {...a11yProps(2)} />
         </Tabs>

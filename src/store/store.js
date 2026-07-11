@@ -319,7 +319,7 @@ export const fetchCrmCustomers = createAsyncThunk('overallAssets/fetchCrmCustome
       dispatch(actions.crmAppendCustomers({ data: response.data.data, total: response.data.total }));
     }
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در دریافت مشتریان', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load customers', type: 'error' }));
   } finally {
     dispatch(actions.crmSetLoading(false));
   }
@@ -333,7 +333,7 @@ export const fetchCrmCustomer = createAsyncThunk('overallAssets/fetchCrmCustomer
     });
     dispatch(actions.crmSetSelectedCustomer(response.data.data));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در دریافت اطلاعات مشتری', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load customer details', type: 'error' }));
   }
 });
 
@@ -344,9 +344,9 @@ export const deleteCrmCustomer = createAsyncThunk('overallAssets/deleteCrmCustom
       url: `${theData.axiosGlobal.defaultTargetApi}/crm/customers/${theData.id}`,
     });
     dispatch(actions.crmRemoveCustomer(theData.id));
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'مشتری حذف شد', type: 'success' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Customer deleted', type: 'success' }));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در حذف مشتری', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to delete customer', type: 'error' }));
   }
 });
 
@@ -374,7 +374,7 @@ export const fetchMisInvoices = createAsyncThunk('overallAssets/fetchMisInvoices
       dispatch(actions.misInvAppendList({ data: response.data.data, total: response.data.total }));
     }
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در دریافت فاکتورها', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load invoices', type: 'error' }));
   } finally {
     dispatch(actions.misInvSetLoading(false));
   }
@@ -388,7 +388,7 @@ export const fetchMisInvoice = createAsyncThunk('overallAssets/fetchMisInvoice',
     });
     dispatch(actions.misInvSetSelected(response.data));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در دریافت سند', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load document', type: 'error' }));
   }
 });
 
@@ -404,11 +404,11 @@ export const deleteMisInvoice = createAsyncThunk('overallAssets/deleteMisInvoice
     dispatch(actions.misInvRemove(theData.id));
     dispatch(actions.setShowSnackBar({
       status: true,
-      msg: response.data?.stockRestored ? 'سند حذف شد — موجودی بازگردانده شد' : 'سند حذف شد',
+      msg: response.data?.stockRestored ? 'Document deleted — stock restored' : 'Document deleted',
       type: 'success',
     }));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'خطا در حذف سند', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete document', type: 'error' }));
   }
 });
 
@@ -419,10 +419,10 @@ export const convertMisPreInvoice = createAsyncThunk('overallAssets/convertMisPr
       url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}/convert`,
     });
     dispatch(actions.misInvBumpRefresh());
-    dispatch(actions.setShowSnackBar({ status: true, msg: `تبدیل شد — فاکتور #${response.data.docNumber}`, type: 'success' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: `Converted — invoice #${response.data.docNumber}`, type: 'success' }));
     return response.data;
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'خطا در تبدیل پیش‌فاکتور', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to convert pre-invoice', type: 'error' }));
     throw err;
   }
 });
@@ -435,9 +435,9 @@ export const updateMisPayment = createAsyncThunk('overallAssets/updateMisPayment
       data: theData.data,
     });
     dispatch(actions.misInvUpsert(response.data));
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'پرداخت ثبت شد', type: 'success' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Payment recorded', type: 'success' }));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'خطا در ثبت پرداخت', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to record payment', type: 'error' }));
   }
 });
 
@@ -460,7 +460,7 @@ export const downloadMisInvoicePdf = createAsyncThunk('overallAssets/downloadMis
     link.remove();
     window.URL.revokeObjectURL(url);
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در تولید PDF', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to generate PDF', type: 'error' }));
   }
 });
 
@@ -472,7 +472,7 @@ export const fetchMisCompanyProfile = createAsyncThunk('overallAssets/fetchMisCo
     });
     dispatch(actions.misSetCompanyProfile(response.data));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در دریافت تنظیمات شرکت', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load company settings', type: 'error' }));
   }
 });
 
@@ -484,9 +484,9 @@ export const saveMisCompanyProfile = createAsyncThunk('overallAssets/saveMisComp
       data: theData.data,
     });
     dispatch(actions.misSetCompanyProfile(response.data));
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'تنظیمات ذخیره شد', type: 'success' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Settings saved', type: 'success' }));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'خطا در ذخیره تنظیمات', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to save settings', type: 'error' }));
   }
 });
 

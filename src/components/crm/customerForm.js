@@ -342,7 +342,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         });
         saved = res.data;
         dispatch(actions.crmUpsertCustomer(saved));
-        dispatch(actions.setShowSnackBar({ status: true, msg: 'مشتری ویرایش شد', type: 'success' }));
+        dispatch(actions.setShowSnackBar({ status: true, msg: 'Customer updated', type: 'success' }));
       } else {
         const res = await authCtx.jwtInst({
           method: 'post',
@@ -351,7 +351,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         });
         saved = res.data;
         dispatch(actions.crmUpsertCustomer(saved));
-        dispatch(actions.setShowSnackBar({ status: true, msg: 'مشتری اضافه شد', type: 'success' }));
+        dispatch(actions.setShowSnackBar({ status: true, msg: 'Customer created', type: 'success' }));
       }
       onSave && onSave(saved);
       onClose();
@@ -359,7 +359,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
       if (err?.response?.status === 409) {
         setDupError('A customer with this phone number already exists.');
       } else {
-        dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در ذخیره مشتری', type: 'error' }));
+        dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to save customer', type: 'error' }));
       }
     }
     setSaving(false);

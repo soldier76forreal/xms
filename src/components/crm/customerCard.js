@@ -196,9 +196,9 @@ const CustomerCard = ({
     setDeleting(true);
     try {
       await dispatch(deleteCrmCustomer({ authCtx, axiosGlobal, id: customer._id }));
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'مشتری حذف شد', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Customer deleted', type: 'success' }));
     } catch (_) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'خطا در حذف مشتری', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to delete customer', type: 'error' }));
     }
     setDeleting(false);
   };

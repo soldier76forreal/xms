@@ -19,14 +19,14 @@ const CustomerTable = (props) =>{
                     <thead>
                         <tr>
                             <th></th>
-                            <th>نام و نام خانوادگی</th>
-                            <th style={{left:"0px" , margin:'0px' , width:'760px'}}>آخرین محصول درخواستی</th>
-                            <th style={{left:"0px" , margin:'0px' , width:'140px'}}>ثبت شده توسط</th>
-                            <th style={{left:"0px" , margin:'0px' , width:'110px'}}>آخرین تماس</th>
-                            <th style={{left:"0px" , margin:'0px' , width:'0px'}}>واتساپ</th>
+                            <th>Full name</th>
+                            <th style={{left:"0px" , margin:'0px' , width:'760px'}}>Last requested product</th>
+                            <th style={{left:"0px" , margin:'0px' , width:'140px'}}>Created by</th>
+                            <th style={{left:"0px" , margin:'0px' , width:'110px'}}>Last call</th>
+                            <th style={{left:"0px" , margin:'0px' , width:'0px'}}>WhatsApp</th>
                             {/* <th style={{left:"0px" , margin:'0px' , width:'70px'}}></th> */}
-                            <th style={{left:"0px" , margin:'0px' , width:'0px'}}>تماس</th>
-                            <th style={{left:"0px" , margin:'0px' , width:'0px'}}>ویرایش</th>
+                            <th style={{left:"0px" , margin:'0px' , width:'0px'}}>Call</th>
+                            <th style={{left:"0px" , margin:'0px' , width:'0px'}}>Edit</th>
                         </tr>
                     </thead>
                     <tbody style={{borderRadius:'20px'}}>
@@ -91,7 +91,7 @@ const CustomerTable = (props) =>{
 
 							
             {/* <div className={Style.rightSideDiv}>
-                <h3>تراورتن</h3>
+                <h3>Travertine</h3>
             </div>
             <div className={Style.leftSideDiv}>
                 <div className={Style.deleteIconDiv}><DeleteIcon className={Style.deleteIcon} sx={{ fontSize: 35,color: '#FD7474' ,iconHover:'#FFF' }}></DeleteIcon></div>
@@ -106,7 +106,7 @@ const CustomerTable = (props) =>{
                     <h3>1400/09/04</h3>
                 </div>
                 <div className={Style.profDiv}>
-                <h4>محمد فلاح</h4>
+                <h4>Sample Name</h4>
                     <img className={Style.profImg} src={`${prof}`}></img>
                 </div>
             </div> */}

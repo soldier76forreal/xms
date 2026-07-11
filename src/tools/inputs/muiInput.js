@@ -46,7 +46,7 @@ export default function MultilineTextFields(props) {
         />
       ) : props.type === 'cm' ? (
         <TextField
-          label={props.err?.status === true ? 'خطا' : props.name}
+          label={props.err?.status === true ? 'Error' : props.name}
           disabled={props.insertFactor}
           error={props.err?.status === true}
           helperText={props.err?.status === true ? props.err.msg : null}
@@ -55,7 +55,7 @@ export default function MultilineTextFields(props) {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <span style={{ fontSize: '7px' }}>سانتی متر</span>
+                <span style={{ fontSize: '7px' }}>cm</span>
               </InputAdornment>
             ),
           }}
@@ -86,13 +86,13 @@ export default function MultilineTextFields(props) {
       ) : props.type === 'price' ? (
         <TextField
           disabled={props.insertFactor}
-          label={props.err?.status === true ? 'خطا' : props.name}
+          label={props.err?.status === true ? 'Error' : props.name}
           value={props.value ?? ''}
           error={props.err?.status === true}
           helperText={props.err?.status === true ? props.err.msg : null}
           onChange={props.onChange}
           InputProps={{
-            startAdornment: <InputAdornment position="start">تومان</InputAdornment>,
+            startAdornment: <InputAdornment position="start">AED</InputAdornment>,
           }}
           size="small"
         />

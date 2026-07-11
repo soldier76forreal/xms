@@ -66,7 +66,7 @@ const FileManagerNav = (props) =>{
                 <Navbar className={Style.navBar}  expand="lg">
                     <Container  className={Style.containerDiv}> 
                         <Button onClick={toggleDrawer('left', true)} variant="contained" endIcon={<MenuIcon />}>
-                        ابزارها
+                        Tools
                         </Button>
 
                         <div>

@@ -41,10 +41,10 @@ export default function ToggleBtn(props) {
   if (props.type === 'type') {
     return (
       <ToggleButtonGroup color="primary" value={listType} exclusive onChange={handleChangeType}>
-        <ToggleButton sx={toggleBtnSx} value="edited">ویرایش شده ها</ToggleButton>
-        <ToggleButton sx={toggleBtnSx} value="sendRequest">دریافتی ها</ToggleButton>
-        <ToggleButton sx={toggleBtnSx} value="newInvoice">تکمیل شده ها</ToggleButton>
-        <ToggleButton sx={toggleBtnSx} value="all">همه</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="edited">Edited</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="sendRequest">Received</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="newInvoice">Completed</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="all">All</ToggleButton>
       </ToggleButtonGroup>
     );
   }
@@ -52,9 +52,9 @@ export default function ToggleBtn(props) {
   if (props.type === 'sort') {
     return (
       <ToggleButtonGroup color="primary" value={sort} exclusive onChange={handleChangeSort}>
-        <ToggleButton sx={toggleBtnSx} value="notVisited">اعلان های مشاهده نشده</ToggleButton>
-        <ToggleButton sx={toggleBtnSx} value="visited">اعلان های مشاهده شده</ToggleButton>
-        <ToggleButton sx={toggleBtnSx} value="all">همه</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="notVisited">Unread notifications</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="visited">Read notifications</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="all">All</ToggleButton>
       </ToggleButtonGroup>
     );
   }
@@ -82,9 +82,9 @@ export default function ToggleBtn(props) {
   if (props.type === 'prInfos') {
     return (
       <ToggleButtonGroup color="primary" value={prInfos} exclusive onChange={handleChangePrInfos}>
-        <ToggleButton sx={toggleBtnSx} value="prRequests">درخواست ها</ToggleButton>
-        <ToggleButton sx={toggleBtnSx} value="prCalls">تماس ها</ToggleButton>
-        <ToggleButton sx={toggleBtnSx} value="prInformation">مشخصات</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="prRequests">Requests</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="prCalls">Calls</ToggleButton>
+        <ToggleButton sx={toggleBtnSx} value="prInformation">Details</ToggleButton>
       </ToggleButtonGroup>
     );
   }

@@ -26,7 +26,7 @@ const SECTIONS = [
     fields: [
       { key: 'nameAr',          label: 'Company name (Arabic)', rtl: true },
       { key: 'nameEn',          label: 'Company name (English)' },
-      { key: 'trn',             label: 'TRN (ب.ض — seller VAT no.)' },
+      { key: 'trn',             label: 'TRN (seller VAT no.)' },
       { key: 'branchAddressAr', label: 'Branch / address (Arabic)', rtl: true },
       { key: 'phonesText',      label: 'Phones (comma-separated)' },
       { key: 'email',           label: 'Email' },

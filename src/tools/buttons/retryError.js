@@ -9,9 +9,9 @@ const RetryError = (props) =>{
         <Fragment>
             <div>
                 <CloudOffIcon sx={{fontSize:'50px' , marginBottom:'5px'}}></CloudOffIcon>
-                <div style={{fontFamily:'YekanBold' , fontSize:'16px'}}>خطا در شبکه</div>
+                <div style={{fontFamily:'YekanBold' , fontSize:'16px'}}>Network error</div>
                 <Button onClick={props.onClick} style={{fontSize:'13px'}} variant="outlined" color="error">
-                تلاش مجدد
+                Retry
                 </Button>
             </div>
         </Fragment>

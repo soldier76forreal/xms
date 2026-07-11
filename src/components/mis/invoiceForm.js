@@ -616,7 +616,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
             )}
 
             <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <TextField size="small" label="TRN (ب.ضـ)" fullWidth value={values.customerTrn}
+              <TextField size="small" label="TRN (VAT no.)" fullWidth value={values.customerTrn}
                 onChange={(e) => setField('customerTrn', e.target.value)}
                 InputLabelProps={tfLabel} inputProps={tfInput} sx={tfSx} />
               <TextField size="small" label="Country" fullWidth value={values.customerCountry}

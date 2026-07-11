@@ -9,7 +9,7 @@ let SearchBarV2 = (props)=>{
         // <FontAwesomeIcon size='lg' color='#fff' icon='search'></FontAwesomeIcon>
         <div className={Style.searchBarDiv}>
             <div className={Style.searchBtn}>{<SearchIcon></SearchIcon>}</div>
-            <input onChange={props.onChange} placeholder='جستجو...' className={Style.searchBar} type='search'></input>
+            <input onChange={props.onChange} placeholder='Search…' className={Style.searchBar} type='search'></input>
             {/* <div className={Style.clearBtn}>            
                 <FontAwesomeIcon size='lg' color='#000' icon='times'></FontAwesomeIcon>
             </div> */}

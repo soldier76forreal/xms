@@ -7,8 +7,8 @@ export default function CallType (value){
     return res[0].name;
 }
 var callType =[
-    {value:'sales' , name:'فروش'},
-    {value:'requestFollowUp' , name:'پی گیری درخواست'},
-    {value:'invoiceFollowUp' , name:'پی گیری فاکتور'},
-    {value:'customerSatisfaction' , name:'رضایت مشتری'}
+    {value:'sales' , name:'Sale'},
+    {value:'requestFollowUp' , name:'Request follow-up'},
+    {value:'invoiceFollowUp' , name:'Invoice follow-up'},
+    {value:'customerSatisfaction' , name:'Customer satisfaction'}
   ]

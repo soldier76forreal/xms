@@ -26,8 +26,8 @@ const Filter = (props) =>{
 
                     <InputBase
                         sx={{ ml: 1, flex: 1 , paddingRight:'10px'}}
-                        placeholder="جستجو..."
-                        inputProps={{ 'aria-label': 'جستجو...' }}
+                        placeholder="Search…"
+                        inputProps={{ 'aria-label': 'Search…' }}
                         onChange={(e)=>{props.setSearchForInvoices({searching:e.target.value , loading:true , retry:false})}}
                     />
                     <IconButton type="button" sx={{ p: '7px' }} aria-label="search">

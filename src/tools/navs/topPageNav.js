@@ -11,7 +11,7 @@ const TopPageNav = (props)=>{
         <Fragment>
             <div className={Style.topSection}>
                 <div onClick={props.close} className={Style.backBtn}><ArrowBackIosIcon className={Style.arrowIcon} sx={{color:'#000' , fontSize:'30px'}}></ArrowBackIosIcon></div>
-                <div className={Style.topTitle}>پیش فاکتور جدید</div>
+                <div className={Style.topTitle}>New pre-invoice</div>
             </div>
         </Fragment>
     )

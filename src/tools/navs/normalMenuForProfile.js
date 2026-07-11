@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import Menu from '@mui/material/Menu';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -6,7 +6,6 @@ import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import { useTheme } from '@mui/material/styles';
-import { useHistory } from 'react-router-dom';
 
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
@@ -19,6 +18,7 @@ import AuthContext from '../../components/authAndConnections/auth';
 import AxiosGlobal from '../../components/authAndConnections/axiosGlobalUrl';
 import ThemeCtx from '../../contextApi/themeContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
+import MyProfileModal from '../../components/users/myProfileModal';
 
 // Human labels for the module part of permission keys (module:resource:action)
 const MODULE_LABELS = {
@@ -37,7 +37,8 @@ export default function NormalMenuForProfile(props) {
   const { permissions, isSuperAdmin } = usePermissions();
   const theme   = useTheme();
   const isDark  = theme.palette.mode === 'dark';
-  const history = useHistory();
+
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const decoded = authCtx.decode || {};
 
@@ -105,6 +106,8 @@ export default function NormalMenuForProfile(props) {
   );
 
   return (
+    <>
+    <MyProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     <Menu
       id="demo-positioned-menu"
       aria-labelledby="demo-positioned-button"
@@ -166,7 +169,7 @@ export default function NormalMenuForProfile(props) {
 
       {/* ── Actions ── */}
       <Box sx={{ py: 0.75 }}>
-        {row(<AccountCircleIcon />, 'My profile', () => { props.handleClose(); history.push('/users'); })}
+        {row(<AccountCircleIcon />, 'My profile', () => { props.handleClose(); setProfileOpen(true); })}
         {row(<NotificationsActiveIcon />, 'Enable push notifications', activeNotif)}
         {row(themeMode === 'light' ? <DarkModeIcon /> : <LightModeIcon />,
           themeMode === 'light' ? 'Dark mode' : 'Light mode', toggleTheme)}
@@ -178,5 +181,6 @@ export default function NormalMenuForProfile(props) {
         {row(<LogoutOutlinedIcon />, 'Log out', () => { props.handleClose(); authCtx.logout(); }, true)}
       </Box>
     </Menu>
+    </>
   );
 }

@@ -23,12 +23,16 @@ export const PermissionProvider = ({ children }) => {
   const [permissions, setPermissions] = useState(new Set());
   const [dataScopes,  setDataScopes]  = useState({});
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  // true once the FIRST successful fetch has landed — route guards must not
+  // redirect off the empty initial set while permissions are still loading.
+  const [ready, setReady] = useState(false);
 
   const fetchPermissions = useCallback(async () => {
     if (!authCtx.isLoggedIn) {
       setPermissions(new Set());
       setDataScopes({});
       setIsSuperAdmin(false);
+      setReady(false);
       return;
     }
     try {
@@ -39,6 +43,7 @@ export const PermissionProvider = ({ children }) => {
       setPermissions(new Set(res.data.permissions || []));
       setDataScopes(res.data.dataScopes || {});
       setIsSuperAdmin(!!res.data.isSuperAdmin);
+      setReady(true);
     } catch {
       setPermissions(new Set());
       setDataScopes({});
@@ -59,7 +64,7 @@ export const PermissionProvider = ({ children }) => {
   const scopeFor = (module) => dataScopes[module] || 'all';
 
   return (
-    <PermissionContext.Provider value={{ permissions, dataScopes, isSuperAdmin, can, scopeFor, refreshPermissions: fetchPermissions }}>
+    <PermissionContext.Provider value={{ permissions, dataScopes, isSuperAdmin, ready, can, scopeFor, refreshPermissions: fetchPermissions }}>
       {children}
     </PermissionContext.Provider>
   );

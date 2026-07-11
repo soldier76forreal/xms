@@ -16,6 +16,7 @@ const BranchContext = createContext({
   activeBranchId: null,
   activeBranch: null,
   loading: true,
+  switching: false,
   setActiveBranchId: () => {},
   refreshBranches: () => {},
 });
@@ -27,9 +28,18 @@ export const BranchProvider = ({ children }) => {
   const [branches, setBranches]   = useState([]);
   const [activeBranchId, setActiveBranchIdState] = useState(() => localStorage.getItem(STORAGE_KEY) || null);
   const [loading, setLoading]     = useState(true);
+  const [switching, setSwitching] = useState(false);
 
   const setActiveBranchId = useCallback((id) => {
-    setActiveBranchIdState(id);
+    setActiveBranchIdState((prev) => {
+      // Show the "switching branch" overlay only on a real change. Sections
+      // refetch reactively off activeBranchId; the overlay covers that window.
+      if (id && prev && String(id) !== String(prev)) {
+        setSwitching(true);
+        setTimeout(() => setSwitching(false), 1200);
+      }
+      return id;
+    });
     if (id) localStorage.setItem(STORAGE_KEY, id);
     else    localStorage.removeItem(STORAGE_KEY);
   }, []);
@@ -54,7 +64,9 @@ export const BranchProvider = ({ children }) => {
         return next;
       });
     } catch {
-      setBranches([]);
+      // Keep whatever list we already have — clearing on a transient error made
+      // the branch selector vanish mid-session. It only resets on logout above.
+      setBranches((prev) => prev);
     }
     setLoading(false);
   }, [authCtx.isLoggedIn, authCtx.jwtInst, axiosGlobal.defaultTargetApi]);
@@ -65,7 +77,7 @@ export const BranchProvider = ({ children }) => {
 
   return (
     <BranchContext.Provider value={{
-      branches, activeBranchId, activeBranch, loading,
+      branches, activeBranchId, activeBranch, loading, switching,
       setActiveBranchId, refreshBranches: fetchBranches,
     }}>
       {children}

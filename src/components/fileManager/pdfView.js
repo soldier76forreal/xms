@@ -41,7 +41,7 @@ const PdfViewPortal = (props) =>{
                 <div style={props.pdfView === true?{display:'block'}:{display:'none'}}  className={props.pdfView === true? `${Style.newInvoice} ${Style.fadeIn}` : props.pdfView === false?`${Style.newInvoice} ${Style.fadeOut}`:null}>
                     <div className={Style.topSection}>
                         <div onClick={()=>{props.setPdfView(false); history.push('#pdfView')}} className={Style.backBtn}><ArrowBackIosIcon className={Style.arrowIcon} sx={{color:'#000' , fontSize:'30px'}}></ArrowBackIosIcon></div>
-                        <div className={Style.topTitle}>پیش فاکتور جدید</div>
+                        <div className={Style.topTitle}>New pre-invoice</div>
                     </div>
                     <div style={{overflowY:'scroll' , height:'95vh'}}>              
 

@@ -25,12 +25,12 @@ export default function MuiSelect(props) {
           <TextField
             {...params}
             variant="filled"
-            label="نقش ها"
+            label="Roles"
           />
         )}
       />
       {/* <FormControl  variant="filled" sx={{ m: 1, width: props.width }}>
-        <InputLabel  id="demo-simple-select-filled-label">نقش</InputLabel>
+        <InputLabel  id="demo-simple-select-filled-label">Role</InputLabel>
         <Select
           labelId="demo-simple-select-filled-label"
           id="demo-simple-select-filled"

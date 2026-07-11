@@ -18,9 +18,9 @@ const NormalTopFilterSection =(props)=>{
             <Row>
                 <Col sm={12} md={12} lg={8} xl={8} xxl={8} xs={8}>
                     <div className={Style.firstSectionDiv}>
-                        <h3>مشتری ها</h3>
+                        <h3>Customers</h3>
                         <div className={Style.dashLine}></div>
-                        <h4>فیلتر براساس:</h4>
+                        <h4>Filter by:</h4>
                         <div dir='ltr'>
                             <div style={{display:'inline-block'}}>
                                 <DropDownMenu width={120}></DropDownMenu>
@@ -40,7 +40,7 @@ const NormalTopFilterSection =(props)=>{
                                 <SearchBarV2></SearchBarV2>
                             </div>
                             <div style={{display:'inline-block'}}>
-                                <button onClick={()=>{history.push('/newCustomer')}}>مشتری جدید<AddCircleIcon sx={{fontSize:'30px' , marginRight:'8px'}}></AddCircleIcon></button>
+                                <button onClick={()=>{history.push('/newCustomer')}}>New customer<AddCircleIcon sx={{fontSize:'30px' , marginRight:'8px'}}></AddCircleIcon></button>
                             </div>
                         </div>
                 </Col>

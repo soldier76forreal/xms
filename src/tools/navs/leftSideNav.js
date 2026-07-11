@@ -65,6 +65,7 @@ export default function LeftSideNav(props) {
               onClick={() => {
                 pageSection.selectedSectionFunc(item.section);
                 history.push(item.path);
+                props.setLeftSideNav({ left: false });   // explicit — the drawer must close on selection
               }}
               sx={{
                 borderRadius: 2,
@@ -101,7 +102,7 @@ export default function LeftSideNav(props) {
               return (
                 <ListItem key={b._id} disablePadding>
                   <ListItemButton
-                    onClick={() => setActiveBranchId(b._id)}
+                    onClick={() => { setActiveBranchId(b._id); props.setLeftSideNav({ left: false }); }}
                     sx={{ borderRadius: 2, mx: 1, minHeight: 40 }}
                   >
                     <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>

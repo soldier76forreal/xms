@@ -44,13 +44,13 @@ export default function ErrorModal(props) {
                     <WarningAmberIcon sx={{fontSize:'135px'}}></WarningAmberIcon>
                 </div>
                 <div style={{padding:'10px 0px 0px 0px' , fontSize:'28px' , color:'red' , textAlign:'center', fontFamily:'yekanBold'}}>
-                    خطا
+                    Error
                 </div>
                 <div style={{padding:'10px 0px 0px 0px' , fontSize:'16px' , textAlign:'center', fontFamily:'yekanBold'}}>
                 {props.errorContext}    
                 </div>
                 <div onClick={handleClose} style={{backgroundColor:'#000' , cursor:'pointer' , margin:'20px auto 0px auto' , color:'#fff' , maxWidth:'70px' , fontSize:'13px' , padding:'7px 0px 7px 0px' , display:'flex' , justifyContent:'center'}}>
-                    باشه
+                    OK
                 </div>
             </div>
           </Box>

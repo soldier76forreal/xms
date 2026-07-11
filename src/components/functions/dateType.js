@@ -5,8 +5,8 @@ export default function DateType (value){
     return res[0].text;
 }
 var customerOrigin = [
-    {id:'shamsi' , text:'َشمسی'},
-    {id:'hejri' , text:'حجری'},
-    {id:'miladi' , text:'میلادی'}
+    {id:'shamsi' , text:'Jalali'},
+    {id:'hejri' , text:'Hijri'},
+    {id:'miladi' , text:'Gregorian'}
   ]
   
