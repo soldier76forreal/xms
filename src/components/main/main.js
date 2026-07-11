@@ -83,8 +83,11 @@ const Main = () => {
     <Fragment>
       <MainNav />
       <SideRail expanded={navExpanded} onToggle={toggleNav} />
-      {/* Content shifts right by the rail width on desktop; rail is hidden on mobile */}
-      <Box sx={{ mt: '60px', ml: { xs: 0, md: `${railWidth}px` }, transition: 'margin-left 0.18s ease' }}>
+      {/* Content shifts right by the rail width on desktop; rail is hidden on mobile.
+          bgcolor + minHeight guarantee the app canvas is theme-dark even under
+          sections that don't paint their own full-height background. */}
+      <Box sx={{ mt: '60px', ml: { xs: 0, md: `${railWidth}px` }, transition: 'margin-left 0.18s ease',
+        bgcolor: 'background.default', minHeight: 'calc(100vh - 60px)' }}>
         {pageSection.selectedSection === 0 ? <Mis />
           : pageSection.selectedSection === 1 ? <FileMain />
           : pageSection.selectedSection === 2 ? <Crm />

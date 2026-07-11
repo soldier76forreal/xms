@@ -30,6 +30,12 @@ const componentOverrides = (mode) => {
     MuiCssBaseline: {
       styleOverrides: {
         '*': { boxSizing: 'border-box' },
+        // html gets the background too: index.css pins body to height:100%, so
+        // content scrolled past the first viewport otherwise exposes the html
+        // element behind it — which rendered WHITE even in dark mode.
+        html: {
+          backgroundColor: isLight ? '#FAFAFA' : '#060606',
+        },
         body: {
           backgroundColor: isLight ? '#FAFAFA' : '#060606',
           color: isLight ? '#000000' : '#FFFFFF',
