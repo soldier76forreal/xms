@@ -1,993 +1,437 @@
-import { Fragment  , useState} from "react";
-import ReactDom from 'react-dom';
-import Style from "./fileMain.module.scss"; 
-import FileManagerNav from "../../tools/navs/fileManagerNav";
-import * as React from 'react';
+import { useState, useEffect, useContext, useRef, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useHistory, useLocation } from 'react-router-dom';
 import Box from '@mui/material/Box';
-import Drawer from '@mui/material/Drawer';
-import AppBar from '@mui/material/AppBar';
-import CssBaseline from '@mui/material/CssBaseline';
-import Toolbar from '@mui/material/Toolbar';
-import List from '@mui/material/List';
 import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
-import ListItem from '@mui/material/ListItem';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
-import ListItemText from '@mui/material/ListItemText';
-import InboxIcon from '@mui/icons-material/MoveToInbox';
-import MailIcon from '@mui/icons-material/Mail';
-import { Add, ArrowBack, ArrowDownward, ArrowForward, ArrowRight, CheckBox, Delete, FileDownloadDoneOutlined, Folder, Image, Info, LocalActivity, Pin, PlusOne, Search, Star, Upload } from "@mui/icons-material";
-import 'bootstrap/dist/css/bootstrap.min.css';
-import {Pagination,Navbar,Row,  Nav ,NavDropdown , Container ,Form ,FormControl ,Button, Col} from 'react-bootstrap';
-import { Checkbox, Chip, CircularProgress, Grid, Stack  } from "@mui/material";
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import FlagPlaceholder from '../../assets/imagePlaceHolder.png';
 import Tooltip from '@mui/material/Tooltip';
-import SearchInputForTags from "./searchInputForTags";
-import BottomUploadList from "./bottomUploadList";
-import ContentCut from '@mui/icons-material/ContentCut';
-import ContentCopy from '@mui/icons-material/ContentCopy';
-import ContentPaste from '@mui/icons-material/ContentPaste';
-import Cloud from '@mui/icons-material/Cloud';
-import ShareIcon from '@mui/icons-material/Share';
+import Checkbox from '@mui/material/Checkbox';
+import Menu from '@mui/material/Menu';
+import CircularProgress from '@mui/material/CircularProgress';
+import { useTheme, useMediaQuery } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DownloadIcon from '@mui/icons-material/Download';
 import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import DeleteIcon from '@mui/icons-material/Delete';
-import LinkIcon from '@mui/icons-material/Link';
-import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
-import DownloadIcon from '@mui/icons-material/Download';
-import NewFileModal from "./newFileModal";
-import DeleteModal from "./deleteModal";
-import RenameModal from "./renameModal";
-import FilePickerModal from "./filePickerModal";
-import { useDispatch, useSelector } from "react-redux";
-import {   actions, setFilesAsync, uploadFile , getAllTags, deleteTag, downloadFileFolder } from "../../store/store";
-import { useEffect } from "react";
+import ShareIcon from '@mui/icons-material/Share';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import StarIcon from '@mui/icons-material/Star';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { useContext } from "react";
-import { useRef } from "react";
-import { useHistory, useLocation } from "react-router-dom";
-import { FileIcon, defaultStyles } from 'react-file-icon';
-import VideoPlayer from 'simple-react-video-thumbnail'
-import DocViewerBox from "./docViewer";
-import moment from 'jalali-moment'
-import ShareTheLink from "./shareTheLink";
-import SuccessMsg from '../../tools/navs/successMsg';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import PhotoSwipeLightbox from 'photoswipe/lightbox';
-import 'photoswipe/style.css';
-import PdfView from "./pdfView";
-import ShowVideo from "./showVideo";
-import { getImageSize  } from 'react-image-size';
-import Loader from "../../tools/loader/loader";
-import '../overalStyle/fileFolderGrid.scss'
-import '../overalStyle/overals.scss'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import SpeedDialForResponsiveUpload from "./speedDialForResponsiveUpload";
-import ViewListIcon from '@mui/icons-material/ViewList';
-import LightProps from "../../tools/props/lightProps";
-import AboutResponsive from "./aboutResponsive";
-const ITEM_HEIGHT = 48;
+import { usePermissions } from '../../contextApi/PermissionContext';
+import { actions, setFilesAsync, uploadFile, downloadFileFolder } from '../../store/store';
 
-function truncateString(inputString, maxLength) {
-    if (inputString.length > maxLength) {
-        return inputString.slice(0, maxLength) + '...';
-    } else { 
-        return inputString;
+import FileCard from './fileCard';
+import FileDetailPanel from './fileDetailPanel';
+import NewFileModal from './newFileModal';
+import RenameModal from './renameModal';
+import DeleteModal from './deleteModal';
+import ShareTheLink from './shareTheLink';
+import FilePickerModal from './filePickerModal';
+import BottomUploadList from './bottomUploadList';
+import SearchInputForTags from './searchInputForTags';
+
+// ── File Manager — Phase 9 makeover ────────────────────────────────────────────
+// Same dark/opacity master-detail shell as CRM/MIS/Inventory. Data layer
+// (float/currentDisplay/routeLink, all URL-pathname-driven) is UNCHANGED from
+// the legacy implementation — this file only replaces the presentation layer.
+// Navigation contract preserved exactly: history.push(newPath) followed by
+// dispatch(actions.setFolder()) re-derives the tree view from the now-updated
+// window.location.pathname against the already-fetched state.data.
+export default function FileMain() {
+  const theme  = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+  const isMob  = useMediaQuery(theme.breakpoints.down('md'));
+  const dispatch    = useDispatch();
+  const authCtx     = useContext(AuthContext);
+  const axiosGlobal = useContext(AxiosGlobal);
+  const { can }     = usePermissions();
+  const apiBase     = axiosGlobal.defaultTargetApi;
+  const myId        = String(authCtx.decode?.id || authCtx.decode?._id || '');
+
+  const location = useLocation();
+  const history  = useHistory();
+
+  const data           = useSelector((s) => s.data);
+  const currentDisplay = useSelector((s) => s.currentDisplay);
+  const routeLink      = useSelector((s) => s.routeLink);
+  const selectedItems  = useSelector((s) => s.selectedItems);
+  const uploadQueue    = useSelector((s) => s.uploadQueue);
+  const loading        = useSelector((s) => s.loading);
+
+  const T = {
+    APP_BG:   isDark ? '#060606' : theme.palette.background.default,
+    PANEL_BG: isDark ? '#0d0d0d' : theme.palette.background.paper,
+    BD:       isDark ? 'rgba(255,255,255,0.07)' : theme.palette.divider,
+    TEXT_PRI: isDark ? 'rgba(255,255,255,0.87)' : theme.palette.text.primary,
+    TEXT_SEC: isDark ? 'rgba(255,255,255,0.45)' : theme.palette.text.secondary,
+    TEXT_TER: isDark ? 'rgba(255,255,255,0.2)'  : 'rgba(0,0,0,0.3)',
+    CTRL_BG:  isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+  };
+
+  const [search, setSearch] = useState('');
+  const [mobileDetail, setMobileDetail] = useState(false);
+
+  const [newFileModal, setNewFileModal] = useState(false);
+  const [newFolderType, setNewFolderType] = useState('mainNewFolderBtn');
+
+  const [openRenameModal, setOpenRenameModal] = useState(false);
+  const [renameFolder, setRenameFolder] = useState('');
+  const [fileFolderIdType, setFileFolderIdType] = useState(null);
+
+  const [deleteFileModal, setDeleteFileModal] = useState(false);
+  const [deleteCount, setDeleteCount] = useState('single');
+
+  const [openFilePicker, setOpenFilePicker] = useState(false);
+  const [filePickerCount, setFilePickerCount] = useState({ count: 'single', idAndType: null });
+  const [copyMoveType, setCopyMoveType] = useState('move');
+
+  const [openShareLink, setOpenShareLink] = useState(false);
+  const [successToast, setSuccessToast] = useState({ status: false, msg: '' });
+  const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
+
+  const fileInputRef = useRef(null);
+
+  // ── Navigation resync — the load-bearing effect from the legacy component.
+  // Every route change (folder descend, breadcrumb jump, back button) re-reads
+  // window.location.pathname inside the reducer and rebuilds float/currentDisplay.
+  useEffect(() => {
+    if (data.length !== 0 && openFilePicker === false) {
+      dispatch(actions.setFolder());
     }
-}
-
-const FileMainPortal = () =>{
-    // Hooks
-    const history = useHistory()
-    const location = useLocation();
-    const authCtx = useContext(AuthContext);
-    const axiosGlobal = useContext(AxiosGlobal);
-    const fileInputRef = useRef(null);
-    const floatArray = useSelector((state) => state.float);
-    const currentDisplay = useSelector((state) => state.currentDisplay);
-    const uploadQueue = useSelector((state) => state.uploadQueue);
-    const data = useSelector((state) => state.data);
-
-    const dataForDisplay = useSelector((state) => state.data);
-    const selectArr = useSelector((state) => state.selectedItems);
-    
-    const allTags = useSelector((state) => state.allTags);
-
-    const route = useSelector((state) => state.routeLink);
-
-    const loading = useSelector((state) => state.loading);
-    const dispatch = useDispatch();
-
-    const tagsToShow = useSelector((state) => state.tagsToShow);
-
-
-    //success toast
-    const [successToast , setSuccessToast] = useState({status:false , msg:''});
-
-    //side menu 
-    const [selectedSideMenu , setSelectedSideMenu] = useState('')
-
-    //share link
-    const [openShareLink , setOpenShareLink] = useState(false)
-
-    //tags state 
-    const [oneSelectedItemsTag , setOneSelectedItemsTag] = useState([])
-    const [tagsForList , setTagsForList] = useState([])
-
-    const [deletedTags , setDeletedTags] = useState([])
-    const [chipChangeRefresh , setChipChangeRefresh] = useState(0)
-
-
-    //Modal states 
-    const [newFileModal , setNewFileModal] = useState(false);
-    const [renameFolder , setRenameFolder] = useState('');
-    const [openRenameModal , setOpenRenameModal] = useState(false);
-    const [selectedForChange , setSelectedForChange] = useState('');
-    const [rightSideMenuExpend , setRightSideMenuExpend] = useState({status:false , choosen:'info'})
-    const [selectedTagsForFile , setSelectedTagsForFile] = useState([]);
-
-    const [deleteFileModal , setDeleteFileModal]=useState(false);
-    const [fileFolderIdType , setFileFolderIdType] = useState({type:'',id:''});
-    const [downloadPath , setDownloadPath] = useState('');
-    const [deleteCount , setDeleteCount]=useState('');
-
-
-
-    const [newFolderType , setNewFolderType] = useState('');
-
-
-    const [oneSelectedItem , setOneSelectedItem] = useState({});
-
-    //select Files
-    const [selectFileOnResponsive , setSelectFileOnResponsive] = useState(false)
-
-
-    //copy move
-    const [filePickerCount , setFilePickerCount] = useState({count:null , idAndType:null});
-    const [openFilePicker , setOpenFilePicker] = useState(false);
-    const [copyMoveType , setCopyMoveType] = useState('');
-
-
-
-
-
-    //pdf reader
-    const [pdfView , setPdfView] = useState(false)
-    const [thePdf  , setThePdf] = useState('')
-
-
-
-
-    
-    //show video
-    const [showVideo , setShowVideo] = useState(false)
-    const [theVideo  , setTheVideo] = useState('')
-
-  
-
-
-    //photo swipe
-    const [photoSwipe , setPhotoSwipe]=useState(false)
-    const [filesForSwipe , setFilesForSwipe] = useState([                 
-    {src: '',
-    w: 1200,
-    h: 900,
-    title:null}])
-
-    
-    //Click handler
-    var tempChip =[]
-    const [anchorElActions, setAnchorElActions] = useState(null);
-    const openAction = Boolean(anchorElActions);
-    const handleCloseAction = () => {
-        setAnchorElActions(null);
-      };
-    const [anchorEl, setAnchorEl] = useState(null);
-    const open = Boolean(anchorEl);
-
-    const handleClose = () => {
-      setAnchorEl(null);
-    };
-    const handleFileSelect = () => {
-        fileInputRef.current.click();
-    };
-
-    const handleFileChange = async(e) => {
-        const files = Array.from(e.target.files);
-        dispatch(setFilesAsync({files:files , uploadType:'fileManager'}))
-        .then(()=>{
-            dispatch(uploadFile({authCtx:authCtx , axiosGlobal:axiosGlobal , files:uploadQueue , currentDisplay}))
-        })
-    };
-
-    function getLastPart(url) {
-        const parts = url.split('/');
-        return parts.at(-1);
-      }
-
-    const sizeInMb = (e) =>{
-        return (e / (1024*1024)).toFixed(2);
+    if (openFilePicker === true) {
+      dispatch(actions.openFilePickerFolder());
     }
+  }, [location]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    dispatch(actions.tagToShow());
+  }, [selectedItems]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-
-
-    useEffect(() => {
-        if(data.length !==0 && openFilePicker === false){
-           dispatch(actions.setFolder());
-        }
-        if(openFilePicker === true){
-           dispatch(actions.openFilePickerFolder());
-        }
-   }, [location]);
-   
-
-
-   useEffect(() => {
-    setOneSelectedItemsTag([])
-   if(selectArr.length === 1){
-       if(allTags !== undefined){
-           if(selectArr[0].type==='file'){
-               var temp = allTags.filter(e=>{return(e.files.includes(selectArr[0].id))})
-               setTagsForList([...allTags.filter(e=>{return(!e.files.includes(selectArr[0].id))})])
-               setOneSelectedItemsTag([...temp])
-
-           }else if(selectArr[0].type==='folder'){
-               var temp = allTags.filter(e=>{return(e.folders.includes(selectArr[0].id))})
-                setTagsForList([...allTags.filter(e=>{return(!e.folders.includes(selectArr[0].id))})])
-               setOneSelectedItemsTag([...temp])
-           }
-       }
-   }else if(selectArr.length > 1){
-        setTagsForList([...allTags])
-   }
-}, [selectArr  ,chipChangeRefresh]);
-   
-   useEffect(() => {
-       if(selectArr.length === 1 && selectArr[0].type === 'file'){
-           const theInfo = currentDisplay.docs.filter(e=>{return e.file !== undefined?e.file._id === selectArr[0].id:null})[0]
-           setOneSelectedItem(theInfo)
-       }else if(selectArr.length === 1 && selectArr[0].type === 'folder'){
-           const theInfo = currentDisplay.docs.filter(e=>{return e.doc !== undefined?e.doc._id === selectArr[0].id:null})[0]
-           setOneSelectedItem(theInfo.doc)
-       }
-       dispatch(actions.tagToShow())
-  }, [selectArr]);
-   
-
-const downloadFile = async () => {
-  try {
-    
-    const res = await authCtx.jwtInst({
-        method:'get',
-        url:`${axiosGlobal.defaultTargetApi}/files/files/download/${downloadPath}`,
-        responseType: 'blob' // 🔑 REQUIRED
-    })
-    // 👇 Try to read filename from backend
-    let filename = `xms-image-${Date.now()}`;
-    const disposition = res.headers['content-disposition'];
-
-    if (disposition) {
-      const match = disposition.match(/filename="?(.+)"?/);
-      if (match && match[1]) {
-        filename = match[1];
-      }
+  useEffect(() => {
+    if (successToast.status) {
+      dispatch(actions.setShowSnackBar({ status: true, msg: successToast.msg, type: 'success' }));
+      setSuccessToast({ status: false, msg: '' });
     }
+  }, [successToast]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-    const blob = new Blob([res.data], {
-      type: res.headers['content-type'] || 'application/octet-stream',
+  const getLastPart = (url) => url.split('/').at(-1);
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  const openFolder = (entry, index) => {
+    const path = location.pathname === '/' ? `/files/${decodeURI(entry.doc.name)}` : `${location.pathname}/${decodeURI(entry.doc.name)}`;
+    history.push(path);
+    dispatch(actions.setFolder({ id: entry.doc._id, name: entry.doc.name, index }));
+  };
+  const goToRoot = () => history.push('/files');
+  const goToBreadcrumb = (path) => history.push(`/files${path}`);
+
+  // ── Selection ─────────────────────────────────────────────────────────────
+  const selectOnly = (id, type) => {
+    dispatch(actions.unselectAll());
+    dispatch(actions.selectUnselect({ id, type }));
+    if (isMob) setMobileDetail(true);
+  };
+  const toggleCheck = (id, type) => dispatch(actions.selectUnselect({ id, type }));
+  const closeDetail = () => { dispatch(actions.unselectAll()); setMobileDetail(false); };
+
+  const isSelectMode = selectedItems.length > 0;
+  const selectedEntry = useMemo(() => {
+    if (selectedItems.length !== 1) return null;
+    const sel = selectedItems[0];
+    return (currentDisplay?.docs || []).find((e) =>
+      sel.type === 'file' ? e.file?._id === sel.id : e.doc?._id === sel.id
+    ) || null;
+  }, [selectedItems, currentDisplay]);
+
+  // ── Pin ───────────────────────────────────────────────────────────────────
+  const togglePin = async (id, kind) => {
+    try {
+      await authCtx.jwtInst({ method: 'post', url: `${apiBase}/files/togglePin`, data: { itemId: id, kind } });
+      dispatch(actions.refresh());
+    } catch (err) {
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to toggle pin', type: 'error' }));
+    }
+  };
+  const isPinned = (doc) => (doc?.pinnedBy || []).map(String).includes(myId);
+
+  // ── Upload ────────────────────────────────────────────────────────────────
+  const handleFileChange = async (e) => {
+    const files = Array.from(e.target.files);
+    e.target.value = '';
+    dispatch(setFilesAsync({ files, uploadType: 'fileManager' })).then(() => {
+      dispatch(uploadFile({ authCtx, axiosGlobal, files: uploadQueue, currentDisplay }));
     });
+  };
 
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+  // ── Rename / Delete / Move / Copy / Share / Download ─────────────────────
+  const openRename = (target, name) => { setFileFolderIdType(target); setRenameFolder(name); setOpenRenameModal(true); };
+  const openDelete = (target) => { setFileFolderIdType(target); setDeleteCount('single'); setDeleteFileModal(true); };
+  const openDeleteMulti = () => { setDeleteCount('multi'); setDeleteFileModal(true); };
+  const openMove = (target) => { setFilePickerCount({ count: 'single', idAndType: target }); setCopyMoveType('move'); setOpenFilePicker(true); };
+  const openCopy = (target) => { setFilePickerCount({ count: 'single', idAndType: target }); setCopyMoveType('copy'); setOpenFilePicker(true); };
+  const openMoveMulti = () => { setFilePickerCount({ count: 'multi', idAndType: null }); setCopyMoveType('move'); setOpenFilePicker(true); };
+  const openCopyMulti = () => { setFilePickerCount({ count: 'multi', idAndType: null }); setCopyMoveType('copy'); setOpenFilePicker(true); };
+  const openShare = (target) => { setFilePickerCount({ count: 'single', idAndType: target }); setOpenShareLink(true); };
+  const openShareMulti = () => { setFilePickerCount({ count: 'multi', idAndType: null }); setOpenShareLink(true); };
+  const handleDownload = (target) => dispatch(downloadFileFolder({ authCtx, axiosGlobal, selected: [target] }));
+  const handleDownloadMulti = () => dispatch(downloadFileFolder({ authCtx, axiosGlobal, selected: selectedItems }));
 
-    link.href = url;
-    link.download = filename;
+  // ── Pinned strip + grid (folders first) ──────────────────────────────────
+  const allDocs = useMemo(() => currentDisplay?.docs || [], [currentDisplay]);
+  const filteredDocs = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const list = q
+      ? allDocs.filter((e) => (e.file ? e.file.name : e.doc?.name || '').toLowerCase().includes(q))
+      : allDocs;
+    const folders = list.filter((e) => e.file === undefined);
+    const files = list.filter((e) => e.file !== undefined);
+    return [...folders, ...files];
+  }, [allDocs, search]);
 
-    document.body.appendChild(link);
-    link.click();
+  const pinnedDocs = useMemo(() => allDocs.filter((e) => isPinned(e.file || e.doc)), [allDocs, myId]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('Download failed:', err);
-  }
-};
+  const desktopSplit = !isMob;
 
+  const cardGrid = (entries) => (
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 1.25 }}>
+      {entries.map((e, i) => {
+        const isFolder = e.file === undefined;
+        const doc = isFolder ? e.doc : e.file;
+        const sel = selectedItems.some((s) => s.id === doc._id);
+        return (
+          <FileCard key={doc._id} entry={e} apiBase={apiBase}
+            selected={sel} checked={sel}
+            pinned={isPinned(doc)} tags={[]}
+            onOpen={() => (isFolder ? openFolder(e, i) : selectOnly(doc._id, 'file'))}
+            onToggleCheck={() => toggleCheck(doc._id, isFolder ? 'folder' : 'file')}
+            onTogglePin={() => togglePin(doc._id, isFolder ? 'folder' : 'file')}
+          />
+        );
+      })}
+    </Box>
+  );
 
-    const lightbox = new PhotoSwipeLightbox({
-    // may select multiple "galleries"
-    gallery: '#gallery--getting-started',
-    
-    // Elements within gallery (slides)
-    children: 'a',
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: T.APP_BG, overflow: 'hidden' }}>
 
-    // setup PhotoSwipe Core dynamic import
-    pswpModule: () => import('photoswipe')
-    });
-    lightbox.init();
+      {/* ── Top bar ── */}
+      {!(isMob && mobileDetail) && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1,
+          bgcolor: isDark ? '#0d0d0d' : 'background.paper', borderBottom: `1px solid ${T.BD}`,
+          flexShrink: 0, flexWrap: 'wrap' }}>
 
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
+            Files
+          </Typography>
 
-    const newFolder = ()=>{
-        setNewFileModal(true);
-        setNewFolderType('mainNewFolderBtn')
-    }
+          {/* Breadcrumb */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, overflow: 'hidden' }}>
+            <Typography onClick={goToRoot} sx={{ fontSize: '0.75rem', color: T.TEXT_SEC, cursor: 'pointer',
+              '&:hover': { color: T.TEXT_PRI } }}>
+              XFILE
+            </Typography>
+            {routeLink.map((p) => (
+              <Typography key={p} onClick={() => goToBreadcrumb(p)} noWrap
+                sx={{ fontSize: '0.75rem', color: T.TEXT_TER, cursor: 'pointer', maxWidth: 140,
+                  '&:hover': { color: T.TEXT_PRI } }}>
+                /{getLastPart(p)}
+              </Typography>
+            ))}
+          </Box>
 
-    return(
-        <Fragment>
-            {/* <LightProps content={<AboutResponsive></AboutResponsive>}></LightProps> */}
-            <SpeedDialForResponsiveUpload
-                newFolder={newFolder}
-                handleFileSelect={handleFileSelect}
-            ></SpeedDialForResponsiveUpload>
-            <ShowVideo
-                showVideo={showVideo}
-                setShowVideo={setShowVideo}
-                theVideo={theVideo}
-            ></ShowVideo>
-            <PdfView 
-                thePdf={thePdf}
-                setPdfView={setPdfView}
-                pdfView={pdfView}
-            ></PdfView>
-            <SuccessMsg openMsg={successToast.status} msg={successToast.msg}></SuccessMsg>  
+          {isSelectMode ? (
+            // ── Bulk action bar ──
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexGrow: 1, justifyContent: 'flex-end' }}>
+              <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC, mr: 1 }}>
+                {selectedItems.length} selected
+              </Typography>
+              <Tooltip title="Download">
+                <IconButton size="small" onClick={handleDownloadMulti} sx={{ color: T.TEXT_SEC }}>
+                  <DownloadIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+              {can('files:upload') && (
+                <>
+                  <Tooltip title="Move">
+                    <IconButton size="small" onClick={openMoveMulti} sx={{ color: T.TEXT_SEC }}>
+                      <DriveFileMoveIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Copy">
+                    <IconButton size="small" onClick={openCopyMulti} sx={{ color: T.TEXT_SEC }}>
+                      <ContentCopyIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Tag">
+                    <IconButton size="small" onClick={(e) => setTagMenuAnchor(e.currentTarget)} sx={{ color: T.TEXT_SEC }}>
+                      <LocalOfferIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Menu anchorEl={tagMenuAnchor} open={Boolean(tagMenuAnchor)} onClose={() => setTagMenuAnchor(null)}
+                    PaperProps={{ sx: { bgcolor: isDark ? '#181818' : 'background.paper', border: `1px solid ${T.BD}`,
+                      borderRadius: '10px', p: 1.5, minWidth: 220 } }}>
+                    <SearchInputForTags />
+                  </Menu>
+                </>
+              )}
+              {can('files:share') && (
+                <Tooltip title="Share">
+                  <IconButton size="small" onClick={openShareMulti} sx={{ color: T.TEXT_SEC }}>
+                    <ShareIcon sx={{ fontSize: 17 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {can('files:delete') && (
+                <Tooltip title="Delete">
+                  <IconButton size="small" onClick={openDeleteMulti} sx={{ color: '#EA005A' }}>
+                    <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+              <Button size="small" onClick={() => dispatch(actions.unselectAll())}
+                sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_TER }}>
+                Clear
+              </Button>
+            </Box>
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexGrow: 1, maxWidth: 320,
+                bgcolor: T.CTRL_BG, borderRadius: '8px', px: 1.25, py: '4px', border: `1px solid ${T.BD}` }}>
+                <SearchIcon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />
+                <TextField variant="standard" placeholder="Search this folder…" fullWidth
+                  value={search} onChange={(e) => setSearch(e.target.value)}
+                  InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', color: T.TEXT_PRI } }} />
+              </Box>
 
-            <NewFileModal newFolderType={newFolderType} setNewFileModal={setNewFileModal} newFileModal={newFileModal}></NewFileModal>
-            <DeleteModal
-                deleteFileModal={deleteFileModal}
-                setDeleteFileModal={setDeleteFileModal}
-                fileFolderIdType={fileFolderIdType}
-                setFileFolderIdType={setFileFolderIdType}
-                deleteCount={deleteCount}
-            ></DeleteModal>
-            <RenameModal newFolderType={newFolderType} fileFolderIdType={fileFolderIdType} setFileFolderIdType={setFileFolderIdType}  setOpenRenameModal={setOpenRenameModal} setRenameFolder={setRenameFolder} renameFolder={renameFolder} openRenameModal={openRenameModal}></RenameModal>
-            <FilePickerModal 
-                openFilePicker={openFilePicker}
-                setOpenFilePicker={setOpenFilePicker}
-                filePickerCount={filePickerCount}
-                setFilePickerCount={setFilePickerCount}
-                setNewFileModal={setNewFileModal}
-                setNewFolderType={setNewFolderType}
-                copyMoveType={copyMoveType}
-            ></FilePickerModal>
+              <Box sx={{ flexGrow: 1 }} />
 
-            <ShareTheLink successToast={successToast} setSuccessToast={setSuccessToast} filePickerCount={filePickerCount} fileFolderIdType={fileFolderIdType}  setOpenShareLink={setOpenShareLink} openShareLink={openShareLink}></ShareTheLink>
-            
-            {/* action menu */}
-            <Menu
-                id="long-menu"
-                MenuListProps={{
-                'aria-labelledby': 'long-button',
-                }}
-                anchorEl={anchorElActions}
-                open={openAction}
-                onClose={handleCloseAction}
-                PaperProps={{
-                style: {
-                    maxHeight: ITEM_HEIGHT * 7.5,
-                    width: '20ch',
-                },
-                }}
-            >
-                <MenuItem>
-                    <ListItemIcon>
-                        <ShareIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Share</ListItemText>
-                </MenuItem>
-                <MenuItem onClick={()=>{setOpenShareLink(true);handleCloseAction(); setFilePickerCount({count:'multi',idAndType:selectArr})}}>
-                    <ListItemIcon>
-                        <LinkIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText >Link</ListItemText>
-                </MenuItem>
-                <MenuItem onClick={()=>{dispatch(downloadFileFolder({authCtx:authCtx , axiosGlobal:axiosGlobal , selected:selectArr}));handleCloseAction();}}>
-                    <ListItemIcon>
-                        <DownloadIcon fontSize="small" />
-                    </ListItemIcon> 
-                    <ListItemText>Download</ListItemText>
-                </MenuItem>
-                <MenuItem onClick={()=>{setCopyMoveType('copy');setOpenFilePicker(true);setFilePickerCount({count:'multi',idAndType:fileFolderIdType});handleCloseAction()}}>
-                    <ListItemIcon>
-                        <ContentCopyIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Copy</ListItemText>
-                </MenuItem>
-                <MenuItem onClick={()=>{setCopyMoveType('move');setOpenFilePicker(true);setFilePickerCount({count:'multi',idAndType:fileFolderIdType});handleCloseAction();}}>
-                    <ListItemIcon>
-                        <DriveFileMoveIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Move</ListItemText>
-                </MenuItem>
-                <MenuItem onClick={()=>{handleCloseAction();setDeleteFileModal(true);setDeleteCount('multi')}}>
-                    <ListItemIcon>
-                        <DeleteIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Delete</ListItemText>
-                </MenuItem>
-            </Menu>
+              {can('files:upload') && (
+                <>
+                  <Tooltip title="New folder">
+                    <IconButton size="small" onClick={() => { setNewFolderType('mainNewFolderBtn'); setNewFileModal(true); }}
+                      sx={{ color: T.TEXT_SEC }}>
+                      <CreateNewFolderIcon sx={{ fontSize: 19 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Button size="small" component="label" startIcon={<UploadFileIcon sx={{ fontSize: 15 }} />}
+                    sx={{ bgcolor: isDark ? '#fff' : '#000', color: isDark ? '#000' : '#fff', fontWeight: 600,
+                      borderRadius: '8px', px: 1.75, py: '5px', fontSize: '0.78rem', textTransform: 'none',
+                      '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' } }}>
+                    Upload
+                    <input ref={fileInputRef} type="file" hidden multiple onChange={handleFileChange} />
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+        </Box>
+      )}
 
-             {/* items menu */}
-            <Menu
-                id="long-menu"
-                MenuListProps={{
-                'aria-labelledby': 'long-button',
-                }}
-                anchorEl={anchorEl}
-                open={open}
-                onClose={handleClose}
-                PaperProps={{
-                style: {
-                    maxHeight: ITEM_HEIGHT * 7.5,
-                    width: '20ch',
-                },
-                }}
-            >
-                <MenuItem>
-                
-                    <ListItemIcon>
-                        <ShareIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Share</ListItemText>
-                    </MenuItem>
-                    <MenuItem onClick={()=>{setOpenShareLink(true);handleClose();setFilePickerCount({count:'single',idAndType:[fileFolderIdType]})}}>
-                    <ListItemIcon>
-                        <LinkIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText >Link</ListItemText>
-                    </MenuItem>
-                    {fileFolderIdType.type === 'folder'?
-                        <MenuItem onClick={()=>{dispatch(downloadFileFolder({authCtx:authCtx , axiosGlobal:axiosGlobal , selected:[fileFolderIdType]}));handleClose();}}>
-                            <ListItemIcon>
-                                <DownloadIcon fontSize="small" />
-                            </ListItemIcon>
-                            <ListItemText>Download</ListItemText>
-                        </MenuItem>
-                        
-                    :
-                            <MenuItem onClick={downloadFile}>
-                            <ListItemIcon>
-                                <DownloadIcon fontSize="small" />
-                            </ListItemIcon>
-                            <ListItemText>Download</ListItemText>
-                            </MenuItem>
-                        
-                    }
-                    <Divider />
-                    <MenuItem onClick={()=>{setCopyMoveType('copy');setOpenFilePicker(true);setFilePickerCount({count:'single',idAndType:fileFolderIdType});handleClose()}}>
-                    <ListItemIcon>
-                        <ContentCopyIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Copy</ListItemText>
-                    </MenuItem>
-                    <MenuItem onClick={()=>{setCopyMoveType('move');setOpenFilePicker(true);setFilePickerCount({count:'single',idAndType:fileFolderIdType});handleClose();}}>
-                    <ListItemIcon>
-                        <DriveFileMoveIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Move</ListItemText>
-                    </MenuItem>
-                    <MenuItem onClick={(e)=>{setOpenRenameModal(true);handleClose()}}>
-                    <ListItemIcon>
-                        <DriveFileRenameOutlineIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Rename</ListItemText>
-                    </MenuItem>
-                    <MenuItem onClick={()=>{handleClose();setDeleteFileModal(true);setDeleteCount('single')}}>
-                    <ListItemIcon>
-                        <DeleteIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>Delete</ListItemText>
-                </MenuItem>
-            </Menu>
+      {/* ── Body ── */}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress size={26} sx={{ color: T.TEXT_TER }} />
+        </Box>
+      ) : (
+        <Box sx={{ display: desktopSplit ? 'flex' : 'block', flexGrow: 1, overflow: 'hidden' }}>
 
+          {/* List column */}
+          {!(isMob && mobileDetail) && (
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+              {pinnedDocs.length > 0 && !search && (
+                <Box sx={{ mb: 2.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                    <StarIcon sx={{ fontSize: 14, color: '#FFB74D' }} />
+                    <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: T.TEXT_TER }}>
+                      Pinned
+                    </Typography>
+                  </Box>
+                  {cardGrid(pinnedDocs)}
+                </Box>
+              )}
 
-            <div dir="" style={{marginTop:'-5px' }} className={Style.mainContainer}>
-                <Row>
-                    {/* <Col style={{ height:'100%', maxHeight:'100%'}} xs={0} md={0} lg={3} xl={3} xxl={2}>
-                        <div >
-                            <div style={{minHeight: '100vh'}} className={Style.leftSizeMenu}>
-                                <ul>
-                                    <li style={selectedSideMenu === 'home'?{color:'black'}:null} onClick={()=>{setSelectedSideMenu('home')}}>Home</li>
-                                    <li>files</li>
-                                    <li>Recent</li>
-                                    <li>Photos</li>
-                                    <li>Starred</li>
-                                    <li>Shared</li>
-                                    <li>Shared</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </Col> */}
-                        <div style={{margin:'0px auto 0px auto', left:'5%' ,textAlign:'center', position:'absolute'}}><BottomUploadList></BottomUploadList></div>
-                    <Col style={{display:'flex' , minHeight: '100vh' , overflowY:'none'}} xs={12} md={12} lg={12} xl={12} xxl={12}>
-                        <div className={Style.fileMainDiv}>
-                            <div className={Style.routeDiv}><span style={{cursor:'pointer'}} onClick={()=>{history.push('/files')}}>XFILE</span><span style={{textAlign:'left' , fontFamily:'YekanLight', fontSize:'22px' , padding:'0px 0px 0px 5px'}}>
-                                {route.map(e=>{return(<span style={{cursor:'pointer'}} onClick={()=>{history.push(`/files${e}`)}}>/{getLastPart(e)}</span>)})}
-                            </span></div>
-                            
-                            <div className='searchBar'>
-                                <div style={{backgroundColor:'#e6e6e6',padding: '0px 0px 0px 6px', display:'flex',justifyContent:'center', alignItems:'center', height:'35px',borderTopLeftRadius:'5px',borderBottomLeftRadius:'5px'}}>
-                                    <Search sx={{color:"black" , fontSize:'22px'}}></Search>
-                                </div>
-                                <input placeholder="Search here..."></input>
-                                <div style={{backgroundColor:'rgb(84, 84, 84)',padding: '10px 0px 0px 0x', width:'65px', display:'flex',justifyContent:'center', alignItems:'center', height:'35px',borderTopRightRadius:'5px',borderBottomRightRadius:'5px'}}>
-                                    <AutoFixHighIcon sx={{ fontSize:'22px' ,color:'white' , marginRight:'0px'}}></AutoFixHighIcon>
-                                </div>
-                            </div>
-                            
-                            <div className={Style.topSec}>
-                                <div className={Style.funcBtn}>
-                                    <input
-                                        type="file"
-                                        name="file"
-                                        style={{ display: 'none' }}
-                                        ref={fileInputRef}
-                                        multiple
-                                        onChange={handleFileChange}
-                                    />
-                                    <botton onClick={handleFileSelect} className='btnWithIcon'>
-                                        <span>Upload</span>
-                                        <Upload></Upload>
-                                    </botton>
-                                    <botton style={{marginLeft:'10px'}} onClick={()=>{setNewFileModal(true);setNewFolderType('mainNewFolderBtn')}} className='btnWithIconOutLine'>
-                                        <span>New Folder</span>
-                                        <Add></Add>
-                                    </botton>
-                                    <div style={{marginLeft:'10px'}}>
-                                        select all:
-                                        <Checkbox onClick={()=>{dispatch(actions.selectAll())}}  color="default" />
-                                    </div>
+              {filteredDocs.length === 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, py: 8, opacity: 0.4 }}>
+                  <InsertDriveFileIcon sx={{ fontSize: 42, color: T.TEXT_TER }} />
+                  <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_SEC }}>
+                    {search ? 'No matches' : 'This folder is empty'}
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                    <Checkbox size="small" checked={isSelectMode}
+                      indeterminate={isSelectMode && selectedItems.length < allDocs.length}
+                      onClick={() => dispatch(actions.selectAll())}
+                      sx={{ p: '4px', color: T.TEXT_TER, '&.Mui-checked': { color: T.TEXT_PRI } }} />
+                    <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>
+                      {filteredDocs.length} item{filteredDocs.length !== 1 ? 's' : ''}
+                    </Typography>
+                  </Box>
+                  {cardGrid(filteredDocs)}
+                </>
+              )}
+            </Box>
+          )}
 
-                                </div>
+          {/* Detail panel (desktop) / drill-down (mobile) */}
+          {desktopSplit ? (
+            <Box sx={{ width: selectedEntry ? 380 : 0, flexShrink: 0, borderLeft: selectedEntry ? `1px solid ${T.BD}` : 'none',
+              overflow: 'hidden', transition: 'width 0.15s' }}>
+              {selectedEntry && (
+                <FileDetailPanel entry={selectedEntry} pinned={isPinned(selectedEntry.file || selectedEntry.doc)}
+                  onClose={closeDetail}
+                  onRename={(t, n) => openRename(t, n)} onMove={openMove} onCopy={openCopy}
+                  onShare={openShare} onDelete={openDelete} onDownload={handleDownload}
+                  onTogglePin={() => togglePin((selectedEntry.file || selectedEntry.doc)._id, selectedEntry.file ? 'file' : 'folder')}
+                />
+              )}
+            </Box>
+          ) : (
+            mobileDetail && selectedEntry && (
+              <Box sx={{ position: 'fixed', inset: '60px 0 0 0', bgcolor: T.APP_BG, zIndex: 10, display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 1, borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
+                  <IconButton onClick={closeDetail} size="small" sx={{ color: T.TEXT_SEC }}>
+                    <ArrowBackIcon sx={{ fontSize: 20 }} />
+                  </IconButton>
+                  <Typography sx={{ fontSize: '0.875rem', color: T.TEXT_SEC, ml: 1 }}>Back</Typography>
+                </Box>
+                <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                  <FileDetailPanel entry={selectedEntry} pinned={isPinned(selectedEntry.file || selectedEntry.doc)}
+                    panelMode={false} onClose={closeDetail}
+                    onRename={(t, n) => openRename(t, n)} onMove={openMove} onCopy={openCopy}
+                    onShare={openShare} onDelete={openDelete} onDownload={handleDownload}
+                    onTogglePin={() => togglePin((selectedEntry.file || selectedEntry.doc)._id, selectedEntry.file ? 'file' : 'folder')}
+                  />
+                </Box>
+              </Box>
+            )
+          )}
+        </Box>
+      )}
 
-                                <div style={{position:'absolute'}} className={Style.SelectBtnDiv}>
-                                    <botton onClick={()=>{setSelectFileOnResponsive(!selectFileOnResponsive)}} className={selectFileOnResponsive === false ?'btnOutLine':selectFileOnResponsive === true ?'btnOutLineRed':null}>{selectFileOnResponsive === false ?'Select':selectFileOnResponsive === true ?'Cancel':null}</botton>
-                                </div>
-                                {selectArr.length > 0?
-                                    <div  className={Style.multiSelectActions}>
-                                        <div className={Style.selectedItems}>
-                                            <span>{selectArr.length}</span> item selected
-                                        </div>
-                                        <botton onClick={(event)=>{setAnchorElActions(event.currentTarget)}} className='btnWithIcon'>
-                                            <span>Actions</span>
-                                            <KeyboardArrowDownIcon sx={{ fontSize:'26px'}}></KeyboardArrowDownIcon>
-                                        </botton>
-                                            <botton style={{marginLeft:'10px'}} className='btnWithIconNoText'><ViewListIcon></ViewListIcon></botton>
+      {uploadQueue.length > 0 && <BottomUploadList />}
 
-                                    </div>
-                                :null}
-                            </div>
-                            <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)'}}></Divider>
-                            {selectFileOnResponsive === true?
-                                <div className={Style.gridOvDiv}>
-                                    {/* <h4>Files</h4> */}
-                                    <div style={{marginLeft:'0px' , fontSize:'14px', margin:'0px auto 0px 0px'}}>
-                                        select all:
-                                        <Checkbox onClick={()=>{dispatch(actions.selectAll())}}  color="default" />
-                                    </div>
-                                    <div>
-                                        selected:{selectArr.length}
-                                    </div>
-                                </div>
-                            :null}        
-                            {loading === true?
-                                <div style={{display:'flex' , justifyContent:'center' , alignItems:'center' , height:'78vh' , overflowY:'hidden'}}>
-                                    <Loader width='60px' color='black'></Loader>
-                                </div>
-                            :
-                                <div className={Style.innerScroll}>
-                                    <div style={{width:'100%'}} id="gallery--getting-started" >
-                                        <Grid   columns={{ xs: 4, sm: 6, md: 8 , lg:12  }} sx={{ flexGrow: 1 }} rowSpacing={1} container spacing={1} item>
-                                            {currentDisplay.docs !== undefined ? currentDisplay.docs.map((e  , i)=>{
-                                                if(e.file !== undefined){
-                                                    if(e.file.format === 'jpg' || e.file.format === 'JPG' || e.file.format === 'png' ||e.file.format === 'svg' || e.file.format === 'jpeg'){
-                                                        return(
-                                                            <Grid    key={i} item xs={2} >
-                                                                <div   className='imageDivForFileFolder'>
-                                                                    <div style={{height:'fit-container'}}>
-                                                    
-                                                                        {/* <div className={Style.fileIconDiv}>
-                                                                            <FileIcon  extension={e.file.format} {...defaultStyles[e.file.format]} />
-                                                                        </div> */}
-                                                                            <a className={Style.linkImg} href={`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`} 
-                                                                                data-pswp-width={e.dim.width} 
-                                                                                data-pswp-height={e.dim.height} 
-                                                                                target="_blank">
-                                                                                <img style={{maxWidth:'130px'}} src={`${axiosGlobal.defaultTargetApi}/uploads/thumb-${e.file.metaData.filename}`} className='galleryImgForFileFolder'></img>
-                                                                            </a>
-                                                                        <div style={{padding:'5px 0px 0px 0px'}} className='fileNameForFileFolder'>{truncateString(e.file.metaData.originalname,30)}</div>
-                                                                        <div className='subToolSectionForFileFolder'>
-                                                                            <div className={Style.menuNormal} style={{float:'right'}}>
-                                                                                <IconButton
-                                                                                    aria-label="more"
-                                                                                    id="long-button"
-                                                                                    aria-controls={open ? 'long-menu' : undefined}
-                                                                                    aria-expanded={open ? 'true' : undefined}
-                                                                                    aria-haspopup="true"
-                                                                                    onClick={(event)=>{setAnchorEl(event.currentTarget);setRenameFolder(e.file.name); setFileFolderIdType({type:'file',id:e.file._id});setDownloadPath(e.file._id)}}
-                                                                                >
-                                                                                    <MoreVertIcon />
-                                                                                </IconButton>
-                                                                            </div>
-                                                                            {selectFileOnResponsive === false?                                                                    
-                                                                                <div className={Style.menuResponsive} style={{float:'right'}}>
-                                                                                    <IconButton
-                                                                                        aria-label="more"
-                                                                                        id="long-button"
-                                                                                        aria-controls={open ? 'long-menu' : undefined}
-                                                                                        aria-expanded={open ? 'true' : undefined}
-                                                                                        aria-haspopup="true"
-                                                                                        onClick={(event)=>{setAnchorEl(event.currentTarget);setRenameFolder(e.file.name); setFileFolderIdType({type:'file',id:e.file._id});setDownloadPath(e.file._id)}}
-                                                                                    >
-                                                                                        <MoreVertIcon />
-                                                                                    </IconButton>
-                                                                                </div>
-                                                                            :selectFileOnResponsive === true?                                                                    
-                                                                                <div  className={Style.checkBoxDivSelect} style={{ float:'left'}}>
-                                                                                    <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.file._id , type:'file'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.file._id}).length>0?true:false} color="default" />
-                                                                                </div>
-                                                                            :null}
-                                                                            <div className={Style.checkBoxDiv} style={{float:'left' , zIndex:'1000'}}>
-                                                                                <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.file._id , type:'file'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.file._id}).length>0?true:false} color="default" />
-                                                                            </div>
-                                                                        </div>
-                                                                        {/* <div className={Style.fileType}>
-                                                                            <Image sx={{color:'white' , fontSize:'20px'}}></Image>
-                                                                        </div> */}
-                                                                    </div>
-                                                                </div>
-                                                            </Grid> 
-                                                        )
-                                                    }else if(e.file.format === 'mp4'){
-                                                        return(
-                                                            <Grid  key={i} item xs={2}>
-                                                                <div onClick={()=>{setShowVideo(true)
-                                                                    setTheVideo(`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`)}} 
-                                                                    className='imageDivForFileFolder'>
-                                                                    {/* <div className={Style.fileIconDiv}>
-                                                                        <FileIcon  extension={e.file.format} {...defaultStyles[e.file.format]} />
-                                                                    </div> */}
-                                                                    <video style={{zIndex:'1000' , maxHeight:'90px'}} width='100%'>
-                                                                        <source src={`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`} type="video/mp4" />
-                                                                    </video>
-                                                                    {/* <VideoPlayer videoUrl={`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`}></VideoPlayer> */}
-                                                                    {/* <img src={`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`} className={Style.galleryImg}></img> */}
-                                                                    <div style={{padding:'5px 0px 0px 0px'}} className='fileNameForFileFolder'>{truncateString(e.file.metaData.originalname,30)}</div>
-                                                                    <div className='subToolSectionForFileFolder'>
-                                                                        <div className={Style.menuNormal} style={{ float:'right'}}>
-                                                                            <IconButton
-                                                                                aria-label="more"
-                                                                                id="long-button"
-                                                                                aria-controls={open ? 'long-menu' : undefined}
-                                                                                aria-expanded={open ? 'true' : undefined}
-                                                                                aria-haspopup="true"
-                                                                                onClick={(event)=>{setAnchorEl(event.currentTarget);setRenameFolder(e.file.name);setFileFolderIdType({type:'file',id:e.file._id});setDownloadPath(e.file._id)}}
-                                                                            >
-                                                                                <MoreVertIcon />
-                                                                            </IconButton>
-                                                                        </div>
-                                                                        {selectFileOnResponsive === false? 
-                                                                            <div className={Style.menuResponsive} style={{float:'right'}}>
-                                                                                <IconButton
-                                                                                    aria-label="more"
-                                                                                    id="long-button"
-                                                                                    aria-controls={open ? 'long-menu' : undefined}
-                                                                                    aria-expanded={open ? 'true' : undefined}
-                                                                                    aria-haspopup="true"
-                                                                                    onClick={(event)=>{setAnchorEl(event.currentTarget);setRenameFolder(e.file.name);setFileFolderIdType({type:'file',id:e.file._id});setDownloadPath(e.file._id)}}
-                                                                                >
-                                                                                    <MoreVertIcon />
-                                                                                </IconButton>
-                                                                            </div>
-                                                                        :selectFileOnResponsive === true?
-                                                                            <div className={Style.checkBoxDivSelect} style={{float:'left' , zIndex:'1000'}}>
-                                                                                <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.file._id , type:'file'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.file._id}).length>0?true:false} color="default" />
-                                                                            </div>
-                                                                        :null}
-                                                                        <div className={Style.checkBoxDiv} style={{float:'left' , zIndex:'1000'}}>
-                                                                            <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.file._id , type:'file'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.file._id}).length>0?true:false} color="default" />
-                                                                        </div>
-                                                                    </div>
-                                                                    {/* <div className={Style.fileType}>
-                                                                        <Image sx={{color:'white' , fontSize:'20px'}}></Image>
-                                                                    </div> */}
-                                                                </div>
-                                                            </Grid> 
-                                                        )
-                                                    }
-                                                    else if(e.file.format === 'pdf'){
-                                                        return(
-                                                            <Grid key={i} item xs={2}>
-                                                                <div  onClick={()=>{setPdfView(true); setThePdf(`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`)}}  className='imageDivForFileFolder'>
-                                                                        <FileIcon  extension={e.file.format} {...defaultStyles[e.file.format]} />
-                                                                    {/* <img src={FlagPlaceholder} className={Style.galleryImg}></img> */}
-                                                                    <div style={{padding:'5px 0px 0px 0px'}} className='fileNameForFileFolder'>{truncateString(e.file.metaData.originalname,30)}</div>
-                                                                    <div className={Style.subToolSection}>
-                                                                        <div className={Style.menuNormal} style={{ float:'right'}}>
-                                                                            <IconButton
-                                                                                aria-label="more"
-                                                                                id="long-button"
-                                                                                aria-controls={open ? 'long-menu' : undefined}
-                                                                                aria-expanded={open ? 'true' : undefined}
-                                                                                aria-haspopup="true"
-                                                                                onClick={(event)=>{setAnchorEl(event.currentTarget);setRenameFolder(e.file.name); setFileFolderIdType({type:'file',id:e.file._id});setDownloadPath(e.file._id)}}
-                                                                            >
-                                                                                <MoreVertIcon />
-                                                                            </IconButton>
-                                                                        </div>
-                                                                        {selectFileOnResponsive === false? 
-                                                                            <div className={Style.menuResponsive}  style={{ float:'right'}}>
-                                                                                <IconButton
-                                                                                    aria-label="more"
-                                                                                    id="long-button"
-                                                                                    aria-controls={open ? 'long-menu' : undefined}
-                                                                                    aria-expanded={open ? 'true' : undefined}
-                                                                                    aria-haspopup="true"
-                                                                                    onClick={(event)=>{setAnchorEl(event.currentTarget);setRenameFolder(e.file.name); setFileFolderIdType({type:'file',id:e.file._id});setDownloadPath(e.file._id)}}
-                                                                                >
-                                                                                    <MoreVertIcon />
-                                                                                </IconButton>
-                                                                            </div>
-                                                                        :selectFileOnResponsive === true?
-                                                                            <div className={Style.checkBoxDivSelect} style={{ float:'left'}}>
-                                                                                <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.file._id , type:'file'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.file._id}).length>0?true:false} color="default" />
-                                                                            </div>
-                                                                        :null}
-                                                                        <div className={Style.checkBoxDiv} style={{ float:'left'}}>
-                                                                            <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.file._id , type:'file'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.file._id}).length>0?true:false} color="default" />
-                                                                        </div>
-                                                                    </div>
-                                                                    {/* <div className={Style.fileType}>
-                                                                        <Image sx={{color:'white' , fontSize:'20px'}}></Image>
-                                                                    </div> */}
-                                                                </div>
-                                                            </Grid>  
-                                                        )
-                                                    }
-                                                    return(
-                                                        <Grid  item xs={2} key={i} >
-                                                            <div   className='imageDivForFileFolder'>
-                                                                    <FileIcon  extension={e.file.format} {...defaultStyles[e.file.format]} />
-
-                                                                {/* <img src={FlagPlaceholder} className={Style.galleryImg}></img> */}
-                                                                <div style={{padding:'5px 0px 0px 0px'}} className={Style.fileName}>{truncateString(e.file.metaData.originalname,30)}</div>
-                                                                <div className={Style.subToolSection}>
-                                                                    <div className={Style.menuNormal} style={{ float:'right'}}>
-                                                                        <IconButton
-                                                                            aria-label="more"
-                                                                            id="long-button"
-                                                                            aria-controls={open ? 'long-menu' : undefined}
-                                                                            aria-expanded={open ? 'true' : undefined}
-                                                                            aria-haspopup="true"
-                                                                            onClick={(event)=>{setAnchorEl(event.currentTarget);setRenameFolder(e.file.name); setFileFolderIdType({type:'file',id:e.file._id}); setDownloadPath(e.file._id)}}
-                                                                        >
-                                                                            <MoreVertIcon />
-                                                                        </IconButton>
-                                                                    </div>
-                                                                    {selectFileOnResponsive === false? 
-                                                                        <div className={Style.menuResponsive} style={{ float:'right'}}>
-                                                                            <IconButton
-                                                                                aria-label="more"
-                                                                                id="long-button"
-                                                                                aria-controls={open ? 'long-menu' : undefined}
-                                                                                aria-expanded={open ? 'true' : undefined}
-                                                                                aria-haspopup="true"
-                                                                                onClick={(event)=>{setAnchorEl(event.currentTarget);setRenameFolder(e.file.name); setFileFolderIdType({type:'file',id:e.file._id});setDownloadPath(e.file._id)}}
-                                                                            >
-                                                                                <MoreVertIcon />
-                                                                            </IconButton>
-                                                                        </div>
-                                                                    :selectFileOnResponsive === true?
-                                                                        <div className={Style.checkBoxDivSelect} style={{ float:'left'}}>
-                                                                            <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.file._id , type:'file'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.file._id}).length>0?true:false} color="default" />
-                                                                        </div>
-                                                                    :null}
-                                                                    <div className={Style.checkBoxDiv} style={{ float:'left'}}>
-                                                                        <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.file._id , type:'file'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.file._id}).length>0?true:false} color="default" />
-                                                                    </div>
-                                                                </div>
-                                                                {/* <div className={Style.fileType}>
-                                                                    <Image sx={{color:'white' , fontSize:'20px'}}></Image>
-                                                                </div> */}
-                                                            </div>
-                                                        </Grid> 
-                                                    )
-
-                                                }else if(e.doc !== undefined){
-                                                    return(
-                                                        <Grid item xs={2} sm='2' md='2' xl='1'  key={i} >
-                                                            <div key={i} onClick={()=>{history.push(location.pathname === '/'?`/files/${decodeURI(e.doc.name)}`:`${location.pathname}/${decodeURI(e.doc.name)}`); dispatch(actions.setFolder({id:e.doc._id , name:e.doc.name , index:i}));}} style={{margin:'2px'}} className='folderDivForFolder'>
-                                                                <Folder className='folderIconForFolder'></Folder>
-                                                                <div className='fileNameForFileFolder'>{truncateString(e.doc.name,30)}</div>
-                                                                <div className='subToolSectionForFileFolder'>
-                                                                    <div className={Style.menuNormal} style={{float:'right'}}>
-                                                                        <IconButton
-                                                                            aria-label="more"
-                                                                            id="long-button"
-                                                                            aria-controls={open ? 'long-menu' : undefined}
-                                                                            aria-expanded={open ? 'true' : undefined}
-                                                                            aria-haspopup="true"
-                                                                            onClick={(event)=>{ event.stopPropagation();setAnchorEl(event.currentTarget);setRenameFolder(e.doc.name); setFileFolderIdType({type:'folder',id:e.doc._id})}}
-                                                                        >
-                                                                            <MoreVertIcon />
-                                                                        </IconButton>
-                                                                    </div>
-                                                                    {selectFileOnResponsive === false? 
-                                                                        <div className={Style.menuResponsive} style={{ float:'right'}}>
-                                                                            <IconButton
-                                                                                aria-label="more"
-                                                                                id="long-button"
-                                                                                aria-controls={open ? 'long-menu' : undefined}
-                                                                                aria-expanded={open ? 'true' : undefined}
-                                                                                aria-haspopup="true"
-                                                                                onClick={(event)=>{ event.stopPropagation();setAnchorEl(event.currentTarget);setRenameFolder(e.doc.name); setFileFolderIdType({type:'folder',id:e.doc._id})}}
-                                                                            >
-                                                                                <MoreVertIcon />
-                                                                            </IconButton>
-                                                                        </div>
-                                                                    :selectFileOnResponsive === true?
-                                                                        <div className={Style.checkBoxDivSelect} style={{ float:'left'}}>
-                                                                            <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.doc._id , type:'folder'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.doc._id}).length>0?true:false} color="default" />
-                                                                        </div>
-                                                                    :null}
-                                                                    <div className={Style.checkBoxDiv} style={{ float:'left'}}>
-                                                                        <Checkbox onClick={(event)=>{dispatch(actions.selectUnselect({id:e.doc._id , type:'folder'}));event.stopPropagation()}}  checked={selectArr.filter(v=>{return v.id === e.doc._id}).length>0?true:false} color="default" />
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </Grid>
-                                                    )
-
-                                                }                   
-                                            }):null}
-            
-                                        </Grid>
-                                    </div>
-                                </div>
-                            }
-                            
-                        </div>
-                     
-                        {rightSideMenuExpend.status === false?
-                        
-                            <div className={Style.minimizedState} >
-                                <ul>          
-                                    <Tooltip arrow style={{fontSize:'20px'}} title="open details panel" placement="left-start">
-                                        <li onClick={()=>{setRightSideMenuExpend({status:true , choosen:rightSideMenuExpend.choosen})}} className={Style.showCloseRightSideMenu}><ArrowBack sx={{fontSize:'24px'}}></ArrowBack></li>
-                                    </Tooltip>
-                                    <Tooltip arrow style={{fontSize:'20px'}} title="info" placement="left-start">
-                                        <li onClick={()=>{setRightSideMenuExpend({status:true , choosen:'info'})}} className={Style.normalRightSideMenu}><Info sx={{fontSize:'24px'}}></Info></li>
-                                    </Tooltip>
-                                    <Tooltip arrow style={{fontSize:'20px'}} title="pinned" placement="left-start">
-                                        <li onClick={()=>{setRightSideMenuExpend({status:true , choosen:'pinned'})}} className={Style.normalRightSideMenu}><Star sx={{fontSize:'24px'}}></Star></li>
-                                    </Tooltip>
-                                    <Tooltip arrow style={{fontSize:'20px'}} title="activity" placement="left-start">
-                                        <li onClick={()=>{setRightSideMenuExpend({status:true , choosen:'activity'})}} className={Style.normalRightSideMenu}><LocalActivity sx={{fontSize:'24px'}}></LocalActivity></li>
-                                    </Tooltip>
-                                </ul>
-                            </div>
-                        :rightSideMenuExpend.status === true ?
-                            <div className={Style.expendedRightSideDiv}>
-                                <ul style={{height:'100%'}}>          
-                                        <li className={Style.showCloseRightSideMenuExp}>
-                                            <div style={{display:'inline-block' , padding:'0px 0px 0px 15px' , fontFamily:'YekanBold' , fontSize:'15px' , width:'50%' , textAlign:'left'}}>
-                                                XFILE
-                                            </div>
-                                            <div  style={{display:'inline-block' , width:'50%'}}>
-                                                <button onClick={()=>{setRightSideMenuExpend({status:false , choosen:rightSideMenuExpend.choosen})}} className={Style.expendedRighSideBackBtn}>
-                                                    <ArrowForward sx={{fontSize:'24px'}}></ArrowForward>
-                                                </button>
-                                            </div>
-                                        </li>
-                                        <li style={{height:rightSideMenuExpend.choosen === 'info'?'100%':'63px' , minHeight:'0px'}} onClick={()=>{setRightSideMenuExpend({status:true , choosen:'info'})}} className={Style.normalRightSideMenuExp}>
-                                            <div className={Style.expdBtns}><Info sx={{fontSize:'24px'}}></Info><span style={{marginLeft:'1px'}}>info</span></div>
-                                            <div style={{height:'100%' , display:rightSideMenuExpend.choosen === 'info'?'block':'none'}}>
-                                                {/* <div className={Style.placeholderText}>
-                                                    select files/folders to see the details and add tags to theme!
-                                                </div> */}
-                                                <div className={Style.infoDiv}>
-                                                    {/* <div className={Style.selectedFiles}>
-                                                        <div style={{margin:'0px auto 0px auto'}}>14<span>selected</span></div>
-                                                    </div> */}
-                                                    {/* <div className={Style.selectedFilesItself}>
-                                                        <img src={FlagPlaceholder}></img>
-                                                    </div> */}
-                                                    <div className={Style.selectedFilesItself}>
-                                                        <Folder className={Style.folderIconInfo}></Folder>
-                                                    </div>
-                                                    <div className={Style.searchInpDiv}>
-                                                        <div style={{padding:'0px'}} className={Style.rightSideListTitle}>Tags</div>
-                                                        <SearchInputForTags list={tagsForList}  setChipChangeRefresh={setChipChangeRefresh} oneSelectedItemsTag={oneSelectedItemsTag} setOneSelectedItemsTag={setOneSelectedItemsTag} selectedTagsForFile={selectedTagsForFile} setSelectedTagsForFile={setSelectedTagsForFile}></SearchInputForTags>
-                                                        <div style={{marginTop:'10px' , display:'flex' , flexWrap:'wrap'}}>
-                                                            {tagsToShow.map((e , i)=>{
-                                                                return(
-                                                                    <Chip
-                                                                        key={i}
-                                                                        sx={{
-                                                                        margin:'2px',
-                                                                        '& .MuiChip-deleteIcon:hover': {
-                                                                            color: 'red',
-                                                                        },
-                                                                        '& .MuiChip-label': {
-                                                                            padding: '2px 8px 0px 8px',
-                                                                            fontSize:'12px'
-                                                                        },
-                                                                        }}
-                                                                        label={e.tag} onDelete={()=>{dispatch(deleteTag({authCtx , axiosGlobal ,tagId:e._id ,selected:selectArr[0]}));dispatch(actions.removeTag(e._id))}} 
-                                                                    />
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                
-                                                        <div> 
-                                                            {selectArr.length === 1 && selectArr[0].type === 'file' && oneSelectedItem.file !== undefined? 
-                                                                
-                                                                <div className={Style.fileDetails}>
-                                                                    <div className={Style.rightSideListTitle}>Properties</div>
-                                                                    <div className={Style.fileDetailsTitleDiv}>
-                                                                        <ul>
-                                                                            <li><div>name</div><span>{oneSelectedItem.file.metaData.originalname}</span></li>
-                                                                            <li><div>size</div><span>{sizeInMb(oneSelectedItem.file.metaData.size)}MB</span></li>
-                                                                            <li><div>Modified</div><span>{moment(oneSelectedItem.file.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}</span></li>
-                                                                            <li><div>type</div><span>{oneSelectedItem.file.format}</span></li>
-                                                                        </ul>
-                                                                    </div>
-                                                                </div>
-                                                            :selectArr.length === 1 && selectArr[0].type === 'folder'?
-                                                                <div className={Style.fileDetails}>
-                                                                    <div className={Style.rightSideListTitle}>Properties</div>
-                                                                    <div className={Style.fileDetailsTitleDiv}>
-                                                                        <ul>
-                                                                            <li><div>name</div><span>{oneSelectedItem.name}</span></li>
-                                                                            <li><div>Modified</div><span>{moment(oneSelectedItem.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}</span></li>
-                                                                        </ul>
-                                                                    </div>
-                                                                </div>
-                                                            : selectArr.length > 1?null:null}
-                                                        </div>
-                                                  
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li style={{height:rightSideMenuExpend.choosen === 'pinned'?'100%':'63px' , minHeight:'0px'}} onClick={()=>{setRightSideMenuExpend({status:true , choosen:'pinned'})}} className={Style.normalRightSideMenuExp}>
-                                            <div className={Style.expdBtns}><Star sx={{fontSize:'24px'}}></Star><span style={{marginLeft:'1px'}}>pinned</span></div>
-                                        </li>
-                                        <li style={{height:rightSideMenuExpend.choosen === 'activity'?'100%':'62px' , minHeight:'0px'}} onClick={()=>{setRightSideMenuExpend({status:true , choosen:'activity'})}} className={Style.normalRightSideMenuExp}>
-                                            <div className={Style.expdBtns}><LocalActivity sx={{fontSize:'24px'}}></LocalActivity><span >activity</span></div>
-                                        </li>
-                                </ul>
-                            </div>
-                        :null} 
-                                          
-                    </Col>
-                </Row>
-
-            </div>
-        </Fragment>
-    )
+      <NewFileModal newFileModal={newFileModal} setNewFileModal={setNewFileModal} newFolderType={newFolderType} />
+      <RenameModal openRenameModal={openRenameModal} setOpenRenameModal={setOpenRenameModal}
+        fileFolderIdType={fileFolderIdType} renameFolder={renameFolder} setRenameFolder={setRenameFolder} />
+      <DeleteModal deleteFileModal={deleteFileModal} setDeleteFileModal={setDeleteFileModal}
+        deleteCount={deleteCount} fileFolderIdType={fileFolderIdType} />
+      <FilePickerModal openFilePicker={openFilePicker} setOpenFilePicker={setOpenFilePicker}
+        filePickerCount={filePickerCount} copyMoveType={copyMoveType}
+        setNewFileModal={setNewFileModal} setNewFolderType={setNewFolderType} />
+      <ShareTheLink openShareLink={openShareLink} setOpenShareLink={setOpenShareLink}
+        filePickerCount={{ idAndType: filePickerCount.count === 'single' ? [filePickerCount.idAndType] : selectedItems }}
+        setSuccessToast={setSuccessToast} setNewFileModal={setNewFileModal} setNewFolderType={setNewFolderType} />
+    </Box>
+  );
 }
-
-
-
-
-const FileMain = (props)=>{
-    return(
-        <Fragment>
-            {ReactDom.createPortal(
-                <FileMainPortal>
-
-                </FileMainPortal>
-                ,
-                document.getElementById('mainFiles')
-                )}
-        </Fragment>
-    )
-}
-export default FileMain;
