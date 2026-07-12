@@ -1,19 +1,29 @@
-import React ,{useState} from "react";
+import React from "react";
 const AxiosGlobal = React.createContext({
     defaultTargetApi:'',
     authTargetApi:'',
     externalLink:'',
     originLink:''
 });
+
+// A host is "local development" when the page is served from localhost or a
+// private LAN IP (phone testing) — anything else is the live deployment.
+const isLocalHost = (host) =>
+    host === 'localhost' || host === '127.0.0.1' ||
+    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
+
 export const AxiosGlobalProvider = (props) =>{
-    // Derived from the page's own host (not hardcoded 'localhost') so the same
-    // build works when opened via localhost, 127.0.0.1, or a LAN IP (e.g. phone
-    // testing at http://192.168.x.x:3000) — the API ports stay fixed, only the
-    // host changes to match whatever host served this page.
     const host = window.location.hostname;
-    const contextValue ={
-        defaultTargetApi:`http://${host}:3003`,
-        authTargetApi:`http://${host}:3002`,
+    const local = isLocalHost(host);
+
+    // Production (launched 2026-07-12): the app lives at xms.lazulitemarble.com
+    // and talks to the two HTTPS APIs below (reverse-proxied to local ports
+    // 7130/7256 on the server). Local dev keeps host-based URLs so the same
+    // build works via localhost or a LAN IP.
+    const contextValue = {
+        defaultTargetApi: local ? `http://${host}:7130` : 'https://api.lazulitemarble.com',
+        authTargetApi:    local ? `http://${host}:7256` : 'https://auth.lazulitemarble.com',
         externalLink:'https://xms.lazulitemarble.com',
         originLink:window.location.origin
     }
