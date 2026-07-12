@@ -27,7 +27,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
-import { actions, setFilesAsync, uploadFile, downloadFileFolder } from '../../store/store';
+import { actions, setFilesAsync, uploadFile, startDownload } from '../../store/store';
 
 import FileCard from './fileCard';
 import FileDetailPanel from './fileDetailPanel';
@@ -37,7 +37,7 @@ import RenameModal from './renameModal';
 import DeleteModal from './deleteModal';
 import ShareTheLink from './shareTheLink';
 import FilePickerModal from './filePickerModal';
-import BottomUploadList from './bottomUploadList';
+import TransferCenter from './transferCenter';
 import SearchInputForTags from './searchInputForTags';
 
 // ── File Manager — Phase 9 makeover ────────────────────────────────────────────
@@ -203,8 +203,27 @@ export default function FileMain() {
   const openCopyMulti = () => { setFilePickerCount({ count: 'multi', idAndType: null }); setCopyMoveType('copy'); setOpenFilePicker(true); };
   const openShare = (target) => { setFilePickerCount({ count: 'single', idAndType: target }); setOpenShareLink(true); };
   const openShareMulti = () => { setFilePickerCount({ count: 'multi', idAndType: null }); setOpenShareLink(true); };
-  const handleDownload = (target) => dispatch(downloadFileFolder({ authCtx, axiosGlobal, selected: [target] }));
-  const handleDownloadMulti = () => dispatch(downloadFileFolder({ authCtx, axiosGlobal, selected: selectedItems }));
+
+  // A single FILE downloads directly (exact original name, no zip wrapper);
+  // anything else (a folder, or more than one item) goes through the zip
+  // route. Both are tracked in the transfer center, not fire-and-forget.
+  const handleDownload = (target, name) => {
+    if (target.type === 'file') {
+      dispatch(startDownload({ authCtx, axiosGlobal, kind: 'single', fileId: target.id, label: name || 'file' }));
+    } else {
+      dispatch(startDownload({ authCtx, axiosGlobal, kind: 'zip', selected: [target], label: `${name || 'folder'}.zip`, itemCount: 1 }));
+    }
+  };
+  const handleDownloadMulti = () => {
+    if (selectedItems.length === 1 && selectedEntry?.file) {
+      handleDownload({ type: 'file', id: selectedEntry.file._id }, selectedEntry.file.name);
+      return;
+    }
+    dispatch(startDownload({
+      authCtx, axiosGlobal, kind: 'zip', selected: selectedItems,
+      label: `download-${selectedItems.length}-items.zip`, itemCount: selectedItems.length,
+    }));
+  };
 
   // ── Pinned strip + grid (folders first) ──────────────────────────────────
   const allDocs = useMemo(() => currentDisplay?.docs || [], [currentDisplay]);
@@ -444,7 +463,7 @@ export default function FileMain() {
         </Box>
       )}
 
-      {uploadQueue.length > 0 && <BottomUploadList />}
+      <TransferCenter />
 
       <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
 

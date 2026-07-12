@@ -167,7 +167,7 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
           )}
           {!isFolder && (
             <Tooltip title="Download">
-              <IconButton size="small" onClick={() => onDownload({ type: kind, id: doc._id })} sx={{ color: T.TEXT_SEC }}>
+              <IconButton size="small" onClick={() => onDownload({ type: kind, id: doc._id }, doc.name)} sx={{ color: T.TEXT_SEC }}>
                 <DownloadIcon sx={{ fontSize: 17 }} />
               </IconButton>
             </Tooltip>

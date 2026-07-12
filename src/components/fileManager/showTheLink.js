@@ -28,7 +28,6 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import FlagPlaceholder from '../../assets/imagePlaceHolder.png';
 import Tooltip from '@mui/material/Tooltip';
 import SearchInputForTags from "./searchInputForTags";
-import BottomUploadList from "./bottomUploadList";
 import ContentCut from '@mui/icons-material/ContentCut';
 import ContentCopy from '@mui/icons-material/ContentCopy';
 import ContentPaste from '@mui/icons-material/ContentPaste';

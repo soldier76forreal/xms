@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import Dialog from '@mui/material/Dialog';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
+import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
@@ -24,9 +26,34 @@ export const resolveMediaKind = (nameOrMime = '') => {
 const MediaViewer = ({ open, onClose, media }) => {
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const [downloading, setDownloading] = useState(false);
   if (!media) return null;
 
   const { url, name = '', kind = resolveMediaKind(name) } = media;
+
+  // /uploads/* is served by express.static with no auth, so a plain fetch
+  // works. A bare <a download href=CROSS_ORIGIN_URL> is what this replaces —
+  // browsers silently IGNORE the download attribute on cross-origin links
+  // (api runs on a different port/origin than the frontend), so it just
+  // navigated/opened the file instead of saving it.
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = name || 'download';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(objUrl);
+    } catch (_) {
+      window.open(url, '_blank', 'noopener');   // last-resort fallback only
+    }
+    setDownloading(false);
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
@@ -43,9 +70,9 @@ const MediaViewer = ({ open, onClose, media }) => {
           color: isDark ? 'rgba(255,255,255,0.85)' : 'text.primary' }}>
           {name || 'Preview'}
         </Typography>
-        <IconButton size="small" component="a" href={url} download={name || true}
+        <IconButton size="small" onClick={handleDownload} disabled={downloading}
           sx={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)' }}>
-          <DownloadIcon sx={{ fontSize: 17 }} />
+          {downloading ? <CircularProgress size={15} color="inherit" /> : <DownloadIcon sx={{ fontSize: 17 }} />}
         </IconButton>
         <IconButton size="small" onClick={onClose}
           sx={{ color: isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)' }}>

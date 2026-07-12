@@ -18,7 +18,6 @@ import ThemeCtx from "../../contextApi/themeContext";
 
 import NormalMenuForProfile from './normalMenuForProfile';
 import LeftSideNav from "./leftSideNav";
-import DownloadNavigation from "./downloadNavigation";
 import NotificationCenter from "../../components/users/notificationCenter";
 
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
@@ -96,8 +95,6 @@ const MainNavPortal = (props) => {
 
   return (
     <Fragment>
-      <DownloadNavigation />
-
       <NotificationCenter
         open={notifOpen}
         onClose={() => setNotifOpen(false)}

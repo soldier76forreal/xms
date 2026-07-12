@@ -58,7 +58,7 @@ export const uploadFile = createAsyncThunk('getFilesAndFolders/uploadFile', asyn
           dispatch(actions.setQueueCount({lastCount:i}))
 
           if(uploadQueue[i].uploaded !== true){
-            if(uploadQueue[i].cancel === false){
+            if(uploadQueue[i].cancel === false && uploadQueue[i].paused !== true){
 
               dispatch(actions.updateUploadStatus({index:i , status:true}))
               
@@ -156,51 +156,92 @@ export const newLink = createAsyncThunk('getFilesAndFolders/newLink', async (the
 
 });
 
-export const downloadFileFolder = createAsyncThunk(
-  'getFilesAndFolders/downloadFileFolder',
-  async (theData, { dispatch, rejectWithValue }) => {
-    try {
-      // Start Loading
-      // dispatch(setDownloading(true));
+// ── Download transfer center (Phase 9 follow-up) ──────────────────────────────
+// Mirrors the upload queue's shape/UX: every download (single file OR a
+// zip of a multi/folder selection) is tracked in state.downloadQueue with
+// real progress, a CancelToken (cancel + "pause"), and a retryable failure
+// state — same as uploads. Runs the actual HTTP request; runDownload is the
+// worker, startDownload enqueues + kicks it off (also used for retry/resume).
+export const runDownload = createAsyncThunk('getFilesAndFolders/runDownload', async (theData, { dispatch, getState }) => {
+  const { authCtx, axiosGlobal, id, label } = theData;
+  // Retry/resume only pass {id} — pull the original request shape back off
+  // the queue entry itself rather than requiring every caller to remember it.
+  const queued = getState().downloadQueue.find((d) => d.id === id) || {};
+  const kind     = theData.kind     ?? queued.kind;
+  const selected = theData.selected ?? queued.selected;
+  const fileId   = theData.fileId   ?? queued.fileId;
+  const cancelSource = axios.CancelToken.source();
+  dispatch(actions.setDownloadCancelToken({ id, cancelToken: cancelSource }));
+  dispatch(actions.setDownloadStatus({ id, status: 'downloading' }));
 
+  try {
+    const isSingle = kind === 'single';
+    const config = {
+      method: isSingle ? 'get' : 'post',
+      url: isSingle
+        ? `${axiosGlobal.defaultTargetApi}/files/download/${fileId}`
+        : `${axiosGlobal.defaultTargetApi}/files/downloadFileFolders`,
+      responseType: 'blob',
+      cancelToken: cancelSource.token,
+      onDownloadProgress: (evt) => {
+        // Zip downloads have no Content-Length (size is unknown until the
+        // archive finishes) — X-Total-Size is the ESTIMATED uncompressed
+        // size instead, so progress is capped short of 100% until the
+        // request actually resolves.
+        let total = evt.total;
+        if (!total && evt.target?.getResponseHeader) {
+          const hdr = evt.target.getResponseHeader('X-Total-Size');
+          if (hdr) total = Number(hdr);
+        }
+        const progress = total ? Math.min(99, Math.round((evt.loaded / total) * 100)) : undefined;
+        dispatch(actions.updateDownloadProgress({ id, progress, receivedBytes: evt.loaded, totalBytes: total || 0 }));
+      },
+    };
+    if (!isSingle) {
+      config.data = { selected };
+      config.config = { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } };
+    }
 
-      const response = await theData.authCtx.jwtInst({
-        method: 'get',
-        params: { selected: theData.selected },
-        responseType: "blob",
-        url: `${theData.axiosGlobal.defaultTargetApi}/files/downloadFileFolders`,
-        // We no longer need onDownloadProgress here
-      });
+    const response = await authCtx.jwtInst(config);
 
-      // --- Success: Trigger Browser Download ---
-      const blob = new Blob([response.data], { type: 'application/zip' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
+    const contentDisp = response.headers['content-disposition'];
+    const fileName = contentDisp
+      ? decodeURIComponent(contentDisp.split('filename=')[1]?.replace(/"/g, '') || label)
+      : label;
 
-      const contentDisp = response.headers['content-disposition'];
-      const fileName = contentDisp 
-        ? contentDisp.split('filename=')[1].replace(/"/g, '') 
-        : `download-${Date.now()}.zip`;
+    const blob = new Blob([response.data]);
+    const url  = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
 
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      
-      // Cleanup
-      link.remove();
-      window.URL.revokeObjectURL(url);
-
-    } catch (error) {
-      console.error("Download Error:", error);
-      return rejectWithValue(error.response?.data || "Download failed");
-    } finally {
-      // End Loading regardless of success or failure
-      // dispatch(setDownloading(false));
-      console.log('true')
+    dispatch(actions.updateDownloadProgress({ id, progress: 100, receivedBytes: 0, totalBytes: 0 }));
+    dispatch(actions.setDownloadStatus({ id, status: 'done' }));
+  } catch (error) {
+    if (axios.isCancel(error)) {
+      // setDownloadStatus is set by the pause/cancel action itself (so it can
+      // distinguish "paused" from "canceled") — nothing to do here.
+    } else {
+      dispatch(actions.setDownloadError({ id, msg: error?.response?.data?.message || 'Download failed' }));
     }
   }
-);
+});
+
+export const startDownload = createAsyncThunk('getFilesAndFolders/startDownload', async (theData, { dispatch }) => {
+  const id = theData.id || `dl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  if (!theData.id) {
+    dispatch(actions.enqueueDownload({
+      id, kind: theData.kind, label: theData.label, itemCount: theData.itemCount || 1,
+      selected: theData.selected, fileId: theData.fileId,
+    }));
+  }
+  dispatch(runDownload({ ...theData, id }));
+  return id;
+});
 
 
 
@@ -231,7 +272,7 @@ export const setFilesAsync = createAsyncThunk('getFilesAndFolders/fetchData', as
   
   var temp = []
   await theData.files.forEach(element => {
-    temp.push({uploadType:theData.uploadType ,  uploading:false , cancel:false , cancelToken:axios.CancelToken.source() , file:element, progress:0 , uploaded:null , show:true , error:{status:false , msg:''}})
+    temp.push({uploadType:theData.uploadType ,  uploading:false , cancel:false , paused:false , cancelToken:axios.CancelToken.source() , file:element, progress:0 , uploaded:null , show:true , error:{status:false , msg:''}})
   })
   return temp;
 });
@@ -1042,7 +1083,7 @@ const dataSlice = createSlice({
   name: 'getFilesAndFolders',
   initialState: {
     //------------------------------file manager 
-    currentImageGallery:[], tagsToShow:[], downloadNavMenu:[], tagsForList:[] , refreshTag:0 ,data: [], routeLink:[] , selectedItems:[] , currentDisplay:{} , float:[] , loading: false, error: null , tempDoc:{} , uploadQueue:[] ,routeLinkFilePicker:[] ,currentDisplayFilePicker:{}, floatFilePicker:[] , allTags:[] , refresh:1 , lastQueueCount:0 , onGoingUpload:false , newLinkCreationLoading:false,
+    currentImageGallery:[], tagsToShow:[], downloadNavMenu:[], tagsForList:[] , refreshTag:0 ,data: [], routeLink:[] , selectedItems:[] , currentDisplay:{} , float:[] , loading: false, error: null , tempDoc:{} , uploadQueue:[] , downloadQueue:[] ,routeLinkFilePicker:[] ,currentDisplayFilePicker:{}, floatFilePicker:[] , allTags:[] , refresh:1 , lastQueueCount:0 , onGoingUpload:false , newLinkCreationLoading:false,
     //------------------------------overall assets
     filterCrm:{},
     filterMis:{},
@@ -1316,8 +1357,68 @@ const dataSlice = createSlice({
       state.uploadQueue[action.payload.index].cancel = action.payload.cancel;
       state.uploadQueue[action.payload.index].cancelToken.cancel('upload has been cancelled')
     },
+    // Pause is a DISTINCT state from cancel (own icon/label in the transfer
+    // center) but mechanically the same abort — the File API gives no way to
+    // resume a stream mid-byte-range, so "resume" (see setFileForRetry) just
+    // restarts the same file, exactly like retrying a canceled/failed upload.
+    pauseTheUploading(state , action){
+      const item = state.uploadQueue[action.payload.index];
+      item.uploading = false;
+      item.paused = true;
+      item.cancelToken.cancel('upload paused');
+    },
     cancelToken(state , action){
       state.uploadQueue[action.payload.index].cancelToken = action.payload.token;
+    },
+    // ── Download transfer center ────────────────────────────────────────────
+    enqueueDownload(state, action){
+      state.downloadQueue.push({
+        id: action.payload.id,
+        kind: action.payload.kind,           // 'zip' | 'single'
+        label: action.payload.label,
+        itemCount: action.payload.itemCount || 1,
+        // Persisted so retry/resume can re-fire the SAME request without the
+        // caller having to remember/re-supply what was being downloaded.
+        selected: action.payload.selected || null,   // zip: [{id,type}]
+        fileId: action.payload.fileId || null,        // single: file _id
+        status: 'downloading',               // downloading | paused | done | canceled | error
+        progress: 0,
+        receivedBytes: 0,
+        totalBytes: 0,
+        error: null,
+        cancelToken: null,
+      });
+    },
+    updateDownloadProgress(state, action){
+      const item = state.downloadQueue.find(d => d.id === action.payload.id);
+      if (!item) return;
+      if (action.payload.progress !== undefined) item.progress = action.payload.progress;
+      item.receivedBytes = action.payload.receivedBytes;
+      if (action.payload.totalBytes) item.totalBytes = action.payload.totalBytes;
+    },
+    setDownloadStatus(state, action){
+      const item = state.downloadQueue.find(d => d.id === action.payload.id);
+      if (item) item.status = action.payload.status;
+    },
+    setDownloadCancelToken(state, action){
+      const item = state.downloadQueue.find(d => d.id === action.payload.id);
+      if (item) item.cancelToken = action.payload.cancelToken;
+    },
+    setDownloadError(state, action){
+      const item = state.downloadQueue.find(d => d.id === action.payload.id);
+      if (item) { item.status = 'error'; item.error = action.payload.msg; }
+    },
+    cancelDownload(state, action){
+      const item = state.downloadQueue.find(d => d.id === action.payload.id);
+      if (!item) return;
+      item.status = action.payload.paused ? 'paused' : 'canceled';
+      item.cancelToken?.cancel?.(action.payload.paused ? 'download paused' : 'download cancelled');
+    },
+    removeDownload(state, action){
+      state.downloadQueue = state.downloadQueue.filter(d => d.id !== action.payload);
+    },
+    clearFinishedDownloads(state){
+      state.downloadQueue = state.downloadQueue.filter(d => d.status === 'downloading' || d.status === 'paused');
     },
     selectUnselect(state , action){
       if(state.selectedItems.filter(e=>{return e.id === action.payload.id}).length === 0){
@@ -1718,6 +1819,7 @@ const dataSlice = createSlice({
       state.uploadQueue.push({
         uploading:false,
         cancel:false,
+        paused:false,
         uploadType:state.uploadQueue[action.payload].uploadType,
         cancelToken:axios.CancelToken.source(),
         file:temp.file,
