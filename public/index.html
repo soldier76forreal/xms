@@ -106,23 +106,9 @@
   <script src="https://unpkg.com/react/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-bootstrap@next/dist/react-bootstrap.min.js" crossorigin></script>
-  <script>
-    {
-      const nav = document.querySelector('#headSec');
-      let lastScrollY = window.scrollY;
-
-      window.addEventListener('scroll' , ()=>{
-        if(lastScrollY < window.scrollY){
-          nav.classList.add('scaleOutSearchBar')
-          nav.classList.remove('scaleInSearchBar')
-        } else {
-          nav.classList.add('scaleInSearchBar')
-          nav.classList.remove('scaleOutSearchBar')
-        }
-        lastScrollY = window.scrollY;
-      });
-    }
-  </script>
+  <!-- (removed 2026-07-12) legacy hide-on-scroll behavior for #headSec — the
+       top bar must stay FIXED on every viewport; this scroll listener was
+       sliding it out of view whenever the page scrolled down. -->
 
 
 <script>

@@ -85,7 +85,8 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
   const kind = isFolder ? 'folder' : 'file';
   const format = !isFolder ? (doc.format || '').toLowerCase() : null;
   const fileUrl = !isFolder && doc.metaData?.filename ? `${apiBase}/uploads/${doc.metaData.filename}` : null;
-  const mediaKind = fileUrl ? resolveMediaKind(format) : null;
+  // resolveMediaKind matches dotted extensions — format is bare ("png")
+  const mediaKind = fileUrl ? resolveMediaKind(`.${format}`) : null;
   const previewable = mediaKind && mediaKind !== 'other';
 
   const itemCount = isFolder ? (doc.subFolders?.length || 0) + (doc.subFiles?.length || 0) : null;

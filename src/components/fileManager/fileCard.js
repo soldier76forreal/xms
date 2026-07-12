@@ -6,8 +6,12 @@ import Chip from '@mui/material/Chip';
 import FolderIcon from '@mui/icons-material/Folder';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import PlayCircleFilledIcon from '@mui/icons-material/PlayCircleFilled';
 import { FileIcon, defaultStyles } from 'react-file-icon';
 import { useTheme } from '@mui/material/styles';
+
+const IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+const VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v'];
 
 // ── File / folder grid tile (Phase 9 shell) ───────────────────────────────────
 // One card renders either a folder entry ({doc, subs}) or a file entry
@@ -30,7 +34,15 @@ const FileCard = ({ entry, apiBase, selected, checked, pinned, tags,
   const doc  = isFolder ? entry.doc : entry.file;
   const name = doc?.name || 'Untitled';
   const format = !isFolder ? (doc.format || '').toLowerCase() : null;
-  const thumbUrl = !isFolder && doc.thumbnail ? `${apiBase}/uploads/${doc.thumbnail}` : null;
+  const isImage = !isFolder && IMAGE_FORMATS.includes(format);
+  const isVideo = !isFolder && VIDEO_FORMATS.includes(format);
+  const fileUrl = !isFolder && doc.metaData?.filename ? `${apiBase}/uploads/${doc.metaData.filename}` : null;
+  // Images: server thumbnail when present, else the original (older uploads
+  // predate thumbnail generation). Videos: no server thumbnail exists (BUG-07,
+  // ffprobe missing) — the browser renders the first frame itself instead.
+  const thumbUrl = !isFolder
+    ? (doc.thumbnail ? `${apiBase}/uploads/${doc.thumbnail}` : (isImage ? fileUrl : null))
+    : null;
 
   return (
     <Box
@@ -72,14 +84,22 @@ const FileCard = ({ entry, apiBase, selected, checked, pinned, tags,
 
       {/* icon / thumbnail */}
       <Box sx={{
-        height: 72, borderRadius: '8px', overflow: 'hidden',
+        height: 72, borderRadius: '8px', overflow: 'hidden', position: 'relative',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
       }}>
         {isFolder ? (
           <FolderIcon sx={{ fontSize: 40, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)' }} />
+        ) : isVideo && fileUrl ? (
+          <>
+            {/* the browser decodes the first frame — no server thumbnail needed */}
+            <Box component="video" muted preload="metadata" src={`${fileUrl}#t=0.1`}
+              sx={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+            <PlayCircleFilledIcon sx={{ position: 'absolute', inset: 0, m: 'auto', fontSize: 26,
+              color: 'rgba(255,255,255,0.85)', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))' }} />
+          </>
         ) : thumbUrl ? (
-          <Box component="img" src={thumbUrl} alt={name}
+          <Box component="img" src={thumbUrl} alt={name} loading="lazy"
             sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <Box sx={{ width: 34 }}>

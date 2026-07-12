@@ -1,169 +1,234 @@
+import { useState, useEffect, useContext } from 'react';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
-import Modal from '@mui/material/Modal';
-import { CircularProgress, Divider, Switch } from '@mui/material';
-import Style from "./shareTheLink.module.scss"; 
-import { ArrowRight, CheckBox, Folder } from '@mui/icons-material';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import CircularProgress from '@mui/material/CircularProgress';
+import Switch from '@mui/material/Switch';
+import CloseIcon from '@mui/icons-material/Close';
+import ShareIcon from '@mui/icons-material/Share';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import CheckIcon from '@mui/icons-material/Check';
+import LinkIcon from '@mui/icons-material/Link';
+import { useTheme, useMediaQuery } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
-import { useContext, useEffect, useRef, useState } from 'react';
-import DatePicker from 'react-date-picker';
-import {   actions, newLink, setFilesAsync, uploadFile } from "../../store/store";
-import { useHistory, useLocation } from 'react-router-dom';
+import { newLink } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { alpha, styled } from '@mui/material/styles';
-import { format } from 'date-fns';
-import { DayPicker } from 'react-day-picker';
-import 'react-day-picker/dist/style.css';
-const PinkSwitch = styled(Switch)(({ theme }) => ({
-    '& .MuiSwitch-switchBase.Mui-checked': {
-      color: '#000',
-      '&:hover': {
-        backgroundColor: alpha('#000', theme.palette.action.hoverOpacity),
-      },
-    },
-    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-      backgroundColor: '#000',
-    },
-  }));
 
-const style = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: '95%',
-    maxWidth:'600px',
-
-  bgcolor: 'background.paper',
-  border:'none',
-  boxShadow: 24,
-  p: 1,
-  
-};
-
-export default function ShareTheLink(props) {
-    const authCtx = useContext(AuthContext);
-    const axiosGlobal = useContext(AxiosGlobal);
-    const customDateRef = useRef()
-    const dispatch = useDispatch();
-
-    const [openDatePicker , setOpenDatePicker] = useState(false);
-
-
-
-
-  const handleOpen = () => props.setOpenShareLink(true);
-  
-  const handleClose = () => {
-    props.setOpenShareLink(false);
-    history.push(lastUrl)
-};
-  const location = useLocation();
-  const history = useHistory();
-
-  const currentDisplaySelect = useSelector((state) => state.currentDisplayFilePicker);
-  const routeLinkSelect = useSelector((state) => state.routeLinkFilePicker);
-  const selectedItemsSelect = useSelector((state) => state.selectedItems);
-  const floatSelect = useSelector((state) => state.float);
-  const loading = useSelector((state) => state.newLinkCreationLoading);
-
-  const [lastUrl , setLastUrl] = useState({});
-
-  const [timer , setTimer] = useState(2880);
-  const [msg , setMsg] = useState('');
-  const [showMyName , setShowMyName] = useState(true);
-
-  const [active , setActive] = useState('day');
-
-
-  const ok = ()=>{
-    dispatch(newLink({authCtx:authCtx , axiosGlobal:axiosGlobal, document:props.filePickerCount.idAndType, timer:timer, msg:msg ,displayName:showMyName}))
-    props.setSuccessToast({status:true , msg:'Link copied to clipboard!'});
-    const closingSuccessMsgTimeOut = setTimeout(()=>{props.setSuccessToast({status:false , msg:'Link copied to clipboard!'})}, 3000);
-    setTimeout(()=>{
-
-        handleClose()
-    }, 800)
+// Clipboard with a fallback: navigator.clipboard only exists on secure origins
+// (https / localhost) — on a LAN http:// origin it's undefined, which is why
+// the old share flow silently failed. execCommand works everywhere.
+const copyText = async (text) => {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_) { /* fall through */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (_) {
+    return false;
   }
+};
+
+const EXPIRY_OPTIONS = [
+  { minutes: 60,    label: '1 hour'  },
+  { minutes: 1440,  label: '1 day'   },
+  { minutes: 2880,  label: '2 days'  },
+  { minutes: 20160, label: '2 weeks' },
+  { minutes: 43200, label: '30 days' },
+];
+
+// ── Share-link dialog (Phase 9 redesign — same props as the legacy modal) ─────
+// Two stages: configure (expiry / message / show-name) → created (the link is
+// DISPLAYED with a copy button — never assumed to have reached the clipboard).
+export default function ShareTheLink(props) {
+  const authCtx     = useContext(AuthContext);
+  const axiosGlobal = useContext(AxiosGlobal);
+  const dispatch    = useDispatch();
+  const theme       = useTheme();
+  const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
+  const isDark      = theme.palette.mode === 'dark';
+
+  const loading = useSelector((s) => s.newLinkCreationLoading);
+
+  const [timer, setTimer]           = useState(2880);
+  const [msg, setMsg]               = useState('');
+  const [showMyName, setShowMyName] = useState(true);
+  const [createdLink, setCreatedLink] = useState('');
+  const [copied, setCopied]         = useState(false);
+
+  const T = {
+    DIALOG_BG: isDark ? '#0d0d0d'                : theme.palette.background.paper,
+    CARD_BD:   isDark ? 'rgba(255,255,255,0.08)' : theme.palette.divider,
+    INPUT_BG:  isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+    INPUT_BD:  isDark ? 'rgba(255,255,255,0.1)'  : theme.palette.divider,
+    TEXT_PRI:  isDark ? '#ffffff'                : theme.palette.text.primary,
+    TEXT_SEC:  isDark ? 'rgba(255,255,255,0.45)' : theme.palette.text.secondary,
+    TEXT_TER:  isDark ? 'rgba(255,255,255,0.2)'  : 'rgba(0,0,0,0.3)',
+    DIVIDER:   isDark ? 'rgba(255,255,255,0.07)' : theme.palette.divider,
+    HVR_BG:    isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+    CTRL_BG:   isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+    BTN_BG:    isDark ? '#ffffff'                : '#000000',
+    BTN_CLR:   isDark ? '#000000'                : '#ffffff',
+  };
+
+  useEffect(() => {
+    if (props.openShareLink) {
+      setCreatedLink(''); setCopied(false); setMsg(''); setTimer(2880); setShowMyName(true);
+    }
+  }, [props.openShareLink]);
+
+  const handleClose = () => props.setOpenShareLink(false);
+
+  const create = async () => {
+    try {
+      const link = await dispatch(newLink({
+        authCtx, axiosGlobal,
+        document: props.filePickerCount.idAndType,
+        timer, msg, displayName: showMyName,
+      })).unwrap();
+      setCreatedLink(link);
+      // Best-effort auto-copy — the visible link + button is the real path
+      const ok = await copyText(link);
+      if (ok) {
+        setCopied(true);
+        props.setSuccessToast && props.setSuccessToast({ status: true, msg: 'Link copied to clipboard!' });
+      }
+    } catch (_) { /* snackbar dispatched by the thunk */ }
+  };
+
+  const handleCopy = async () => {
+    const ok = await copyText(createdLink);
+    setCopied(ok);
+    if (ok) props.setSuccessToast && props.setSuccessToast({ status: true, msg: 'Link copied to clipboard!' });
+  };
 
   return (
-      <Modal
-        open={props.openShareLink}
-        onClose={handleClose}
-        aria-labelledby="modal-modal-title"
-        sx={{zIndex:'10000', padding:'0px 30px 0px 30px'}}
-        aria-describedby="modal-modal-description"
-      >
-        <div>
-            <Box sx={style}>
-                <div style={{width:'100%'}}>
-                    <div style={{padding:'15px 0px 15px 10px' ,fontSize:'17px', fontFamily:'YekanBold'}}>Create link</div>
-                </div>
+    <Dialog open={props.openShareLink} onClose={handleClose} maxWidth="xs" fullWidth
+      sx={{ zIndex: 10000 }}
+      PaperProps={{ sx: {
+        bgcolor: T.DIALOG_BG, border: `1px solid ${T.CARD_BD}`,
+        borderRadius: '14px', backgroundImage: 'none',
+        mx: isXs ? 2 : 'auto',
+      }}}>
 
-                <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)'}}></Divider>
-                <div style={{padding:'8px 0px 14px 0px'}}>
-                    
-                    <div style={{textAlign:'left' , fontFamily:'YekanBold', fontSize:'13px'  , marginTop:'10px' , marginBottom:'20px', padding:'0px 0px 0px 10px'}}>
-                        <span style={{cursor:'pointer'}}>Set expiration time</span>
-                    </div>
-                    <div className={Style.expTimeList}>
-                        <ul>
-                            <div>
-                                <li onClick={()=>{setTimer(60); setActive('hour')}} className={active === 'hour' ?Style.selectedLeftSide:Style.sidesLeft}>1<span style={{fontSize:'8px' , marginLeft:'2px'}}>Hour</span></li>
-                                <li onClick={()=>{setTimer(2880); setActive('day')}} className={active === 'day' ?Style.selected:Style.centers}>2<span style={{fontSize:'8px' , marginLeft:'2px'}}>Day</span></li>
-                                <li onClick={()=>{setTimer(20160); setActive('weeks')}} className={active === 'weeks' ?Style.selected:Style.centers}>2<span style={{fontSize:'8px' , marginLeft:'2px'}}>Weeks</span></li>
-                                <li  onClick={()=>{setTimer(20160); setActive('weeks')}} className={active === 'customTime' ?Style.selectedLeftSide:Style.LeftRight}>No limit</li>
-                            </div>
-                        </ul>
-                    </div>
-                    {openDatePicker === true?
-                        <div>
-                                {/* <DayPicker
-                                mode="single"
-                                // selected={selected}
-                                // onSelect={setSelected}
-                                // footer={footer}
-                                /> */}
-                        </div>
-                    :null}
-                    <div style={{fontSize:'13px' , textAlign:'center' , marginTop:'10px'}}>This link will expire from now!</div>
-                    <div style={{marginTop:'25px'}}>
-                        <div style={{textAlign:'left' , fontFamily:'YekanBold', fontSize:'13px'  , marginTop:'10px' , marginBottom:'0px', padding:'0px 0px 0px 10px'}}>
-                            <span style={{cursor:'pointer'}}>Write your message...</span>
-                        </div>
-                        
-                        <div className={Style.inputDiv}>
-                            <input value={msg} onChange={(e)=>{setMsg(e.target.value)}} placeholder='...'></input>
-                        </div>
-                    </div>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
+        <ShareIcon sx={{ fontSize: 17, color: T.TEXT_SEC }} />
+        <Typography sx={{ flexGrow: 1, fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
+          {createdLink ? 'Link created' : 'Create share link'}
+        </Typography>
+        <IconButton size="small" onClick={handleClose} sx={{ color: T.TEXT_SEC }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+      </Box>
 
-                    <div style={{marginTop:'15px'}}>                    
-                        <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)'}}></Divider>
-                            <div>
-                                <div style={{paddingTop:'0px'}} className={Style.buttonDiv}>
-                                    <div onClick={()=>{props.setNewFileModal(true);props.setNewFolderType('inFilePicker')}} style={{display:'flex',alignItems:'center', fontSize:'14px' , cursor:'pointer'}}>
-                                        Display my name
-                                    </div>
-                                    <div style={{margin:'0px 0px 0px auto'}}>
-                                        <PinkSwitch onChange={()=>{showMyName===true?setShowMyName(false):setShowMyName(true)}} checked={showMyName} />                        
-                                    </div>
-                                </div>
-                            </div>
-                        <Divider sx={{borderBottomWidth:'1px' , opacity:'1' , borderColor:'rgb(194, 194, 194)'}}></Divider>
-                    </div>
+      {createdLink ? (
+        /* ── Stage 2: link ready ── */
+        <Box sx={{ px: 3, py: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC }}>
+            Anyone with this link can view the shared item{Array.isArray(props.filePickerCount.idAndType) && props.filePickerCount.idAndType.length !== 1 ? 's' : ''} until it expires.
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
+            bgcolor: T.CTRL_BG, border: `1px solid ${T.INPUT_BD}`, borderRadius: '10px' }}>
+            <LinkIcon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />
+            <Typography noWrap sx={{ fontSize: '0.76rem', color: T.TEXT_PRI, flexGrow: 1, direction: 'ltr' }}>
+              {createdLink}
+            </Typography>
+            <Button size="small" onClick={handleCopy}
+              startIcon={copied ? <CheckIcon sx={{ fontSize: 14 }} /> : <ContentCopyIcon sx={{ fontSize: 14 }} />}
+              sx={{ flexShrink: 0, fontSize: '0.72rem', fontWeight: 700, textTransform: 'none',
+                borderRadius: '7px', px: 1.25,
+                bgcolor: copied ? 'transparent' : T.BTN_BG,
+                color: copied ? '#81c784' : T.BTN_CLR,
+                border: copied ? '1px solid rgba(129,199,132,0.4)' : 'none',
+                '&:hover': { bgcolor: copied ? 'transparent' : (isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.8)') } }}>
+              {copied ? 'Copied' : 'Copy'}
+            </Button>
+          </Box>
+          <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>
+            Expires in {EXPIRY_OPTIONS.find((o) => o.minutes === timer)?.label || `${timer} minutes`} from now.
+          </Typography>
+        </Box>
+      ) : (
+        /* ── Stage 1: configure ── */
+        <Box sx={{ px: 3, py: 2.5, display: 'flex', flexDirection: 'column', gap: 2.25 }}>
 
-
-
-                    <div  className={Style.buttonDiv}>
-                        <button onClick={handleClose} className={Style.cancelBtn}>Cancel</button>
-                        <button onClick={ok}  className={Style.okButton} style={{paddingLeft:'20px' , paddingRight:'20px'}}>{loading === true?<span style={{paddingLeft:'14px', paddingRight:'14px'}}><CircularProgress size='13px' color='inherit'></CircularProgress></span>:'Create'}</button>
-                    </div>
-                    
-                </div>
+          <Box>
+            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
+              Link expires after
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+              {EXPIRY_OPTIONS.map((opt) => {
+                const sel = timer === opt.minutes;
+                return (
+                  <Button key={opt.minutes} size="small" onClick={() => setTimer(opt.minutes)}
+                    sx={{ minWidth: 0, px: 1.5, py: '4px', borderRadius: '8px', fontSize: '0.74rem',
+                      fontWeight: sel ? 700 : 400, textTransform: 'none',
+                      color: sel ? T.TEXT_PRI : T.TEXT_TER,
+                      bgcolor: sel ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.09)') : 'transparent',
+                      border: `1px solid ${sel ? (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : T.INPUT_BD}`,
+                      '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
+                    {opt.label}
+                  </Button>
+                );
+              })}
             </Box>
-        </div>
-      </Modal>
+          </Box>
+
+          <TextField fullWidth size="small" placeholder="Message for the recipient (optional)"
+            value={msg} onChange={(e) => setMsg(e.target.value)}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: T.INPUT_BG, borderRadius: '10px', color: T.TEXT_PRI,
+                '& fieldset': { borderColor: T.INPUT_BD },
+                '&.Mui-focused fieldset': { borderColor: T.TEXT_PRI, borderWidth: 1.5 },
+              },
+              '& input::placeholder': { color: T.TEXT_SEC, opacity: 1 },
+            }} />
+
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box>
+              <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_PRI }}>Display my name</Typography>
+              <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>The recipient sees who shared this</Typography>
+            </Box>
+            <Switch size="small" checked={showMyName} onChange={() => setShowMyName((v) => !v)}
+              sx={{
+                '& .MuiSwitch-switchBase.Mui-checked': { color: isDark ? '#fff' : '#000' },
+                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)' },
+              }} />
+          </Box>
+        </Box>
+      )}
+
+      <DialogActions sx={{ px: 3, pb: 2.5, pt: 0.5, gap: 1 }}>
+        <Button onClick={handleClose}
+          sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
+          {createdLink ? 'Done' : 'Cancel'}
+        </Button>
+        {!createdLink && (
+          <Button onClick={create} disabled={loading}
+            startIcon={loading ? <CircularProgress size={13} color="inherit" /> : <LinkIcon sx={{ fontSize: 15 }} />}
+            sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
+              '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
+              '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' } }}>
+            {loading ? 'Creating…' : 'Create link'}
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
   );
 }

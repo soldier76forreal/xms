@@ -31,6 +31,7 @@ import { actions, setFilesAsync, uploadFile, downloadFileFolder } from '../../st
 
 import FileCard from './fileCard';
 import FileDetailPanel from './fileDetailPanel';
+import MediaViewer, { resolveMediaKind } from '../digitalMarketing/mediaViewer';
 import NewFileModal from './newFileModal';
 import RenameModal from './renameModal';
 import DeleteModal from './deleteModal';
@@ -97,6 +98,7 @@ export default function FileMain() {
   const [openShareLink, setOpenShareLink] = useState(false);
   const [successToast, setSuccessToast] = useState({ status: false, msg: '' });
   const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
+  const [viewerMedia, setViewerMedia] = useState(null);   // { url, name, kind } — in-app preview from a card click
 
   const fileInputRef = useRef(null);
 
@@ -139,6 +141,25 @@ export default function FileMain() {
     dispatch(actions.unselectAll());
     dispatch(actions.selectUnselect({ id, type }));
     if (isMob) setMobileDetail(true);
+  };
+
+  // Clicking a previewable file opens the in-app viewer right away (desktop
+  // also selects it so the detail panel shows alongside). Non-previewable
+  // types just select/drill down as before.
+  const openFileCard = (doc) => {
+    // resolveMediaKind matches dotted extensions — doc.format is bare ("png")
+    const kind = resolveMediaKind(doc.format ? `.${doc.format}` : (doc.metaData?.originalname || ''));
+    if (!isMob) selectOnly(doc._id, 'file');
+    if (kind !== 'other' && doc.metaData?.filename) {
+      setViewerMedia({
+        url: `${apiBase}/uploads/${doc.metaData.filename}`,
+        name: doc.name,
+        kind,
+      });
+      if (isMob) { dispatch(actions.unselectAll()); dispatch(actions.selectUnselect({ id: doc._id, type: 'file' })); }
+    } else if (isMob) {
+      selectOnly(doc._id, 'file');
+    }
   };
   const toggleCheck = (id, type) => dispatch(actions.selectUnselect({ id, type }));
   const closeDetail = () => { dispatch(actions.unselectAll()); setMobileDetail(false); };
@@ -202,7 +223,8 @@ export default function FileMain() {
   const desktopSplit = !isMob;
 
   const cardGrid = (entries) => (
-    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 1.25 }}>
+    <Box sx={{ display: 'grid', gap: 1.25,
+      gridTemplateColumns: { xs: 'repeat(auto-fill, minmax(118px, 1fr))', sm: 'repeat(auto-fill, minmax(140px, 1fr))' } }}>
       {entries.map((e, i) => {
         const isFolder = e.file === undefined;
         const doc = isFolder ? e.doc : e.file;
@@ -211,7 +233,7 @@ export default function FileMain() {
           <FileCard key={doc._id} entry={e} apiBase={apiBase}
             selected={sel} checked={sel}
             pinned={isPinned(doc)} tags={[]}
-            onOpen={() => (isFolder ? openFolder(e, i) : selectOnly(doc._id, 'file'))}
+            onOpen={() => (isFolder ? openFolder(e, i) : openFileCard(doc))}
             onToggleCheck={() => toggleCheck(doc._id, isFolder ? 'folder' : 'file')}
             onTogglePin={() => togglePin(doc._id, isFolder ? 'folder' : 'file')}
           />
@@ -229,19 +251,22 @@ export default function FileMain() {
           bgcolor: isDark ? '#0d0d0d' : 'background.paper', borderBottom: `1px solid ${T.BD}`,
           flexShrink: 0, flexWrap: 'wrap' }}>
 
-          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0,
+            display: { xs: 'none', sm: 'block' } }}>
             Files
           </Typography>
 
-          {/* Breadcrumb */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0, overflow: 'hidden' }}>
-            <Typography onClick={goToRoot} sx={{ fontSize: '0.75rem', color: T.TEXT_SEC, cursor: 'pointer',
+          {/* Breadcrumb — horizontally scrollable on phones instead of wrapping */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 1, minWidth: 0,
+            overflowX: 'auto', whiteSpace: 'nowrap',
+            '&::-webkit-scrollbar': { display: 'none' } }}>
+            <Typography onClick={goToRoot} sx={{ fontSize: '0.75rem', color: T.TEXT_SEC, cursor: 'pointer', flexShrink: 0,
               '&:hover': { color: T.TEXT_PRI } }}>
               XFILE
             </Typography>
             {routeLink.map((p) => (
               <Typography key={p} onClick={() => goToBreadcrumb(p)} noWrap
-                sx={{ fontSize: '0.75rem', color: T.TEXT_TER, cursor: 'pointer', maxWidth: 140,
+                sx={{ fontSize: '0.75rem', color: T.TEXT_TER, cursor: 'pointer', maxWidth: { xs: 90, sm: 140 }, flexShrink: 0,
                   '&:hover': { color: T.TEXT_PRI } }}>
                 /{getLastPart(p)}
               </Typography>
@@ -420,6 +445,8 @@ export default function FileMain() {
       )}
 
       {uploadQueue.length > 0 && <BottomUploadList />}
+
+      <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
 
       <NewFileModal newFileModal={newFileModal} setNewFileModal={setNewFileModal} newFolderType={newFolderType} />
       <RenameModal openRenameModal={openRenameModal} setOpenRenameModal={setOpenRenameModal}

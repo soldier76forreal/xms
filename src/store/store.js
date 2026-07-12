@@ -131,8 +131,8 @@ export const getAllTags = createAsyncThunk('getFilesAndFolders/getAllTags', asyn
 
 
 
-export const newLink = createAsyncThunk('getFilesAndFolders/newLink', async (theData, { dispatch , getState } ) => {
-        
+export const newLink = createAsyncThunk('getFilesAndFolders/newLink', async (theData, { dispatch } ) => {
+
   try{
       dispatch(actions.newLinkCreationLoading(true))
       const response = await theData.authCtx.jwtInst({
@@ -142,16 +142,16 @@ export const newLink = createAsyncThunk('getFilesAndFolders/newLink', async (the
           config: { headers: {'Content-Type': 'application/x-www-form-urlencoded' }}
       })
       const data = await response.data;
-      // Copy the text inside the text field
-      navigator.clipboard.writeText(`${window.location.origin}/showLink?token=${data}`);
-
-      setTimeout(()=>{
-        dispatch(actions.newLinkCreationLoading(false))
-      }, 800)
+      dispatch(actions.newLinkCreationLoading(false))
+      // The share modal displays this and owns copying — navigator.clipboard
+      // is undefined on non-secure origins (http:// LAN IPs), so writing it
+      // here silently failed and the user never saw the link at all.
+      return `${window.location.origin}/showLink?token=${data}`;
 
   }catch(error){
-    console.log(error)
-
+    dispatch(actions.newLinkCreationLoading(false))
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to create the share link', type: 'error' }))
+    throw error
   }
 
 });
