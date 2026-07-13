@@ -8,7 +8,9 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
 
+import CloseIcon from '@mui/icons-material/Close';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import StoreIcon from '@mui/icons-material/Store';
@@ -41,21 +43,21 @@ export default function LeftSideNav(props) {
       onClick={props.toggleDrawer(anchor, false)}
       onKeyDown={props.toggleDrawer(anchor, false)}
     >
-      {/* Offset for fixed AppBar */}
-      <Box sx={{ height: 64 }} />
+      {/* Close button — this drawer now renders ABOVE the fixed top bar, so it
+          carries its own close control (the bar's back/hamburger is covered). */}
+      <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 1 }}>
+        <Typography sx={{ flexGrow: 1, fontWeight: 700, letterSpacing: 1, color: 'text.primary' }}>
+          XCAPITAL
+        </Typography>
+        <IconButton size="small" onClick={props.toggleDrawer(anchor, false)}
+          aria-label="Close menu" sx={{ color: 'text.secondary' }}>
+          <CloseIcon sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Box>
+
+      <Divider sx={{ mb: 0.5 }} />
 
       <List disablePadding>
-        {/* Brand name */}
-        <ListItem sx={{ px: 2, py: 1.5 }}>
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 700, letterSpacing: 1, color: 'text.primary' }}
-          >
-            XCAPITAL
-          </Typography>
-        </ListItem>
-
-        <Divider sx={{ mb: 0.5 }} />
 
         {/* Main nav items — permission-filtered */}
         {visibleItems.map((item) => (

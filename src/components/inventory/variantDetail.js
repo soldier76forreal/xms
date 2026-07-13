@@ -3,6 +3,8 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -70,8 +72,13 @@ const VariantDetail = () => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
-      <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
-        Variant detail
+      <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem',
+        display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box component="span" sx={{ flexGrow: 1 }}>Variant detail</Box>
+        <IconButton size="small" onClick={handleClose} aria-label="Close"
+          sx={{ color: 'text.secondary' }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, display: 'flex', flexDirection: 'column', gap: 1.5, pt: '4px !important' }}>

@@ -3,6 +3,8 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -124,7 +126,14 @@ const ImportExportDialog = ({ open, onClose, onImportSuccess, branchId }) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isXs}>
-      <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem' }}>Import / Export Inventory</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem',
+        display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box component="span" sx={{ flexGrow: 1 }}>Import / Export Inventory</Box>
+        <IconButton size="small" onClick={onClose} aria-label="Close"
+          sx={{ color: 'text.secondary' }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+      </DialogTitle>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
         {can('inventory:export') && <Tab value="export" label="Export" sx={{ textTransform: 'none' }} />}
         {can('inventory:import') && <Tab value="import" label="Import" sx={{ textTransform: 'none' }} />}

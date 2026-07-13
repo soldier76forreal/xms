@@ -3,6 +3,8 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
@@ -197,8 +199,15 @@ const VariantForm = ({ productId }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth fullScreen={isMobile}>
-      <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
-        {isEdit ? `Edit variant — ${editVariant?.code}` : 'Add variant'}
+      <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem',
+        display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box component="span" sx={{ flexGrow: 1 }}>
+          {isEdit ? `Edit variant — ${editVariant?.code}` : 'Add variant'}
+        </Box>
+        <IconButton size="small" onClick={handleClose} aria-label="Close"
+          sx={{ color: 'text.secondary' }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>

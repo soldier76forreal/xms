@@ -133,7 +133,9 @@ code {
 }
 
 #headSec {
-  z-index: 1201 !important;
+  /* Below the MUI Drawer layer (1200) so form/filter drawers + panels render
+     above the fixed top bar (their close buttons were hidden under it). */
+  z-index: 1150 !important;
 }
 
 #modal {

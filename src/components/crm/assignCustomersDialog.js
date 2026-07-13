@@ -6,6 +6,8 @@ import DialogActions   from '@mui/material/DialogActions';
 import Box             from '@mui/material/Box';
 import Typography      from '@mui/material/Typography';
 import Button          from '@mui/material/Button';
+import IconButton      from '@mui/material/IconButton';
+import CloseIcon       from '@mui/icons-material/Close';
 import TextField       from '@mui/material/TextField';
 import Chip            from '@mui/material/Chip';
 import Checkbox        from '@mui/material/Checkbox';
@@ -236,15 +238,21 @@ const AssignCustomersDialog = ({
       PaperProps={{ sx: { bgcolor: T.CARD_BG, borderRadius: isXs ? 0 : '14px',
         border: `1px solid ${T.BD}`, backgroundImage: 'none' } }}>
 
-      <DialogTitle sx={{ pb: 0 }}>
-        <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: T.TEXT_PRI }}>
-          {isUserMode
-            ? `Assign customers to ${prefilledUserName || 'user'}`
-            : 'Assign customers'}
-        </Typography>
-        <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mt: 0.25 }}>
-          A task will be created and the assignee notified
-        </Typography>
+      <DialogTitle sx={{ pb: 0, display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+        <Box sx={{ flexGrow: 1 }}>
+          <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: T.TEXT_PRI }}>
+            {isUserMode
+              ? `Assign customers to ${prefilledUserName || 'user'}`
+              : 'Assign customers'}
+          </Typography>
+          <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mt: 0.25 }}>
+            A task will be created and the assignee notified
+          </Typography>
+        </Box>
+        <IconButton size="small" onClick={onClose} aria-label="Close"
+          sx={{ color: T.TEXT_TER, mt: -0.5, mr: -0.5 }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1.5,
