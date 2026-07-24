@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -25,14 +26,15 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 // Import fields mirror the backend's IMPORT_SETTABLE_FIELDS (routes/inventory/main.js) —
 // code always drives matching/creation and isn't itself a toggle.
 const IMPORT_FIELDS = [
-  { key: 'name',     label: 'Name' },
-  { key: 'unit',     label: 'Unit' },
-  { key: 'quantity', label: 'Quantity' },
-  { key: 'price',    label: 'Price' },
-  { key: 'category', label: 'Category' },
+  { key: 'name',     labelKey: 'inventory.nameLabel' },
+  { key: 'unit',     labelKey: 'inventory.fieldUnit' },
+  { key: 'quantity', labelKey: 'inventory.quantityLabel' },
+  { key: 'price',    labelKey: 'inventory.priceLabel' },
+  { key: 'category', labelKey: 'inventory.categoryLabel' },
 ];
 
 const ImportExportDialog = ({ open, onClose, onImportSuccess, branchId }) => {
+  const { t } = useTranslation();
   const theme  = useTheme();
   const isXs   = useMediaQuery(theme.breakpoints.down('sm'));
   const authCtx     = useContext(AuthContext);
@@ -119,7 +121,7 @@ const ImportExportDialog = ({ open, onClose, onImportSuccess, branchId }) => {
       setImportResult(res.data.data);
       if ((res.data.data.created > 0 || res.data.data.updated > 0) && onImportSuccess) onImportSuccess();
     } catch (err) {
-      setImportResult({ error: err?.response?.data?.message || 'Import failed' });
+      setImportResult({ error: err?.response?.data?.message || t('inventory.importFailed') });
     }
     setImporting(false);
   };
@@ -128,22 +130,22 @@ const ImportExportDialog = ({ open, onClose, onImportSuccess, branchId }) => {
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isXs}>
       <DialogTitle sx={{ fontWeight: 700, fontSize: '1rem',
         display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Box component="span" sx={{ flexGrow: 1 }}>Import / Export Inventory</Box>
-        <IconButton size="small" onClick={onClose} aria-label="Close"
+        <Box component="span" sx={{ flexGrow: 1 }}>{t('inventory.importExportTitle')}</Box>
+        <IconButton size="small" onClick={onClose} aria-label={t('common.close')}
           sx={{ color: 'text.secondary' }}>
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
       </DialogTitle>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-        {can('inventory:export') && <Tab value="export" label="Export" sx={{ textTransform: 'none' }} />}
-        {can('inventory:import') && <Tab value="import" label="Import" sx={{ textTransform: 'none' }} />}
+        {can('inventory:export') && <Tab value="export" label={t('inventory.exportTab')} sx={{ textTransform: 'none' }} />}
+        {can('inventory:import') && <Tab value="import" label={t('inventory.importTab')} sx={{ textTransform: 'none' }} />}
       </Tabs>
 
       <DialogContent sx={{ pt: 2.5 }}>
         {tab === 'export' && (
           <Box>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-              Select which columns to include in the exported .xlsx file (one row per variant/SKU).
+              {t('inventory.exportDescription')}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
               {exportFields.map((f) => (
@@ -159,14 +161,12 @@ const ImportExportDialog = ({ open, onClose, onImportSuccess, branchId }) => {
         {tab === 'import' && (
           <Box>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-              Upload an .xlsx file with a CODE column (stone code) — rows are matched/created by
-              code. Select which columns to apply from the sheet; unselected columns are left untouched
-              on existing variants.
+              {t('inventory.importDescription')}
             </Typography>
 
             <Button component="label" variant="outlined" size="small"
               startIcon={<UploadFileIcon sx={{ fontSize: 16 }} />} sx={{ mb: 1.5, textTransform: 'none' }}>
-              {importFile ? importFile.name : 'Choose .xlsx file'}
+              {importFile ? importFile.name : t('inventory.chooseXlsxFile')}
               <input type="file" accept=".xlsx,.xls" hidden
                 onChange={(e) => { setImportFile(e.target.files?.[0] || null); setImportResult(null); }} />
             </Button>
@@ -176,7 +176,7 @@ const ImportExportDialog = ({ open, onClose, onImportSuccess, branchId }) => {
                 <FormControlLabel key={f.key} sx={{ width: { xs: '100%', sm: '48%' } }}
                   control={<Checkbox size="small" checked={importSelected.has(f.key)}
                     onChange={() => toggleImportField(f.key)} />}
-                  label={<Typography variant="body2">{f.label}</Typography>} />
+                  label={<Typography variant="body2">{t(f.labelKey)}</Typography>} />
               ))}
             </Box>
 
@@ -187,14 +187,18 @@ const ImportExportDialog = ({ open, onClose, onImportSuccess, branchId }) => {
                 ) : (
                   <>
                     <Alert severity={importResult.errors?.length ? 'warning' : 'success'} sx={{ mb: 1 }}>
-                      Processed {importResult.processed} rows — {importResult.created} created,
-                      {' '}{importResult.updated} updated, {importResult.skipped} skipped.
+                      {t('inventory.importProcessedSummary', {
+                        processed: importResult.processed,
+                        created: importResult.created,
+                        updated: importResult.updated,
+                        skipped: importResult.skipped,
+                      })}
                     </Alert>
                     {importResult.errors?.length > 0 && (
                       <Box sx={{ maxHeight: 200, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
                         {importResult.errors.map((e, i) => (
                           <Typography key={i} variant="caption" sx={{ display: 'block', color: 'text.secondary' }}>
-                            Row {e.row} ({e.code}): {e.message}
+                            {t('inventory.importRowError', { row: e.row, code: e.code, message: e.message })}
                           </Typography>
                         ))}
                       </Box>
@@ -208,19 +212,19 @@ const ImportExportDialog = ({ open, onClose, onImportSuccess, branchId }) => {
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} size="small">Close</Button>
+        <Button onClick={onClose} size="small">{t('common.close')}</Button>
         {tab === 'export' && (
           <Button variant="contained" size="small" onClick={handleExport}
             disabled={exporting || exportSelected.size === 0}
             startIcon={exporting ? <CircularProgress size={14} /> : <DownloadIcon sx={{ fontSize: 16 }} />}>
-            Download
+            {t('inventory.downloadButton')}
           </Button>
         )}
         {tab === 'import' && (
           <Button variant="contained" size="small" onClick={handleImport}
             disabled={importing || !importFile}
             startIcon={importing ? <CircularProgress size={14} /> : <UploadFileIcon sx={{ fontSize: 16 }} />}>
-            Upload &amp; Import
+            {t('inventory.uploadImportButton')}
           </Button>
         )}
       </DialogActions>

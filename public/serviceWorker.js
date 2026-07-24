@@ -1,7 +1,7 @@
 // XMS service worker — app-shell caching for a fast/offline-capable load.
 // Bump CACHE_NAME on any change to this file's caching strategy so old
 // clients pick up the new behavior instead of running stale cached logic.
-const CACHE_NAME = 'xms-cache-v3';
+const CACHE_NAME = 'xms-cache-v4';
 
 // Precached at install — the app shell + icons. NOT the hashed /static/js
 // and /static/css bundles (their exact filenames change per build and are
@@ -96,33 +96,49 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (e) => {
-  const data = e.data.json();
-  switch (data.type) {
-    case 'newInvoice':
-      e.waitUntil(
-        self.registration.showNotification(`درخواست توسط ${data.sendFrom} تکمیل شد `, {
-          body: `${data.document}`,
-          icon: '/icon-192x192.png',
-        })
-      );
-      break;
-    case 'sendRequest':
-      e.waitUntil(
-        self.registration.showNotification(`درخواست از طرف ${data.sendFrom} برای شما ارسال شده است`, {
-          body: `${data.document}`,
-          icon: '/icon-192x192.png',
-        })
-      );
-      break;
-    case 'edited':
-      e.waitUntil(
-        self.registration.showNotification(`درخواست توسط ${data.sendFrom} ویرایش شد`, {
-          body: `${data.document}`,
-          icon: '/icon-192x192.png',
-        })
-      );
-      break;
-    default:
-      break;
-  }
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (_) { data = { title: 'XCAPITAL', body: e.data ? e.data.text() : '' }; }
+
+  // Current app notifications send { type:'generic', title, body, url }. The
+  // three legacy Farsi types are kept for backward compatibility.
+  const LEGACY = {
+    newInvoice:  (d) => ({ title: `درخواست توسط ${d.sendFrom} تکمیل شد `, body: `${d.document}` }),
+    sendRequest: (d) => ({ title: `درخواست از طرف ${d.sendFrom} برای شما ارسال شده است`, body: `${d.document}` }),
+    edited:      (d) => ({ title: `درخواست توسط ${d.sendFrom} ویرایش شد`, body: `${d.document}` }),
+  };
+
+  const view = LEGACY[data.type] ? LEGACY[data.type](data) : { title: data.title || 'XCAPITAL', body: data.body || '' };
+
+  e.waitUntil(
+    self.registration.showNotification(view.title, {
+      body: view.body,
+      icon: '/icon-192x192.png',
+      badge: '/icon-192x192.png',
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
+// Focus an existing app tab (navigating it to the related record) or open a new
+// one when a push notification is clicked.
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const target = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          await client.focus();
+          // Route the already-open app to the record. navigate() needs the full
+          // origin; fall back to postMessage if the browser blocks it.
+          try {
+            if ('navigate' in client) return client.navigate(self.location.origin + target);
+          } catch (_) { /* fall through */ }
+          client.postMessage({ type: 'notification-navigate', url: target });
+          return;
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    })
+  );
 });

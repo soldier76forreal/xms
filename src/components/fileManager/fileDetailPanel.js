@@ -19,6 +19,7 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import FolderIcon from '@mui/icons-material/Folder';
 import { FileIcon, defaultStyles } from 'react-file-icon';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -41,15 +42,15 @@ const fmtDate = (d) => {
 };
 
 const TABS = [
-  { id: 'details',  label: 'Details' },
-  { id: 'tags',     label: 'Tags' },
-  { id: 'activity', label: 'Activity' },
+  { id: 'details',  labelKey: 'files.detailsTab' },
+  { id: 'tags',     labelKey: 'files.tagsTab' },
+  { id: 'activity', labelKey: 'files.activityTab' },
 ];
 
-const ACTIVITY_LABEL = {
-  upload: 'Uploaded', new_folder: 'Folder created', rename: 'Renamed', move: 'Moved',
-  copy: 'Copied', delete: 'Deleted', tag_added: 'Tag added', tag_removed: 'Tag removed',
-  share_link: 'Share link created', download: 'Downloaded',
+const ACTIVITY_LABEL_KEYS = {
+  upload: 'files.actUploaded', new_folder: 'files.actFolderCreated', rename: 'files.renamed', move: 'files.actMoved',
+  copy: 'files.actCopied', delete: 'files.actDeleted', tag_added: 'files.actTagAdded', tag_removed: 'files.actTagRemoved',
+  share_link: 'files.actShareLinkCreated', download: 'files.actDownloaded',
 };
 
 // ── Detail panel — Details / Tags / Activity (Phase 9) ────────────────────────
@@ -57,6 +58,7 @@ const ACTIVITY_LABEL = {
 // selected item. Preview uses the shared Digital Marketing MediaViewer — no
 // window.open, everything renders in-app.
 export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMove, onCopy, onShare, onDelete, onDownload, onTogglePin, panelMode = true }) {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -133,11 +135,11 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
           {previewable && (
             <Button size="small" variant="outlined" onClick={() => setViewerOpen(true)}
               sx={{ fontSize: '0.7rem', textTransform: 'none', borderRadius: '8px' }}>
-              Preview
+              {t('common.preview')}
             </Button>
           )}
           {can('files:upload') && (
-            <Tooltip title="Rename">
+            <Tooltip title={t('files.renameHeader')}>
               <IconButton size="small" onClick={() => onRename({ type: kind, id: doc._id }, doc.name)}
                 sx={{ color: T.TEXT_SEC }}>
                 <DriveFileRenameOutlineIcon sx={{ fontSize: 17 }} />
@@ -145,40 +147,40 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
             </Tooltip>
           )}
           {can('files:upload') && (
-            <Tooltip title="Move">
+            <Tooltip title={t('files.moveTip')}>
               <IconButton size="small" onClick={() => onMove({ type: kind, id: doc._id })} sx={{ color: T.TEXT_SEC }}>
                 <DriveFileMoveIcon sx={{ fontSize: 17 }} />
               </IconButton>
             </Tooltip>
           )}
           {can('files:upload') && (
-            <Tooltip title="Copy">
+            <Tooltip title={t('common.copy')}>
               <IconButton size="small" onClick={() => onCopy({ type: kind, id: doc._id })} sx={{ color: T.TEXT_SEC }}>
                 <ContentCopyIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
           )}
           {can('files:share') && (
-            <Tooltip title="Share">
+            <Tooltip title={t('common.share')}>
               <IconButton size="small" onClick={() => onShare({ type: kind, id: doc._id })} sx={{ color: T.TEXT_SEC }}>
                 <ShareIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>
           )}
           {!isFolder && (
-            <Tooltip title="Download">
+            <Tooltip title={t('common.download')}>
               <IconButton size="small" onClick={() => onDownload({ type: kind, id: doc._id }, doc.name)} sx={{ color: T.TEXT_SEC }}>
                 <DownloadIcon sx={{ fontSize: 17 }} />
               </IconButton>
             </Tooltip>
           )}
-          <Tooltip title={pinned ? 'Unpin' : 'Pin'}>
+          <Tooltip title={pinned ? t('files.unpinTip') : t('files.pinTip')}>
             <IconButton size="small" onClick={onTogglePin} sx={{ color: pinned ? '#FFB74D' : T.TEXT_SEC }}>
               {pinned ? <StarIcon sx={{ fontSize: 17 }} /> : <StarBorderIcon sx={{ fontSize: 17 }} />}
             </IconButton>
           </Tooltip>
           {can('files:delete') && (
-            <Tooltip title="Delete">
+            <Tooltip title={t('common.delete')}>
               <IconButton size="small" onClick={() => onDelete({ type: kind, id: doc._id })} sx={{ color: '#EA005A' }}>
                 <DeleteOutlineIcon sx={{ fontSize: 17 }} />
               </IconButton>
@@ -188,16 +190,16 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
 
         {/* Tab bar */}
         <Box sx={{ display: 'flex', gap: 0.5, mt: 1.5 }}>
-          {TABS.map((t) => (
-            <Button key={t.id} size="small" onClick={() => setTab(t.id)}
+          {TABS.map((tabItem) => (
+            <Button key={tabItem.id} size="small" onClick={() => setTab(tabItem.id)}
               sx={{
                 minWidth: 0, px: 1.5, py: '3px', borderRadius: '7px',
-                fontSize: '0.72rem', fontWeight: tab === t.id ? 700 : 400, textTransform: 'none',
-                color: tab === t.id ? T.TEXT_PRI : T.TEXT_TER,
-                bgcolor: tab === t.id ? T.CTRL_BG : 'transparent',
+                fontSize: '0.72rem', fontWeight: tab === tabItem.id ? 700 : 400, textTransform: 'none',
+                color: tab === tabItem.id ? T.TEXT_PRI : T.TEXT_TER,
+                bgcolor: tab === tabItem.id ? T.CTRL_BG : 'transparent',
                 '&:hover': { bgcolor: T.CTRL_BG, color: T.TEXT_PRI },
               }}>
-              {t.label}
+              {t(tabItem.labelKey)}
             </Button>
           ))}
         </Box>
@@ -230,17 +232,17 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {isFolder ? (
                 <>
-                  <Row label="Items" value={itemCount} T={T} />
+                  <Row label={t('files.itemsLabel')} value={itemCount} T={T} />
                 </>
               ) : (
                 <>
-                  <Row label="Type" value={format?.toUpperCase() || '—'} T={T} />
-                  <Row label="Size" value={fmtSize(doc.metaData?.size)} T={T} />
+                  <Row label={t('files.typeLabel')} value={format?.toUpperCase() || '—'} T={T} />
+                  <Row label={t('files.sizeLabel')} value={fmtSize(doc.metaData?.size)} T={T} />
                 </>
               )}
-              <Row label="Uploaded by" value={doc.uploadedByName || '—'} T={T} />
-              <Row label="Date" value={fmtDate(doc.insertDate)} T={T} />
-              {doc.updateDate && <Row label="Last updated" value={fmtDate(doc.updateDate)} T={T} />}
+              <Row label={t('files.uploadedByLabel')} value={doc.uploadedByName || '—'} T={T} />
+              <Row label={t('files.dateLabel')} value={fmtDate(doc.insertDate)} T={T} />
+              {doc.updateDate && <Row label={t('files.lastUpdatedLabel')} value={fmtDate(doc.updateDate)} T={T} />}
             </Box>
           </Box>
         )}
@@ -250,13 +252,13 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
             {can('files:upload') && <SearchInputForTags />}
             {tagsToShow.length === 0 ? (
               <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, textAlign: 'center', py: 3 }}>
-                No tags on this item
+                {t('files.noTagsOnItem')}
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-                {tagsToShow.map((t) => (
-                  <Chip key={t._id} label={t.tag} size="small"
-                    onDelete={can('files:upload') ? () => removeTag(t._id) : undefined}
+                {tagsToShow.map((tag) => (
+                  <Chip key={tag._id} label={tag.tag} size="small"
+                    onDelete={can('files:upload') ? () => removeTag(tag._id) : undefined}
                     sx={{ height: 24, fontSize: '0.72rem', borderRadius: '6px',
                       bgcolor: T.CTRL_BG, color: T.TEXT_PRI }} />
                 ))}
@@ -272,7 +274,7 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
             </Box>
           ) : activity.length === 0 ? (
             <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, textAlign: 'center', py: 3 }}>
-              No activity recorded yet
+              {t('files.noActivityRecordedYet')}
             </Typography>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
@@ -282,7 +284,7 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
                     bgcolor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }} />
                   <Box sx={{ minWidth: 0 }}>
                     <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI }}>
-                      {ACTIVITY_LABEL[a.type] || a.type}
+                      {ACTIVITY_LABEL_KEYS[a.type] ? t(ACTIVITY_LABEL_KEYS[a.type]) : a.type}
                       {a.actorName ? <Box component="span" sx={{ color: T.TEXT_SEC }}> — {a.actorName}</Box> : null}
                     </Typography>
                     <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{fmtDate(a.date)}</Typography>

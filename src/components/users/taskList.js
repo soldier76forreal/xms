@@ -12,6 +12,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
 import { useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -40,22 +41,22 @@ const useT = () => {
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS = {
-  open:    { label: 'Open',    color: '#64B5F6', bg: 'rgba(100,181,246,0.1)' },
-  claimed: { label: 'Claimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.1)'  },
-  done:    { label: 'Done',    color: '#81C784', bg: 'rgba(129,199,132,0.1)' },
+  open:    { labelKey: 'users.taskStatusOpen',    color: '#64B5F6', bg: 'rgba(100,181,246,0.1)' },
+  claimed: { labelKey: 'users.taskStatusClaimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.1)'  },
+  done:    { labelKey: 'users.taskStatusDone',    color: '#81C784', bg: 'rgba(129,199,132,0.1)' },
 };
 
 // ── Relative time ──────────────────────────────────────────────────────────────
-const relTime = (d) => {
+const relTime = (d, t) => {
   if (!d) return '';
   const diff = Date.now() - new Date(d).getTime();
   const m = Math.floor(diff / 60000);
   const h = Math.floor(diff / 3600000);
   const dy = Math.floor(diff / 86400000);
-  if (m < 1)   return 'Just now';
-  if (m < 60)  return `${m}m ago`;
-  if (h < 24)  return `${h}h ago`;
-  return `${dy}d ago`;
+  if (m < 1)   return t('users.justNow');
+  if (m < 60)  return t('users.minutesAgo', { count: m });
+  if (h < 24)  return t('users.hoursAgo', { count: h });
+  return t('users.daysAgo', { count: dy });
 };
 
 // ── Scope + Filter pills ───────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ const Pill = ({ active, onClick, children, T }) => (
 // ── Single task row ────────────────────────────────────────────────────────────
 const TaskRow = ({ task, onClaim, onDone, currentUserId, onClick, isSelected }) => {
   const T  = useT();
+  const { t } = useTranslation();
   const st = STATUS[task.status] || STATUS.open;
   const canClaim = task.status === 'open' && task.assigneeType === 'group';
   const canDone  = task.status !== 'done' &&
@@ -120,14 +122,14 @@ const TaskRow = ({ task, onClaim, onDone, currentUserId, onClick, isSelected }) 
             )}
           </Box>
           {task.createdByName && (
-            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>by {task.createdByName}</Typography>
+            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{t('crm.byActor', { name: task.createdByName })}</Typography>
           )}
-          <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>· {relTime(task.insertDate)}</Typography>
+          <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>· {relTime(task.insertDate, t)}</Typography>
         </Box>
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
-        <Chip label={st.label} size="small" sx={{
+        <Chip label={t(st.labelKey)} size="small" sx={{
           height: 20, fontSize: '0.68rem', fontWeight: 600, borderRadius: '4px',
           bgcolor: st.bg, color: st.color, border: `1px solid ${st.color}30`,
           '& .MuiChip-label': { px: 0.75 },
@@ -160,6 +162,7 @@ const TaskList = ({ onSelect = null, selectedId = null, refreshKey = 0 }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const T           = useT();
+  const { t }       = useTranslation();
 
   // Must be before useState so maxScope is defined for the initial state
   const { scopeFor }  = usePermissions();
@@ -183,10 +186,13 @@ const TaskList = ({ onSelect = null, selectedId = null, refreshKey = 0 }) => {
   }, [maxScope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const scopeOptions = [
-    { id: 'mine',  label: 'Mine'  },
-    { id: 'group', label: 'Group' },
-    { id: 'all',   label: 'All'   },
+    { id: 'mine',  labelKey: 'users.scopeMine'  },
+    { id: 'group', labelKey: 'users.scopeGroup' },
+    { id: 'all',   labelKey: 'users.scopeAll'   },
   ].filter(s => (SCOPE_RANK[s.id] || 3) <= (SCOPE_RANK[maxScope] || 3));
+
+  const STATUS_FILTER_KEYS = { all: 'users.filterAllTasks', open: 'users.taskStatusOpen', claimed: 'users.taskStatusClaimed', done: 'users.taskStatusDone' };
+  const NO_TASKS_KEYS = { open: 'users.noOpenTasks', claimed: 'users.noClaimedTasks', done: 'users.noDoneTasks' };
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -198,31 +204,31 @@ const TaskList = ({ onSelect = null, selectedId = null, refreshKey = 0 }) => {
       });
       setTasks(res.data.data || []);
     } catch {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load tasks', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedLoadTasks'), type: 'error' }));
     } finally {
       setLoading(false);
     }
-  }, [filter, scope]);
+  }, [filter, scope]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchTasks(); }, [fetchTasks, refreshKey]);
 
   const handleClaim = async (taskId) => {
     try {
       await authCtx.jwtInst({ method: 'put', url: `${axiosGlobal.defaultTargetApi}/tasks/${taskId}/claim` });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Task claimed', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.taskClaimed'), type: 'success' }));
       fetchTasks();
     } catch (err) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || t('users.failedShort'), type: 'error' }));
     }
   };
 
   const handleDone = async (taskId) => {
     try {
       await authCtx.jwtInst({ method: 'put', url: `${axiosGlobal.defaultTargetApi}/tasks/${taskId}/done` });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Task marked done', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.taskMarkedDone'), type: 'success' }));
       fetchTasks();
     } catch (err) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || t('users.failedShort'), type: 'error' }));
     }
   };
 
@@ -234,7 +240,7 @@ const TaskList = ({ onSelect = null, selectedId = null, refreshKey = 0 }) => {
         <Box sx={{ display: 'flex', gap: 0.5, flexGrow: 1 }}>
           {scopeOptions.map(s => (
             <Pill key={s.id} active={scope === s.id} onClick={() => setScope(s.id)} T={T}>
-              {s.label}
+              {t(s.labelKey)}
             </Pill>
           ))}
         </Box>
@@ -244,7 +250,7 @@ const TaskList = ({ onSelect = null, selectedId = null, refreshKey = 0 }) => {
             sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 600, borderRadius: '8px', px: 2, py: '5px',
               fontSize: '0.78rem', textTransform: 'none',
               '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' } }}>
-            Assign
+            {t('users.assignShort')}
           </Button>
         </Can>
       </Box>
@@ -253,7 +259,7 @@ const TaskList = ({ onSelect = null, selectedId = null, refreshKey = 0 }) => {
       <Box sx={{ display: 'flex', gap: 0.5, mb: 2 }}>
         {['all', 'open', 'claimed', 'done'].map(f => (
           <Pill key={f} active={filter === f} onClick={() => setFilter(f)} T={T}>
-            {f.charAt(0).toUpperCase() + f.slice(1)}
+            {t(STATUS_FILTER_KEYS[f])}
           </Pill>
         ))}
       </Box>
@@ -261,7 +267,7 @@ const TaskList = ({ onSelect = null, selectedId = null, refreshKey = 0 }) => {
       {/* Scope hint */}
       {scope !== 'all' && (
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mb: 1.5 }}>
-          {scope === 'mine'  ? 'Showing tasks assigned to you or created by you' : 'Showing tasks assigned to your groups'}
+          {scope === 'mine'  ? t('users.scopeHintMine') : t('users.scopeHintGroup')}
         </Typography>
       )}
 
@@ -274,7 +280,7 @@ const TaskList = ({ onSelect = null, selectedId = null, refreshKey = 0 }) => {
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10, gap: 1 }}>
           <AssignmentIcon sx={{ fontSize: 32, color: T.TEXT_TER }} />
           <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_TER }}>
-            {filter === 'all' ? 'No tasks' : `No ${filter} tasks`}
+            {filter === 'all' ? t('users.noTasks') : t(NO_TASKS_KEYS[filter] || 'users.noTasks')}
           </Typography>
         </Box>
       ) : (

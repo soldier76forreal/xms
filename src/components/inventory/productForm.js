@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -27,6 +28,7 @@ import { createProduct, updateProduct, createCategory, actions } from '../../sto
 import { useBranch } from '../../contextApi/BranchContext';
 
 const ProductForm = () => {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -152,9 +154,9 @@ const ProductForm = () => {
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem',
         display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box component="span" sx={{ flexGrow: 1 }}>
-          {isEdit ? `Edit product — ${editProd?.code}` : 'New product (stone variety)'}
+          {isEdit ? t('inventory.editProductTitle', { code: editProd?.code }) : t('inventory.newProductTitle')}
         </Box>
-        <IconButton size="small" onClick={handleClose} aria-label="Close"
+        <IconButton size="small" onClick={handleClose} aria-label={t('common.close')}
           sx={{ color: 'text.secondary' }}>
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
@@ -166,7 +168,7 @@ const ProductForm = () => {
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             select
-            label="Stone type"
+            label={t('inventory.stoneTypeLabel')}
             size="small"
             value={stoneType}
             onChange={(e) => setStoneType(e.target.value)}
@@ -186,25 +188,25 @@ const ProductForm = () => {
           </TextField>
 
           <TextField
-            label="Quarry code"
+            label={t('inventory.quarryCodeLabel')}
             size="small"
             value={quarryCode}
             onChange={(e) => setQuarryCode(e.target.value.replace(/\D/g, '').slice(0, 2))}
-            placeholder="e.g. 45"
+            placeholder={t('inventory.quarryCodePlaceholder')}
             inputProps={{ maxLength: 2, inputMode: 'numeric', style: { fontFamily: 'monospace', letterSpacing: 2 } }}
             sx={{ width: 130 }}
-            helperText={`Code: ${codePreview}`}
+            helperText={t('inventory.codeHelper', { code: codePreview })}
           />
         </Box>
 
         {/* Quarry name */}
         <TextField
-          label="Quarry / colour name"
+          label={t('inventory.quarryColourName')}
           size="small"
           fullWidth
           value={quarryName}
           onChange={(e) => setQuarryName(e.target.value)}
-          placeholder="e.g. Beige NR, Armani Grey"
+          placeholder={t('inventory.quarryColourPlaceholder')}
         />
 
         <Divider />
@@ -212,15 +214,15 @@ const ProductForm = () => {
         {/* Display names */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
-            label="Product name"
+            label={t('inventory.productNameLabel')}
             size="small"
             value={name}
             onChange={(e) => setName(e.target.value)}
             sx={{ flex: 1 }}
-            placeholder="e.g. Travertine Silver Platinum"
+            placeholder={t('inventory.productNamePlaceholder')}
           />
           <TextField
-            label="Arabic name"
+            label={t('inventory.arabicNameLabel')}
             size="small"
             value={nameAr}
             onChange={(e) => setNameAr(e.target.value)}
@@ -231,7 +233,7 @@ const ProductForm = () => {
 
         {/* Description */}
         <TextField
-          label="Description"
+          label={t('inventory.descriptionLabel')}
           size="small"
           fullWidth
           multiline
@@ -246,7 +248,7 @@ const ProductForm = () => {
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
             select
-            label="Default unit"
+            label={t('inventory.defaultUnitLabel')}
             size="small"
             value={defaultUnit}
             onChange={(e) => setDefaultUnit(e.target.value)}
@@ -259,13 +261,13 @@ const ProductForm = () => {
           </TextField>
 
           <FormControl size="small" sx={{ flex: 1 }}>
-            <InputLabel>Category</InputLabel>
+            <InputLabel>{t('inventory.categoryLabel')}</InputLabel>
             <Select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              input={<OutlinedInput label="Category" />}
+              input={<OutlinedInput label={t('inventory.categoryLabel')} />}
             >
-              <MenuItem value="">None</MenuItem>
+              <MenuItem value="">{t('inventory.categoryNone')}</MenuItem>
               {invCategories.map((c) => (
                 <MenuItem key={c._id} value={c.name}>
                   {c.name}
@@ -276,28 +278,28 @@ const ProductForm = () => {
 
           <TextField
             select
-            label="Status"
+            label={t('inventory.statusLabel')}
             size="small"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             sx={{ width: 130 }}
           >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="archived">Archived</MenuItem>
+            <MenuItem value="active">{t('inventory.statusActive')}</MenuItem>
+            <MenuItem value="archived">{t('inventory.statusArchivedOption')}</MenuItem>
           </TextField>
         </Box>
 
         {/* Inline new category creator */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
           <TextField
-            label="Add new category"
+            label={t('inventory.addNewCategory')}
             size="small"
             value={newCatName}
             onChange={(e) => setNewCatName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCategory(); }}
             sx={{ flex: 1 }}
             error={catNameExists}
-            helperText={catNameExists ? 'Already exists — select it above' : ''}
+            helperText={catNameExists ? t('inventory.categoryExists') : ''}
           />
           <Button
             size="small"
@@ -307,25 +309,25 @@ const ProductForm = () => {
             startIcon={catBusy ? <CircularProgress size={12} color="inherit" /> : <AddIcon sx={{ fontSize: 14 }} />}
             sx={{ minWidth: 80, height: 40, flexShrink: 0 }}
           >
-            Add
+            {t('common.add')}
           </Button>
         </Box>
 
         {isDuplicate && (
           <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600 }}>
-            ⚠ Product {codePreview} already exists. Choose a different stone type or quarry code.
+            {t('inventory.duplicateProductWarning', { code: codePreview })}
           </Typography>
         )}
 
         {!isEdit && !isDuplicate && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Product code will be <strong>{codePreview}</strong>. Variants (SKUs) are added after creation.
+            {t('inventory.codePreviewNote', { code: codePreview })}
           </Typography>
         )}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={handleClose} size="small" disabled={busy}>Cancel</Button>
+        <Button onClick={handleClose} size="small" disabled={busy}>{t('common.cancel')}</Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
@@ -333,7 +335,7 @@ const ProductForm = () => {
           disabled={busy || !stoneType || !quarryCode.trim() || isDuplicate}
           startIcon={busy ? <CircularProgress size={12} color="inherit" /> : null}
         >
-          {isEdit ? 'Save changes' : 'Create product'}
+          {isEdit ? t('inventory.saveChanges') : t('inventory.createProduct')}
         </Button>
       </DialogActions>
     </Dialog>

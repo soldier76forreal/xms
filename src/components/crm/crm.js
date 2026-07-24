@@ -19,6 +19,7 @@ import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Skeleton from '@mui/material/Skeleton';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -49,12 +50,17 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 
 const CHANNEL_OPTIONS = ['whatsApp', 'phone', 'email', 'telegram', 'instagram'];
 const STATUS_OPTIONS  = ['new', 'active', 'follow_up', 'won', 'lost'];
+const STATUS_KEY = {
+  new: 'statusNew', active: 'statusActive', follow_up: 'statusFollowUp', won: 'statusWon', lost: 'statusLost',
+};
 
+// Labels translated at render time via t(`crm.${key}`) — bare values here since
+// this is module scope, outside any component/hook.
 const SORT_OPTIONS = [
-  { value: 'insertDate',  label: 'Newest first' },
-  { value: '-insertDate', label: 'Oldest first' },
-  { value: 'lastCallAt',  label: 'Last call (newest)' },
-  { value: '-lastCallAt', label: 'Last call (oldest)' },
+  { value: 'insertDate',  key: 'sortNewestFirst' },
+  { value: '-insertDate', key: 'sortOldestFirst' },
+  { value: 'lastCallAt',  key: 'sortLastCallNewest' },
+  { value: '-lastCallAt', key: 'sortLastCallOldest' },
 ];
 
 const DEFAULT_FILTER = {
@@ -72,6 +78,7 @@ function useDebounce(value, delay) {
 }
 
 export default function Crm() {
+  const { t }   = useTranslation();
   const theme   = useTheme();
   const isDark  = theme.palette.mode === 'dark';
   const isMob   = useMediaQuery(theme.breakpoints.down('md'));
@@ -237,12 +244,12 @@ export default function Crm() {
         },
       });
       dispatch(actions.setShowSnackBar({ status: true,
-        msg: `Added ${ids.length} customer${ids.length !== 1 ? 's' : ''} to My Desk`,
+        msg: t('crm.addedToMyDesk', { count: ids.length }),
         type: 'success' }));
       if (!idsParam) setCheckedIds(new Set()); // only clear bulk selection if bulk action
     } catch (err) {
       dispatch(actions.setShowSnackBar({ status: true,
-        msg: err?.response?.data?.message || 'Failed to add to My Desk', type: 'error' }));
+        msg: err?.response?.data?.message || t('crm.failedAddToMyDesk'), type: 'error' }));
     }
     setAddingToDesk(false);
   };
@@ -259,7 +266,7 @@ export default function Crm() {
       });
       dispatch(actions.setShowSnackBar({
         status: true,
-        msg: `Deleted ${ids.length} customer${ids.length !== 1 ? 's' : ''}`,
+        msg: t('crm.deletedCustomers', { count: ids.length }),
         type: 'success',
       }));
       setCheckedIds(new Set());
@@ -271,7 +278,7 @@ export default function Crm() {
     } catch (err) {
       dispatch(actions.setShowSnackBar({
         status: true,
-        msg: err?.response?.data?.message || 'Failed to delete',
+        msg: err?.response?.data?.message || t('crm.failedDelete'),
         type: 'error',
       }));
     }
@@ -288,15 +295,15 @@ export default function Crm() {
         borderBottom: `1px solid ${T.BD}`, flexShrink: 0, flexWrap: 'wrap' }}>
 
         <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
-          CRM
+          {t('crm.title')}
         </Typography>
 
         {/* View toggle: Customers | My Desk */}
         <Box sx={{ display: 'flex', gap: 0.5, bgcolor: T.CTRL_BG, borderRadius: '9px',
           p: '3px', border: `1px solid ${T.BD}`, flexShrink: 0 }}>
           {[
-            { id: 'customers', Icon: TableRowsIcon, label: 'Customers' },
-            { id: 'myDesk',    Icon: DashboardIcon, label: 'My Desk'   },
+            { id: 'customers', Icon: TableRowsIcon, label: t('crm.customers') },
+            { id: 'myDesk',    Icon: DashboardIcon, label: t('crm.myDesk')   },
           ].map(({ id, Icon, label }) => (
             <Tooltip key={id} title={isMob ? label : ''}>
               <Button size="small" onClick={() => setView(id)}
@@ -319,7 +326,7 @@ export default function Crm() {
           border: `1px solid ${T.BD}` }}>
           <SearchIcon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />
           <InputBase value={filter.search} onChange={(e) => setF('search', e.target.value)}
-            placeholder="Search name, company, phone…"
+            placeholder={t('crm.searchPlaceholder')}
             sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, flex: 1,
               '& input::placeholder': { color: T.TEXT_TER } }} />
           {filter.search && (
@@ -329,7 +336,7 @@ export default function Crm() {
           )}
         </Box>
 
-        <Tooltip title="Filters">
+        <Tooltip title={t('common.filters')}>
           <IconButton size="small" onClick={() => setFilterOpen(!filterOpen)}
             sx={{ color: activeFilterCount > 0 ? T.TEXT_PRI : T.TEXT_TER,
               bgcolor: filterOpen ? T.CTRL_BG : 'transparent',
@@ -353,14 +360,14 @@ export default function Crm() {
         <Box sx={{ flexGrow: 1 }} />
 
         {can('crm:customer:create') && (
-          <Tooltip title={isMob ? 'New customer' : ''}>
+          <Tooltip title={isMob ? t('crm.newCustomer') : ''}>
             <Button variant="contained" size="small"
               onClick={() => { setFormMode('new'); setFormCustomer(null); setFormOpen(true); }}
               sx={{ fontSize: '0.75rem', height: 30, borderRadius: '8px',
                 textTransform: 'none', fontWeight: 600, flexShrink: 0,
                 minWidth: isMob ? 30 : 'auto', px: isMob ? '5px' : undefined }}>
               <AddIcon sx={{ fontSize: 17 }} />
-              {!isMob && <Box component="span" sx={{ ml: 0.5 }}>New customer</Box>}
+              {!isMob && <Box component="span" sx={{ ml: 0.5 }}>{t('crm.newCustomer')}</Box>}
             </Button>
           </Tooltip>
         )}
@@ -371,12 +378,12 @@ export default function Crm() {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 0.75,
           bgcolor: T.CTRL_BG, borderBottom: `1px solid ${T.BD}`, flexShrink: 0, flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_PRI, fontWeight: 600 }}>
-            {checkedIds.size} selected
+            {t('common.selected', { count: checkedIds.size })}
           </Typography>
 
           <Button size="small" startIcon={<LabelIcon sx={{ fontSize: 14 }} />}
             sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC, minWidth: 0 }}>
-            Add tag
+            {t('crm.addTag')}
           </Button>
 
           <Button size="small" startIcon={<DashboardIcon sx={{ fontSize: 13 }} />}
@@ -384,14 +391,14 @@ export default function Crm() {
             onClick={handleAddToMyDesk}
             sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC, minWidth: 0 }}>
             {addingToDesk ? <CircularProgress size={11} sx={{ mr: 0.5 }} /> : null}
-            Add to My Desk
+            {t('crm.addToMyDesk')}
           </Button>
 
           {can('crm:task:assign') && (
             <Button size="small" startIcon={<AssignmentIndIcon sx={{ fontSize: 14 }} />}
               onClick={() => setAssignOpen(true)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC, minWidth: 0 }}>
-              Assign
+              {t('common.assign')}
             </Button>
           )}
 
@@ -404,7 +411,7 @@ export default function Crm() {
               onClick={() => setConfirmDeleteOpen(true)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', color: '#EA005A', minWidth: 0,
                 '&:hover': { bgcolor: 'rgba(234,0,90,0.07)' } }}>
-              Delete
+              {t('common.delete')}
             </Button>
           )}
 
@@ -453,7 +460,7 @@ export default function Crm() {
                 }
                 label={
                   <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, ml: 0.5 }}>
-                    {total > 0 ? `${total} customer${total !== 1 ? 's' : ''}` : 'No customers'}
+                    {total > 0 ? t('crm.customersCount', { count: total }) : t('crm.noCustomers')}
                   </Typography>
                 }
                 sx={{ m: 0 }} />
@@ -470,7 +477,7 @@ export default function Crm() {
                     '& .MuiSvgIcon-root': { color: T.TEXT_TER } }}>
                   {SORT_OPTIONS.map(o => (
                     <MenuItem key={o.value} value={o.value} sx={{ fontSize: '0.75rem' }}>
-                      {o.label}
+                      {t(`crm.${o.key}`)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -496,12 +503,12 @@ export default function Crm() {
                   justifyContent: 'center', py: 8, px: 3, textAlign: 'center' }}>
                   <PersonIcon sx={{ fontSize: 48, color: T.TEXT_TER, mb: 1.5 }} />
                   <Typography sx={{ fontSize: '0.875rem', color: T.TEXT_SEC, fontWeight: 600, mb: 0.5 }}>
-                    {activeFilterCount > 0 ? 'No customers match these filters' : 'No customers yet'}
+                    {activeFilterCount > 0 ? t('crm.noCustomersMatchFilters') : t('crm.noCustomersYet')}
                   </Typography>
                   {activeFilterCount > 0 && (
                     <Button size="small" onClick={clearFilters}
                       sx={{ mt: 1.5, fontSize: '0.75rem', textTransform: 'none', color: T.TEXT_TER }}>
-                      Clear filters
+                      {t('common.clearFilters')}
                     </Button>
                   )}
                 </Box>
@@ -560,7 +567,7 @@ export default function Crm() {
             <Box sx={{ textAlign: 'center' }}>
               <PersonIcon sx={{ fontSize: 40, color: T.TEXT_TER, mb: 1 }} />
               <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>
-                Select a customer to view details
+                {t('crm.selectCustomer')}
               </Typography>
             </Box>
           </Box>
@@ -575,7 +582,7 @@ export default function Crm() {
         <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5,
           borderBottom: `1px solid ${T.BD}` }}>
           <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-            Filters
+            {t('common.filters')}
           </Typography>
           <IconButton size="small" onClick={() => setFilterOpen(false)}
             sx={{ color: T.TEXT_TER }}>
@@ -586,28 +593,28 @@ export default function Crm() {
         <Box sx={{ px: 2, py: 2, display: 'flex', flexDirection: 'column', gap: 2.5, overflowY: 'auto' }}>
 
           <FormControl size="small" fullWidth>
-            <InputLabel sx={{ fontSize: '0.78rem' }}>Type</InputLabel>
-            <Select value={filter.type} onChange={(e) => setF('type', e.target.value)} label="Type"
+            <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.type')}</InputLabel>
+            <Select value={filter.type} onChange={(e) => setF('type', e.target.value)} label={t('common.type')}
               sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
-              <MenuItem value=""><em>All</em></MenuItem>
-              <MenuItem value="individual">Individual</MenuItem>
-              <MenuItem value="company">Company</MenuItem>
+              <MenuItem value=""><em>{t('common.all')}</em></MenuItem>
+              <MenuItem value="individual">{t('crm.individual')}</MenuItem>
+              <MenuItem value="company">{t('crm.company')}</MenuItem>
             </Select>
           </FormControl>
 
-          <TextField size="small" label="Country" value={filter.country}
+          <TextField size="small" label={t('common.country')} value={filter.country}
             onChange={(e) => setF('country', e.target.value)}
             inputProps={{ style: { fontSize: '0.8rem' } }}
             sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }} />
 
           <FormControl size="small" fullWidth>
-            <InputLabel sx={{ fontSize: '0.78rem' }}>Status</InputLabel>
-            <Select value={filter.status} onChange={(e) => setF('status', e.target.value)} label="Status"
+            <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.status')}</InputLabel>
+            <Select value={filter.status} onChange={(e) => setF('status', e.target.value)} label={t('common.status')}
               sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
-              <MenuItem value=""><em>All</em></MenuItem>
+              <MenuItem value=""><em>{t('common.all')}</em></MenuItem>
               {STATUS_OPTIONS.map(s => (
                 <MenuItem key={s} value={s} sx={{ fontSize: '0.8rem' }}>
-                  {s.replace('_', ' ')}
+                  {t(`crm.${STATUS_KEY[s]}`)}
                 </MenuItem>
               ))}
             </Select>
@@ -616,7 +623,7 @@ export default function Crm() {
           <Box>
             <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 1,
               textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Channels
+              {t('crm.channels')}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
               {CHANNEL_OPTIONS.map(ch => (
@@ -633,7 +640,7 @@ export default function Crm() {
             </Box>
           </Box>
 
-          <TextField size="small" label="Tags (comma-separated)" value={filter.tags}
+          <TextField size="small" label={t('crm.tagsCommaSeparated')} value={filter.tags}
             onChange={(e) => setF('tags', e.target.value)}
             inputProps={{ style: { fontSize: '0.8rem' } }}
             sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }} />
@@ -641,15 +648,15 @@ export default function Crm() {
           <Box>
             <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 1,
               textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Last call range
+              {t('crm.lastCallRange')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField size="small" type="date" label="From" value={filter.dateFrom}
+              <TextField size="small" type="date" label={t('common.from')} value={filter.dateFrom}
                 onChange={(e) => setF('dateFrom', e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 sx={{ flex: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
                   '& input': { fontSize: '0.78rem' } }} />
-              <TextField size="small" type="date" label="To" value={filter.dateTo}
+              <TextField size="small" type="date" label={t('common.to')} value={filter.dateTo}
                 onChange={(e) => setF('dateTo', e.target.value)}
                 InputLabelProps={{ shrink: true }}
                 sx={{ flex: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
@@ -660,13 +667,13 @@ export default function Crm() {
           <Box sx={{ mb: 2.5 }}>
             <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, mb: 0.75, fontWeight: 700,
               textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              Created by
+              {t('common.createdBy')}
             </Typography>
             <FormControl size="small" fullWidth disabled={createdByDisabled}>
               <Select value={createdByDisabled ? '' : filter.createdBy} displayEmpty
                 onChange={(e) => setF('createdBy', e.target.value)}
                 sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
-                <MenuItem value="" sx={{ fontSize: '0.8rem' }}>Anyone</MenuItem>
+                <MenuItem value="" sx={{ fontSize: '0.8rem' }}>{t('common.anyone')}</MenuItem>
                 {creators.map(c => (
                   <MenuItem key={c._id} value={c._id} sx={{ fontSize: '0.8rem' }}>{c.name}</MenuItem>
                 ))}
@@ -674,7 +681,7 @@ export default function Crm() {
             </FormControl>
             {createdByDisabled && (
               <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.5 }}>
-                Disabled — your CRM access is scoped to your own records
+                {t('crm.disabledScopeNote')}
               </Typography>
             )}
           </Box>
@@ -684,7 +691,7 @@ export default function Crm() {
           <Button fullWidth size="small" onClick={clearFilters}
             sx={{ fontSize: '0.75rem', textTransform: 'none', color: T.TEXT_SEC,
               border: `1px solid ${T.BD}`, borderRadius: '8px' }}>
-            Clear all filters
+            {t('common.clearAllFilters')}
           </Button>
         </Box>
       </Drawer>
@@ -720,9 +727,9 @@ export default function Crm() {
         open={confirmDeleteOpen}
         onClose={() => setConfirmDeleteOpen(false)}
         onConfirm={handleBulkDelete}
-        title={`Delete ${checkedIds.size} customer${checkedIds.size !== 1 ? 's' : ''}?`}
-        message={`This will permanently remove ${checkedIds.size} customer${checkedIds.size !== 1 ? 's' : ''} from the CRM. This action cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('crm.deleteConfirmTitle', { count: checkedIds.size })}
+        message={t('crm.deleteConfirmMessage', { count: checkedIds.size })}
+        confirmLabel={t('common.delete')}
         destructive
       />
     </Box>

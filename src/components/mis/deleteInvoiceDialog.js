@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -19,6 +20,7 @@ import Inventory2Icon from '@mui/icons-material/Inventory2';
 // of tools/modal/confirmDialog.js but needs the extra checkbox, so it's its
 // own small component rather than extending the shared generic one.
 export default function DeleteInvoiceDialog({ doc, open, onClose, onConfirm }) {
+  const { t } = useTranslation();
   const [restoreStock, setRestoreStock] = useState(true);
 
   useEffect(() => { if (open) setRestoreStock(true); }, [open, doc?._id]);
@@ -26,7 +28,7 @@ export default function DeleteInvoiceDialog({ doc, open, onClose, onConfirm }) {
   if (!doc) return null;
 
   const isInvoice = doc.docType === 'invoice';
-  const label = isInvoice ? 'invoice' : 'quotation';
+  const label = isInvoice ? t('mis.docTypeInvoice') : t('mis.docTypeQuotation');
   const showStockOption = isInvoice && doc.stockDecremented;
 
   return (
@@ -43,11 +45,11 @@ export default function DeleteInvoiceDialog({ doc, open, onClose, onConfirm }) {
       }}
     >
       <DialogTitle sx={{ fontSize: '15px', fontWeight: 700, pb: 1 }}>
-        Delete {label} #{doc.docNumber}?
+        {t('mis.deleteDocTitle', { type: label, number: doc.docNumber })}
       </DialogTitle>
       <DialogContent sx={{ pt: 0 }}>
         <DialogContentText sx={{ fontSize: '13px', color: 'text.secondary' }}>
-          The document will be removed from the list. This action cannot be undone.
+          {t('mis.deleteDocMessage')}
         </DialogContentText>
 
         {showStockOption && (
@@ -66,13 +68,12 @@ export default function DeleteInvoiceDialog({ doc, open, onClose, onConfirm }) {
                   }
                   label={
                     <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>
-                      Restore stock
+                      {t('mis.restoreStock')}
                     </Typography>
                   }
                 />
                 <Typography sx={{ fontSize: '12px', color: 'text.secondary', lineHeight: 1.4 }}>
-                  This invoice already decremented inventory when it was paid. Add the sold
-                  quantities back to their variants so deleting it doesn't leave stock short.
+                  {t('mis.restoreStockNote')}
                 </Typography>
               </Box>
             </Box>
@@ -86,7 +87,7 @@ export default function DeleteInvoiceDialog({ doc, open, onClose, onConfirm }) {
           variant="outlined"
           sx={{ borderRadius: '10px', textTransform: 'none', fontSize: '13px' }}
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={() => { onConfirm(showStockOption && restoreStock); onClose(); }}
@@ -97,7 +98,7 @@ export default function DeleteInvoiceDialog({ doc, open, onClose, onConfirm }) {
             bgcolor: '#EA005A', '&:hover': { bgcolor: '#c0004a' },
           }}
         >
-          Delete
+          {t('common.delete')}
         </Button>
       </DialogActions>
     </Dialog>

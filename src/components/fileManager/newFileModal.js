@@ -10,6 +10,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -19,6 +20,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 // modal: newFolderType 'mainNewFolderBtn' creates in currentDisplay,
 // 'inFilePicker' creates in currentDisplayFilePicker) ─────────────────────────
 export default function NewFileModal(props) {
+  const { t }        = useTranslation();
   const authContext = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -51,7 +53,7 @@ export default function NewFileModal(props) {
   const handleClose = () => props.setNewFileModal(false);
 
   const newFile = async () => {
-    if (!theName.trim()) { setError('Enter a folder name'); return; }
+    if (!theName.trim()) { setError(t('files.enterFolderName')); return; }
     setLoading(true);
     const target = props.newFolderType === 'inFilePicker' ? currentDisplayFilePicker : currentDisplay;
     try {
@@ -61,12 +63,12 @@ export default function NewFileModal(props) {
         data: { supFolder: target.id, name: theName.trim() },
       });
       dispatch(actions.refresh());
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Folder created', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('files.folderCreated'), type: 'success' }));
       setLoading(false);
       handleClose();
     } catch (err) {
       setLoading(false);
-      setError(err?.response?.data?.message || 'Failed to create the folder');
+      setError(err?.response?.data?.message || t('files.failedToCreateFolder'));
     }
   };
 
@@ -82,7 +84,7 @@ export default function NewFileModal(props) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
         <CreateNewFolderIcon sx={{ fontSize: 18, color: T.TEXT_SEC }} />
         <Typography sx={{ flexGrow: 1, fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          New folder
+          {t('common.newFolder')}
         </Typography>
         <IconButton size="small" onClick={handleClose} sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -90,7 +92,7 @@ export default function NewFileModal(props) {
       </Box>
 
       <Box sx={{ px: 3, pt: 2.5, pb: 1 }}>
-        <TextField autoFocus fullWidth size="small" placeholder="Folder name"
+        <TextField autoFocus fullWidth size="small" placeholder={t('files.folderNamePlaceholder')}
           value={theName}
           onChange={(e) => { setTheName(e.target.value); setError(''); }}
           onKeyDown={(e) => e.key === 'Enter' && newFile()}
@@ -108,14 +110,14 @@ export default function NewFileModal(props) {
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, gap: 1 }}>
         <Button onClick={handleClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={newFile} disabled={loading}
           startIcon={loading ? <CircularProgress size={13} color="inherit" /> : null}
           sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
             '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' } }}>
-          {loading ? 'Creating…' : 'Create'}
+          {loading ? t('files.creatingEllipsis') : t('users.create')}
         </Button>
       </DialogActions>
     </Dialog>

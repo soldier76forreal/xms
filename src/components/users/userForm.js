@@ -16,6 +16,7 @@ import MenuItem from '@mui/material/MenuItem';
 import CloseIcon from '@mui/icons-material/Close';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -33,6 +34,7 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
+  const { t }       = useTranslation();
   const { isSuperAdmin } = usePermissions();
   const theme       = useTheme();
   const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
@@ -137,7 +139,7 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
+    if (!file.type.startsWith('image/')) { setError(t('users.selectImageFile')); return; }
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setAvatarPreview(reader.result);
@@ -155,9 +157,9 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
   );
 
   const handleSave = async () => {
-    if (!firstName.trim()) { setError('First name is required'); return; }
-    if (!lastName.trim())  { setError('Last name is required');  return; }
-    if (mode === 'new' && !phoneNumber.trim()) { setError('Phone number is required'); return; }
+    if (!firstName.trim()) { setError(t('users.firstNameRequired')); return; }
+    if (!lastName.trim())  { setError(t('users.lastNameRequired'));  return; }
+    if (mode === 'new' && !phoneNumber.trim()) { setError(t('users.phoneRequired')); return; }
 
     setSaving(true); setError('');
     try {
@@ -208,13 +210,13 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
 
       dispatch(actions.setShowSnackBar({
         status: true,
-        msg:    mode === 'new' ? 'User created' : 'User updated',
+        msg:    mode === 'new' ? t('users.userCreated') : t('users.userUpdated'),
         type:   'success',
       }));
       onSave(savedId);
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || err?.response?.data?.error || 'Failed to save');
+      setError(err?.response?.data?.message || err?.response?.data?.error || t('users.failedSave'));
     } finally {
       setSaving(false);
     }
@@ -251,7 +253,7 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
         px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}`,
       }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          {mode === 'new' ? 'New User' : 'Edit User'}
+          {mode === 'new' ? t('users.newUserHeader') : t('users.editUserHeader')}
         </Typography>
         <IconButton
           onClick={onClose} size="small"
@@ -297,8 +299,8 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
           </Box>
           <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleAvatarChange} />
           <Box>
-            <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_PRI, fontWeight: 500 }}>Profile photo</Typography>
-            <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mt: 0.3 }}>Click avatar to upload</Typography>
+            <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_PRI, fontWeight: 500 }}>{t('users.profilePhoto')}</Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mt: 0.3 }}>{t('users.clickAvatarToUpload')}</Typography>
           </Box>
         </Box>
 
@@ -307,13 +309,13 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
         {/* Name fields */}
         <Box sx={{ display: 'flex', gap: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
           <TextField
-            label="First name" size="small" fullWidth
+            label={t('users.firstNameLabel')} size="small" fullWidth
             value={firstName}
             onChange={e => { setFirstName(e.target.value); setError(''); }}
             sx={inputSx}
           />
           <TextField
-            label="Last name" size="small" fullWidth
+            label={t('users.lastNameLabel')} size="small" fullWidth
             value={lastName}
             onChange={e => { setLastName(e.target.value); setError(''); }}
             sx={inputSx}
@@ -343,8 +345,8 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
             </Button>
 
             <TextField
-              label="Phone number" size="small" fullWidth
-              placeholder="09xxxxxxxxx"
+              label={t('users.phoneNumberLabel')} size="small" fullWidth
+              placeholder={t('users.phoneNumberPlaceholder')}
               value={phoneNumber}
               onChange={e => { setPhoneNumber(e.target.value); setError(''); }}
               inputProps={{ dir: 'ltr' }}
@@ -357,7 +359,7 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
         {mode === 'edit' && (
           <Box>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-              Country
+              {t('users.countryLabel')}
             </Typography>
             <Button
               onClick={(e) => { setCountryMenu(e.currentTarget); setCountrySearch(''); }}
@@ -393,7 +395,7 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
         >
           <Box sx={{ px: 1.5, pt: 1, pb: 0.5, position: 'sticky', top: 0, bgcolor: isDark ? '#181818' : '#ffffff', zIndex: 1 }}>
             <TextField
-              size="small" fullWidth placeholder="Search…"
+              size="small" fullWidth placeholder={t('users.searchEllipsis')}
               value={countrySearch}
               onChange={e => setCountrySearch(e.target.value)}
               autoFocus
@@ -425,15 +427,15 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
             </MenuItem>
           ))}
           {filteredCountries.length === 0 && (
-            <MenuItem disabled sx={{ color: T.TEXT_TER, fontSize: '0.82rem' }}>No match</MenuItem>
+            <MenuItem disabled sx={{ color: T.TEXT_TER, fontSize: '0.82rem' }}>{t('users.noMatch')}</MenuItem>
           )}
         </Menu>
 
         {/* Active toggle */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box>
-            <Typography sx={{ fontSize: '0.85rem', color: T.TEXT_PRI }}>Active</Typography>
-            <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>Inactive users cannot log in</Typography>
+            <Typography sx={{ fontSize: '0.85rem', color: T.TEXT_PRI }}>{t('users.activeLabel')}</Typography>
+            <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>{t('users.inactiveUsersHint')}</Typography>
           </Box>
           <Switch
             checked={validation}
@@ -453,12 +455,12 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
         {isSuperAdmin && (
           <Box>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-              Roles
+              {t('users.rolesLabel')}
             </Typography>
             {loadingMeta ? (
               <CircularProgress size={16} sx={{ color: T.TEXT_TER }} />
             ) : roles.length === 0 ? (
-              <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER }}>No roles available</Typography>
+              <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER }}>{t('users.noRolesAvailable')}</Typography>
             ) : (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
                 {roles.map(r => {
@@ -491,7 +493,7 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
         {isSuperAdmin && groups.length > 0 && (
           <Box>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-              Groups
+              {t('users.groupsLabel')}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
               {groups.map(g => {
@@ -523,10 +525,10 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
         {isSuperAdmin && branches.length > 0 && (
           <Box>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-              Branches
+              {t('users.branchesLabel')}
             </Typography>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mb: 1 }}>
-              Which branches this user can access (Inventory + Invoices are isolated per branch).
+              {t('users.branchesAccessHint')}
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
               {branches.map(b => {
@@ -568,7 +570,7 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
             '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', color: T.TEXT_PRI },
           }}
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={handleSave}
@@ -582,7 +584,7 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
             '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' },
           }}
         >
-          {saving ? 'Saving…' : mode === 'new' ? 'Create' : 'Save'}
+          {saving ? t('users.saving') : mode === 'new' ? t('users.create') : t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>

@@ -9,6 +9,7 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 import PlayCircleFilledIcon from '@mui/icons-material/PlayCircleFilled';
 import { FileIcon, defaultStyles } from 'react-file-icon';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 
 const IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
 const VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v'];
@@ -18,6 +19,7 @@ const VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v'];
 // ({file}) — the exact same tree-entry shapes store.js has always used.
 const FileCard = ({ entry, apiBase, selected, checked, pinned, tags,
   onOpen, onToggleCheck, onTogglePin }) => {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -32,7 +34,7 @@ const FileCard = ({ entry, apiBase, selected, checked, pinned, tags,
 
   const isFolder = entry.file === undefined;
   const doc  = isFolder ? entry.doc : entry.file;
-  const name = doc?.name || 'Untitled';
+  const name = doc?.name || t('files.untitled');
   const format = !isFolder ? (doc.format || '').toLowerCase() : null;
   const isImage = !isFolder && IMAGE_FORMATS.includes(format);
   const isVideo = !isFolder && VIDEO_FORMATS.includes(format);
@@ -116,8 +118,8 @@ const FileCard = ({ entry, apiBase, selected, checked, pinned, tags,
       {/* tag chips */}
       {tags?.length > 0 && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
-          {tags.slice(0, 3).map((t) => (
-            <Chip key={t._id} label={t.tag} size="small"
+          {tags.slice(0, 3).map((tag) => (
+            <Chip key={tag._id} label={tag.tag} size="small"
               sx={{ height: 16, fontSize: '0.6rem', borderRadius: '4px',
                 bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                 color: T.TEXT_SEC, '& .MuiChip-label': { px: 0.6 } }} />

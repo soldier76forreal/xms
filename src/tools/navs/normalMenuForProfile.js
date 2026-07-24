@@ -1,4 +1,5 @@
 import { useContext, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Menu from '@mui/material/Menu';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -31,6 +32,7 @@ const MODULE_LABELS = {
 // access[] role strings. Shows identity + real RBAC-derived access, and the
 // actions: my profile, push notifications, theme toggle, logout.
 export default function NormalMenuForProfile(props) {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { themeMode, toggleTheme } = useContext(ThemeCtx);
@@ -169,16 +171,16 @@ export default function NormalMenuForProfile(props) {
 
       {/* ── Actions ── */}
       <Box sx={{ py: 0.75 }}>
-        {row(<AccountCircleIcon />, 'My profile', () => { props.handleClose(); setProfileOpen(true); })}
+        {row(<AccountCircleIcon />, t('profile.myProfile'), () => { props.handleClose(); setProfileOpen(true); })}
         {row(<NotificationsActiveIcon />, 'Enable push notifications', activeNotif)}
         {row(themeMode === 'light' ? <DarkModeIcon /> : <LightModeIcon />,
-          themeMode === 'light' ? 'Dark mode' : 'Light mode', toggleTheme)}
+          themeMode === 'light' ? t('profile.darkMode') : t('profile.lightMode'), toggleTheme)}
       </Box>
 
       <Divider sx={{ borderColor: T.BD }} />
 
       <Box sx={{ py: 0.75 }}>
-        {row(<LogoutOutlinedIcon />, 'Log out', () => { props.handleClose(); authCtx.logout(); }, true)}
+        {row(<LogoutOutlinedIcon />, t('profile.logout'), () => { props.handleClose(); authCtx.logout(); }, true)}
       </Box>
     </Menu>
     </>

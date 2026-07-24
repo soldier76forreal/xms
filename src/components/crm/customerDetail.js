@@ -11,6 +11,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Skeleton from '@mui/material/Skeleton';
 import Tooltip from '@mui/material/Tooltip';
 import { useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 import CloseIcon          from '@mui/icons-material/Close';
 import EditIcon           from '@mui/icons-material/Edit';
@@ -55,45 +56,53 @@ const STATUS_COLORS = {
   lost:       { bg: 'rgba(255,77,141,0.15)',  text: 'rgb(255,77,141)'  },
 };
 
+// WhatsApp/Telegram/Instagram are brand names and stay untranslated in every
+// language; labelKey resolves the two generic ones (Call/Email) at render time.
 const CHANNEL_CONFIG = {
   whatsApp:  { icon: <WhatsAppIcon  sx={{ fontSize: 15 }} />, build: h => `https://wa.me/${h}`,          label: 'WhatsApp' },
-  phone:     { icon: <CallIcon      sx={{ fontSize: 15 }} />, build: h => `tel:${h}`,                    label: 'Call' },
-  email:     { icon: <EmailIcon     sx={{ fontSize: 15 }} />, build: h => `mailto:${h}`,                 label: 'Email' },
+  phone:     { icon: <CallIcon      sx={{ fontSize: 15 }} />, build: h => `tel:${h}`,                    labelKey: 'channelCall' },
+  email:     { icon: <EmailIcon     sx={{ fontSize: 15 }} />, build: h => `mailto:${h}`,                 labelKey: 'channelEmail' },
   telegram:  { icon: <TelegramIcon  sx={{ fontSize: 15 }} />, build: h => `https://t.me/${h}`,           label: 'Telegram' },
   instagram: { icon: <InstagramIcon sx={{ fontSize: 15 }} />, build: h => `https://instagram.com/${h}`, label: 'Instagram' },
 };
 
+// labelKey resolved at render time via t(`crm.${labelKey}`).
 const ACTIVITY_CFG = {
-  created:        { label: 'Customer created',  Icon: PersonAddIcon,   color: 'rgb(72,199,142)' },
-  updated:        { label: 'Record updated',    Icon: EditIcon,        color: 'rgb(100,149,237)' },
-  call_logged:    { label: 'Call logged',       Icon: CallIcon,        color: 'rgb(100,149,237)' },
-  note:           { label: 'Note added',        Icon: NoteAltIcon,     color: 'rgb(255,183,77)'  },
-  assigned:       { label: 'Assigned',          Icon: PersonIcon,      color: 'rgb(149,100,237)' },
-  status_changed: { label: 'Status changed',    Icon: FlagIcon,        color: 'rgb(255,100,130)' },
-  interest:       { label: 'Products updated',  Icon: StarIcon,        color: 'rgb(100,200,200)' },
-  follow_up_set:  { label: 'Follow-up set',     Icon: ScheduleIcon,    color: 'rgb(255,183,77)'  },
+  created:        { labelKey: 'activityCreated',         Icon: PersonAddIcon,   color: 'rgb(72,199,142)' },
+  updated:        { labelKey: 'activityUpdated',         Icon: EditIcon,        color: 'rgb(100,149,237)' },
+  call_logged:    { labelKey: 'activityCallLogged',      Icon: CallIcon,        color: 'rgb(100,149,237)' },
+  note:           { labelKey: 'activityNoteAdded',       Icon: NoteAltIcon,     color: 'rgb(255,183,77)'  },
+  assigned:       { labelKey: 'activityAssigned',        Icon: PersonIcon,      color: 'rgb(149,100,237)' },
+  status_changed: { labelKey: 'activityStatusChanged',   Icon: FlagIcon,        color: 'rgb(255,100,130)' },
+  interest:       { labelKey: 'activityInterestUpdated', Icon: StarIcon,        color: 'rgb(100,200,200)' },
+  follow_up_set:  { labelKey: 'activityFollowUpSet',     Icon: ScheduleIcon,    color: 'rgb(255,183,77)'  },
 };
 
-const TABS = ['Details', 'Communication', 'Requests'];
+const TAB_KEYS = ['tabDetails', 'tabCommunication', 'tabRequests'];
 
-function relativeDate(d) {
+const STATUS_KEY = {
+  new: 'statusNew', active: 'statusActive', follow_up: 'statusFollowUp', won: 'statusWon', lost: 'statusLost',
+};
+
+function relativeDate(d, t) {
   if (!d) return null;
   const diff = Date.now() - new Date(d).getTime();
   const sec  = Math.floor(diff / 1000);
-  if (sec < 60)   return 'just now';
+  if (sec < 60)   return t('crm.relativeJustNow');
   const min = Math.floor(sec / 60);
-  if (min < 60)   return `${min}m ago`;
+  if (min < 60)   return t('crm.relativeMinutesAgo', { count: min });
   const hr  = Math.floor(min / 60);
-  if (hr  < 24)   return `${hr}h ago`;
+  if (hr  < 24)   return t('crm.relativeHoursAgo', { count: hr });
   const days = Math.floor(hr / 24);
-  if (days < 30)  return `${days}d ago`;
-  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
+  if (days < 30)  return t('crm.relativeDaysAgo', { count: days });
+  if (days < 365) return t('crm.relativeMonthsAgo', { count: Math.floor(days / 30) });
+  return t('crm.relativeYearsAgo', { count: Math.floor(days / 365) });
 }
 
 // ── CustomerDetail (main) ──────────────────────────────────────────────────────
 
 const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }) => {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [activeTab,    setActiveTab]    = useState(initialTab);
@@ -151,7 +160,7 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
                 {customerName}
               </Typography>
               {customer.status && (
-                <Chip label={customer.status.replace('_', ' ')} size="small"
+                <Chip label={t(`crm.${STATUS_KEY[customer.status] || 'statusNew'}`)} size="small"
                   sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700, borderRadius: '4px',
                     bgcolor: statusCfg.bg, color: statusCfg.text,
                     '& .MuiChip-label': { px: 0.75 } }} />
@@ -167,7 +176,7 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
 
           <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>
             {can('crm:customer:edit') && (
-              <Tooltip title="Edit">
+              <Tooltip title={t('common.edit')}>
                 <IconButton size="small" onClick={onEdit}
                   sx={{ color: T.TEXT_TER, width: 28, height: 28, '&:hover': { color: T.TEXT_PRI } }}>
                   <EditIcon sx={{ fontSize: 15 }} />
@@ -175,7 +184,7 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
               </Tooltip>
             )}
             {can('crm:customer:delete') && (
-              <Tooltip title="Delete">
+              <Tooltip title={t('common.delete')}>
                 <IconButton size="small" onClick={handleDeleteClick}
                   sx={{ color: T.TEXT_TER, width: 28, height: 28, '&:hover': { color: '#EA005A' } }}>
                   <DeleteOutlineIcon sx={{ fontSize: 15 }} />
@@ -204,15 +213,15 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
 
       {/* ── Tab bar ── */}
       <Box sx={{ px: 2, pt: 1.25, pb: 0, display: 'flex', gap: 0.5, flexShrink: 0 }}>
-        {TABS.map((tab, i) => (
-          <Button key={tab} size="small" onClick={() => setActiveTab(i)}
+        {TAB_KEYS.map((tabKey, i) => (
+          <Button key={tabKey} size="small" onClick={() => setActiveTab(i)}
             sx={{ minWidth: 0, px: 1.5, py: '4px', borderRadius: '7px',
               fontSize: '0.75rem', fontWeight: activeTab === i ? 700 : 400,
               textTransform: 'none',
               color: activeTab === i ? T.TEXT_PRI : T.TEXT_TER,
               bgcolor: activeTab === i ? T.TAB_BG : 'transparent',
               '&:hover': { bgcolor: T.TAB_BG, color: T.TEXT_PRI } }}>
-            {tab}
+            {t(`crm.${tabKey}`)}
           </Button>
         ))}
       </Box>
@@ -237,9 +246,9 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete customer"
-        message={`Delete "${customerName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('crm.deleteCustomerTitle')}
+        message={t('crm.deleteCustomerMessage', { name: customerName })}
+        confirmLabel={t('common.delete')}
         destructive
       />
     </Box>
@@ -249,6 +258,7 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
 // ── Details Tab ───────────────────────────────────────────────────────────────
 
 const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
+  const { t }   = useTranslation();
   const pi      = customer.personalInformation || {};
   const handles = customer.commHandles || {};
   const { can } = usePermissions();
@@ -281,11 +291,11 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
     <Box sx={{ px: 2.5, py: 2 }}>
 
       {/* ── Contact info ── */}
-      <SectionLabel label="Contact" T={T} />
+      <SectionLabel label={t('crm.sectionContact')} T={T} />
 
       {/* Phone + click-to-contact */}
       {(customer.phoneNumber || customer.contactInfo?.phoneNumbers?.[0]?.number) && (
-        <InfoRow label="Phone" T={T}>
+        <InfoRow label={t('crm.labelPhone')} T={T}>
           <ContactLink
             href={`tel:${customer.phoneNumber || customer.contactInfo?.phoneNumbers?.[0]?.number}`}
             icon={<CallIcon sx={{ fontSize: 14 }} />}
@@ -300,7 +310,7 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
         const handle = handles[ch];
         if (!cfg || !handle) return null;
         return (
-          <InfoRow key={ch} label={cfg.label} T={T}>
+          <InfoRow key={ch} label={cfg.labelKey ? t(`crm.${cfg.labelKey}`) : cfg.label} T={T}>
             <ContactLink href={cfg.build(handle)} icon={cfg.icon} text={handle} T={T}
               external={ch !== 'phone' && ch !== 'email'} />
           </InfoRow>
@@ -309,7 +319,7 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
 
       {/* Legacy email fallback */}
       {!handles.email && customer.contactInfo?.emails?.[0]?.email && (
-        <InfoRow label="Email" T={T}>
+        <InfoRow label={t('crm.labelEmail')} T={T}>
           <ContactLink href={`mailto:${customer.contactInfo.emails[0].email}`}
             icon={<EmailIcon sx={{ fontSize: 14 }} />}
             text={customer.contactInfo.emails[0].email} T={T} />
@@ -317,46 +327,46 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
       )}
 
       {/* ── Identity ── */}
-      <SectionLabel label="Identity" T={T} mt={2} />
+      <SectionLabel label={t('crm.sectionIdentity')} T={T} mt={2} />
 
       {pi.personOrCompany || pi.customerType
-        ? <InfoRow label="Type"    T={T}><PlainText text={(pi.personOrCompany || pi.customerType)} T={T} /></InfoRow>
+        ? <InfoRow label={t('crm.labelType')}    T={T}><PlainText text={(pi.personOrCompany || pi.customerType)} T={T} /></InfoRow>
         : null}
       {pi.contactPerson
-        ? <InfoRow label="Contact person" T={T}><PlainText text={pi.contactPerson} T={T} /></InfoRow>
+        ? <InfoRow label={t('crm.labelContactPerson')} T={T}><PlainText text={pi.contactPerson} T={T} /></InfoRow>
         : null}
       {pi.attractedBy
-        ? <InfoRow label="Source"  T={T}><PlainText text={pi.attractedBy} T={T} /></InfoRow>
+        ? <InfoRow label={t('crm.labelSource')}  T={T}><PlainText text={pi.attractedBy} T={T} /></InfoRow>
         : null}
 
       {/* ── Location ── */}
       {(pi.country || pi.city || pi.State || pi.address) && (
         <>
-          <SectionLabel label="Location" T={T} mt={2} />
-          {pi.country  && <InfoRow label="Country" T={T}><PlainText text={pi.country}  T={T} /></InfoRow>}
-          {pi.State    && <InfoRow label="State"   T={T}><PlainText text={pi.State}    T={T} /></InfoRow>}
-          {pi.city     && <InfoRow label="City"    T={T}><PlainText text={pi.city}     T={T} /></InfoRow>}
-          {pi.address  && <InfoRow label="Address" T={T}><PlainText text={pi.address}  T={T} /></InfoRow>}
-          {pi.postalCode && <InfoRow label="ZIP"   T={T}><PlainText text={pi.postalCode} T={T} /></InfoRow>}
+          <SectionLabel label={t('crm.sectionLocation')} T={T} mt={2} />
+          {pi.country  && <InfoRow label={t('common.country')} T={T}><PlainText text={pi.country}  T={T} /></InfoRow>}
+          {pi.State    && <InfoRow label={t('crm.labelState')}   T={T}><PlainText text={pi.State}    T={T} /></InfoRow>}
+          {pi.city     && <InfoRow label={t('crm.labelCity')}    T={T}><PlainText text={pi.city}     T={T} /></InfoRow>}
+          {pi.address  && <InfoRow label={t('crm.labelAddress')} T={T}><PlainText text={pi.address}  T={T} /></InfoRow>}
+          {pi.postalCode && <InfoRow label={t('crm.labelZip')}   T={T}><PlainText text={pi.postalCode} T={T} /></InfoRow>}
         </>
       )}
 
       {/* ── Activity ── */}
-      <SectionLabel label="Activity" T={T} mt={2} />
+      <SectionLabel label={t('crm.sectionActivity')} T={T} mt={2} />
 
       {customer.lastCallAt && (
-        <InfoRow label="Last call" T={T}>
+        <InfoRow label={t('crm.labelLastCall')} T={T}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <CallIcon sx={{ fontSize: 13, color: T.TEXT_TER }} />
             <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>
-              {new Date(customer.lastCallAt).toLocaleDateString()} ({relativeDate(customer.lastCallAt)})
+              {new Date(customer.lastCallAt).toLocaleDateString()} ({relativeDate(customer.lastCallAt, t)})
             </Typography>
           </Box>
         </InfoRow>
       )}
 
       {/* Follow-up */}
-      <InfoRow label="Follow-up" T={T}>
+      <InfoRow label={t('crm.labelFollowUp')} T={T}>
         {followUpEditing ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <TextField type="date" size="small" value={followUpDate}
@@ -366,7 +376,7 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
             <Button size="small" disabled={!followUpDate || savingFollowUp}
               onClick={saveFollowUp} variant="contained"
               sx={{ minWidth: 0, height: 26, fontSize: '0.72rem', px: 1.5, textTransform: 'none' }}>
-              {savingFollowUp ? <CircularProgress size={10} /> : 'Save'}
+              {savingFollowUp ? <CircularProgress size={10} /> : t('common.save')}
             </Button>
             <IconButton size="small" onClick={() => setFollowUpEditing(false)}
               sx={{ color: T.TEXT_TER, width: 24, height: 24 }}>
@@ -381,12 +391,12 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
                 <ScheduleIcon sx={{ fontSize: 13, verticalAlign: 'middle', mr: 0.5,
                   color: isOverdue ? '#FFB74D' : T.TEXT_TER }} />
                 {new Date(customer.nextFollowUpAt).toLocaleDateString()}
-                {isOverdue && <Chip label="overdue" size="small"
+                {isOverdue && <Chip label={t('crm.overdue')} size="small"
                   sx={{ ml: 0.75, height: 16, fontSize: '0.55rem', bgcolor: 'rgba(255,183,77,0.15)',
                     color: '#FFB74D', '& .MuiChip-label': { px: 0.5 } }} />}
               </Typography>
             ) : (
-              <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>Not set</Typography>
+              <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>{t('crm.notSet')}</Typography>
             )}
             {can('crm:customer:edit') && (
               <IconButton size="small"
@@ -402,12 +412,15 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
       {/* ── Interested products ── */}
       {(customer.interestedProducts || []).length > 0 && (
         <>
-          <SectionLabel label="Interested products" T={T} mt={2} />
+          <SectionLabel label={t('crm.sectionInterestedProducts')} T={T} mt={2} />
           {customer.interestedProducts.map((ip, i) => (
-            <InfoRow key={i} label={`Product ${i + 1}`} T={T}>
+            <InfoRow key={i} label={t('crm.labelProductN', { n: i + 1 })} T={T}>
               <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>
-                  {ip.productCode || ip.productId || '—'}
+                <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, fontWeight: 600 }}>
+                  {ip.productName || t('crm.unknownProduct')}
+                </Typography>
+                <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC, fontFamily: ip.variantCode ? 'monospace' : undefined }}>
+                  {ip.variantCode || t('crm.anyVariety')}
                 </Typography>
                 {ip.note && (
                   <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>
@@ -421,15 +434,15 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
       )}
 
       {/* ── Meta ── */}
-      <SectionLabel label="Meta" T={T} mt={2} />
+      <SectionLabel label={t('crm.sectionMeta')} T={T} mt={2} />
       {customer.insertDate && (
-        <InfoRow label="Created" T={T}>
+        <InfoRow label={t('crm.labelCreated')} T={T}>
           <PlainText text={new Date(customer.insertDate).toLocaleDateString()} T={T} />
         </InfoRow>
       )}
       {customer.updateDate && (
-        <InfoRow label="Updated" T={T}>
-          <PlainText text={`${new Date(customer.updateDate).toLocaleDateString()} (${relativeDate(customer.updateDate)})`} T={T} />
+        <InfoRow label={t('crm.labelUpdated')} T={T}>
+          <PlainText text={`${new Date(customer.updateDate).toLocaleDateString()} (${relativeDate(customer.updateDate, t)})`} T={T} />
         </InfoRow>
       )}
 
@@ -441,6 +454,7 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
 // ── Communication Tab ─────────────────────────────────────────────────────────
 
 const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
+  const { t }   = useTranslation();
   const { can } = usePermissions();
 
   const [activities, setActivities] = useState([]);
@@ -469,7 +483,7 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
       chunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((track) => track.stop());
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
         setPendingFiles((prev) => [...prev, file]);
@@ -478,7 +492,7 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
       mediaRecorderRef.current = recorder;
       setRecording(true);
     } catch (_) {
-      setRecordError('Microphone access denied or unavailable');
+      setRecordError(t('crm.micDenied'));
     }
   };
   const stopRecording = () => {
@@ -534,7 +548,7 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setActivities(prev => [res.data, ...prev]);
-      setTotal(t => t + 1);
+      setTotal(prevTotal => prevTotal + 1);
       setPendingFiles([]);
       setLogBody('');
     } catch (_) {}
@@ -545,7 +559,7 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
     return (
       <Box sx={{ px: 2.5, py: 4, textAlign: 'center' }}>
         <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>
-          You don't have permission to view communication history
+          {t('crm.noPermissionCommunication')}
         </Typography>
       </Box>
     );
@@ -560,18 +574,18 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
           bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
           border: `1px solid ${T.BD}` }}>
           <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-            {['call_logged', 'note'].map(t => (
-              <Button key={t} size="small" onClick={() => setLogType(t)}
+            {['call_logged', 'note'].map(lt => (
+              <Button key={lt} size="small" onClick={() => setLogType(lt)}
                 sx={{ minWidth: 0, px: 1.25, py: '3px', borderRadius: '6px',
-                  fontSize: '0.72rem', textTransform: 'none', fontWeight: logType === t ? 700 : 400,
-                  color: logType === t ? T.TEXT_PRI : T.TEXT_TER,
-                  bgcolor: logType === t ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)') : 'transparent' }}>
-                {t === 'call_logged' ? 'Log call' : 'Add note'}
+                  fontSize: '0.72rem', textTransform: 'none', fontWeight: logType === lt ? 700 : 400,
+                  color: logType === lt ? T.TEXT_PRI : T.TEXT_TER,
+                  bgcolor: logType === lt ? (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)') : 'transparent' }}>
+                {lt === 'call_logged' ? t('crm.logCall') : t('crm.addNote')}
               </Button>
             ))}
           </Box>
           <TextField multiline minRows={2} fullWidth size="small"
-            placeholder={logType === 'call_logged' ? 'Call outcome, topics discussed…' : 'Note…'}
+            placeholder={logType === 'call_logged' ? t('crm.callOutcomePlaceholder') : t('crm.notePlaceholder')}
             value={logBody}
             onChange={e => setLogBody(e.target.value)}
             sx={{ mb: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
@@ -594,13 +608,13 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
           )}
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Tooltip title={recording ? 'Stop recording' : 'Record a voice message'}>
+            <Tooltip title={recording ? t('crm.stopRecording') : t('crm.recordVoiceMessage')}>
               <IconButton size="small" onClick={recording ? stopRecording : startRecording}
                 sx={{ color: recording ? '#EA005A' : T.TEXT_TER, width: 28, height: 28 }}>
                 {recording ? <StopCircleIcon sx={{ fontSize: 18 }} /> : <MicIcon sx={{ fontSize: 18 }} />}
               </IconButton>
             </Tooltip>
-            <Tooltip title="Attach image or video">
+            <Tooltip title={t('crm.attachImageVideo')}>
               <IconButton size="small" component="label" sx={{ color: T.TEXT_TER, width: 28, height: 28 }}>
                 <AttachFileIcon sx={{ fontSize: 17 }} />
                 <input type="file" hidden multiple accept="image/*,video/*" onChange={handleAttachFiles} />
@@ -608,14 +622,14 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
             </Tooltip>
             {recording && (
               <Typography sx={{ fontSize: '0.7rem', color: '#EA005A', fontWeight: 600 }}>
-                Recording…
+                {t('crm.recording')}
               </Typography>
             )}
             <Box sx={{ flexGrow: 1 }} />
             <Button size="small" variant="contained" startIcon={<SendIcon sx={{ fontSize: 13 }} />}
               onClick={submitLog} disabled={submitting || (!logBody.trim() && pendingFiles.length === 0)}
               sx={{ fontSize: '0.72rem', height: 28, textTransform: 'none', borderRadius: '7px', px: 1.5 }}>
-              {submitting ? <CircularProgress size={12} /> : 'Save'}
+              {submitting ? <CircularProgress size={12} /> : t('common.save')}
             </Button>
           </Box>
         </Box>
@@ -638,7 +652,7 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <ChatIcon sx={{ fontSize: 36, color: T.TEXT_TER, mb: 1 }} />
           <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>
-            No activity yet
+            {t('crm.noActivityYet')}
           </Typography>
         </Box>
       ) : (
@@ -664,15 +678,15 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
                 <Box sx={{ flexGrow: 1, minWidth: 0, pt: 0.25 }}>
                   <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
                     <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: T.TEXT_PRI }}>
-                      {cfg.label}
+                      {t(`crm.${cfg.labelKey}`)}
                     </Typography>
                     {act.actorName && (
                       <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
-                        by {act.actorName}
+                        {t('crm.byActor', { name: act.actorName })}
                       </Typography>
                     )}
                     <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, ml: 'auto' }}>
-                      {relativeDate(act.date)}
+                      {relativeDate(act.date, t)}
                     </Typography>
                   </Box>
 
@@ -757,7 +771,7 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
               <Button size="small" onClick={() => load(page + 1)} disabled={loading}
                 sx={{ fontSize: '0.72rem', color: T.TEXT_TER, textTransform: 'none' }}>
                 {loading ? <CircularProgress size={12} sx={{ mr: 0.5 }} /> : null}
-                Load more
+                {t('crm.loadMore')}
               </Button>
             </Box>
           )}

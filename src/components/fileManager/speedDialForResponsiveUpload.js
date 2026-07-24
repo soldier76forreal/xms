@@ -1,5 +1,6 @@
 import { Fragment } from "react"
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import SpeedDial from '@mui/material/SpeedDial';
 import SpeedDialIcon from '@mui/material/SpeedDialIcon';
@@ -17,10 +18,11 @@ import S from '../../tools/buttons/speedDial.module.scss'
 
 
 const actions = [
-    { icon: <Upload  sx={{color:'white'}}/>, name: 'Upload' },
-    { icon: <CreateNewFolder   sx={{color:'white'}} />, name: 'NewFolder' },
+    { icon: <Upload  sx={{color:'white'}}/>, name: 'Upload', labelKey: 'files.uploadAction' },
+    { icon: <CreateNewFolder   sx={{color:'white'}} />, name: 'NewFolder', labelKey: 'common.newFolder' },
   ];
 const SpeedDialForResponsiveUploadPortal = (props) =>{
+    const { t } = useTranslation();
     const [open, setOpen] = React.useState(false);
     const handleOpen = () => setOpen(true);
 
@@ -43,7 +45,7 @@ const SpeedDialForResponsiveUploadPortal = (props) =>{
                     <SpeedDialAction
                         key={action.name}
                         icon={action.icon}
-                        tooltipTitle={action.name}
+                        tooltipTitle={t(action.labelKey)}
                         tooltipOpen
                         onClick={action.name === 'NewFolder'?props.newFolder:action.name === 'Upload'?props.handleFileSelect:null}
                     />

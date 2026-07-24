@@ -1,8 +1,10 @@
 import { Route, Switch, Redirect } from "react-router-dom";
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import { lightTheme, darkTheme } from './theme/theme';
+import { createLightTheme, createDarkTheme } from './theme/theme';
 import { ThemeContextProvider } from './contextApi/themeContext';
 import ThemeCtx from './contextApi/themeContext';
+import { LanguageContextProvider } from './contextApi/languageContext';
+import LanguageCtx from './contextApi/languageContext';
 import { PermissionProvider } from './contextApi/PermissionContext';
 import { BranchProvider } from './contextApi/BranchContext';
 
@@ -10,7 +12,7 @@ import Main from './components/main/main';
 import Mis from './components/mis/mis';
 import LogIn from './components/authAndConnections/logIn';
 import AuthContext from './components/authAndConnections/auth';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState, useMemo } from 'react';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import AxiosGlobal from './components/authAndConnections/axiosGlobalUrl';
@@ -19,10 +21,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import ShowTheLink from './components/fileManager/showTheLink';
 import { useHistory, useLocation, Link } from "react-router-dom";
 import SnackBar from './tools/navs/snackBar';
+import PwaInstallPrompt from './tools/navs/pwaInstallPrompt';
+import EnableNotificationsPrompt from './tools/navs/enableNotificationsPrompt';
+import { pushSupported, subscribeToPush } from './tools/pushNotifications';
 
 // Inner component so it can consume ThemeCtx after the provider mounts
 const ThemedApp = () => {
   const { themeMode } = useContext(ThemeCtx);
+  const { language, isRtl } = useContext(LanguageCtx);
   const authCtx = useContext(AuthContext);
   const [notifs, setNotifs] = useState('');
   const [count, setCount] = useState(0);
@@ -33,6 +39,13 @@ const ThemedApp = () => {
   const misRefresh = useSelector((state) => state.misRefresh);
   const refreshTag = useSelector((state) => state.refreshTag);
   const userProfileRefresh = useSelector((state) => state.userProfileRefresh);
+
+  // Memoized so unrelated re-renders (refresh/misRefresh/etc.) don't rebuild
+  // the MUI theme object and cascade a re-render through every consumer.
+  const muiTheme = useMemo(() => {
+    const direction = isRtl ? 'rtl' : 'ltr';
+    return themeMode === 'light' ? createLightTheme(direction, language) : createDarkTheme(direction, language);
+  }, [themeMode, isRtl, language]);
 
   if (localStorage.getItem('accessToken') === 'undefined') {
     localStorage.removeItem('accessToken');
@@ -60,12 +73,39 @@ const ThemedApp = () => {
     dispatch(userProfileData({ authCtx, axiosGlobal }));
   }, [userProfileRefresh]);
 
+  // Keep the push subscription alive: if the user already granted permission,
+  // (re)subscribe on every load and re-save it server-side. Subscriptions can
+  // be dropped by the browser/OS, so re-registering here is what keeps push
+  // arriving when the app/browser is closed — without it a stale/missing
+  // subscription silently stops delivering.
+  useEffect(() => {
+    if (authCtx.isLoggedIn !== true) return;
+    if (!pushSupported() || Notification.permission !== 'granted') return;
+    subscribeToPush(authCtx, axiosGlobal).catch(() => {});
+  }, [authCtx.isLoggedIn]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Service worker → app bridge: when a push notification is clicked and the app
+  // is already open, the SW posts the target route here for smooth in-app
+  // navigation (no full reload).
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const onMsg = (event) => {
+      if (event.data?.type === 'notification-navigate' && event.data.url) {
+        history.push(event.data.url);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', onMsg);
+    return () => navigator.serviceWorker.removeEventListener('message', onMsg);
+  }, [history]);
+
   return (
-    <ThemeProvider theme={themeMode === 'light' ? lightTheme : darkTheme}>
+    <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <PermissionProvider>
       <BranchProvider>
         <SnackBar />
+        {authCtx.isLoggedIn === true && <PwaInstallPrompt />}
+        {authCtx.isLoggedIn === true && <EnableNotificationsPrompt />}
         <Switch>
           <Route path="/logIn" exact>
             {authCtx.isLoggedIn === true ? <Redirect to="/" /> : <LogIn />}
@@ -138,17 +178,23 @@ const ThemedApp = () => {
 };
 
 function App() {
-  // service worker reg
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/serviceWorker.js').then(() => {
-      console.log('activated');
-    });
-  }
+  // service worker reg — once on mount, not every render; logs the real reason
+  // on failure (e.g. a server rewrite serving index.html for /serviceWorker.js
+  // instead of the actual script — a MIME-type mismatch the browser rejects).
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/serviceWorker.js')
+        .then(() => { console.log('service worker registered'); })
+        .catch((err) => { console.error('service worker registration failed:', err); });
+    }
+  }, []);
 
   return (
-    <ThemeContextProvider>
-      <ThemedApp />
-    </ThemeContextProvider>
+    <LanguageContextProvider>
+      <ThemeContextProvider>
+        <ThemedApp />
+      </ThemeContextProvider>
+    </LanguageContextProvider>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -16,6 +17,8 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DownloadIcon from '@mui/icons-material/Download';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -23,17 +26,28 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchRawContent, updateRawContent, deleteRawContent } from '../../store/store';
 import RawContentChat from './rawContentChat';
 import ReadyToUploadForm from './readyToUploadForm';
+import DmFileEditDialog from './dmFileEditDialog';
+import DmActivityLog from './dmActivityLog';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
-import MediaViewer, { resolveMediaKind } from './mediaViewer';
+import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
+
+// A stored file `name` may have had its extension stripped (friendly name),
+// so append the real extension from the disk filename for the download.
+const extOf = (s = '') => { const m = String(s).match(/\.[^./]+$/); return m ? m[0] : ''; };
+const downloadName = (f) => {
+  const base = f.name || f.diskName || 'file';
+  return extOf(base) ? base : base + (extOf(f.diskName) || '');
+};
 
 const STATUS_META = {
-  working_on_it:   { label: 'Working on it', color: '#64b5f6' },
-  rejected:        { label: 'Rejected',      color: '#e57373' },
-  canceled:        { label: 'Canceled',      color: '#9e9e9e' },
-  ready_to_upload: { label: 'Ready',         color: '#81c784' },
+  working_on_it:   { labelKey: 'dm.statusWorkingOnIt', color: '#64b5f6' },
+  rejected:        { labelKey: 'dm.statusRejected',    color: '#e57373' },
+  canceled:        { labelKey: 'dm.statusCanceled',    color: '#9e9e9e' },
+  ready_to_upload: { labelKey: 'dm.statusReady',       color: '#81c784' },
 };
 
 export default function RawContentDetail({ id, onClose, onDeleted }) {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -56,6 +70,9 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   const [loading, setLoading] = useState(true);
   const [editingDesc, setEditingDesc] = useState(null);   // fileId being edited
   const [descDraft, setDescDraft] = useState('');
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [editFile, setEditFile] = useState(null);         // file entry open in the full edit dialog
   const [readyFormOpen, setReadyFormOpen] = useState(false);
   const [confirmRemoveFile, setConfirmRemoveFile] = useState(null);   // fileId pending removal
   const [confirmDeleteBatch, setConfirmDeleteBatch] = useState(false);
@@ -105,6 +122,13 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
     setEditingDesc(null);
   };
 
+  const saveTitle = async () => {
+    const fd = new FormData();
+    fd.append('title', titleDraft);
+    await dispatch(updateRawContent({ authCtx, axiosGlobal, id, formData: fd }));
+    setEditingTitle(false);
+  };
+
   const handleDelete = async () => {
     await dispatch(deleteRawContent({ authCtx, axiosGlobal, id }));
     onDeleted && onDeleted();
@@ -119,6 +143,17 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
       name: name || diskName,
       kind: kindHint || resolveMediaKind(name || diskName),
     });
+  };
+
+  // Native download (keeps the browser's own progress UI) + a separate
+  // fire-and-forget authenticated call to record who downloaded it — the
+  // actual bytes deliberately stay on the untracked public /download route so
+  // a plain <a> click still works (it can't carry a bearer token).
+  const handleDownload = (f) => {
+    downloadFile(`${axiosGlobal.defaultTargetApi}/uploads/${f.diskName}`, downloadName(f));
+    authCtx.jwtInst({ method: 'post',
+      url: `${axiosGlobal.defaultTargetApi}/digitalMarketing/raw-contents/${doc._id}/files/${f.fileId}/log-download` })
+      .catch(() => {});
   };
 
   if (loading || !doc || String(doc._id) !== String(id)) {
@@ -136,20 +171,34 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <Box sx={{ px: 3, pt: 2, pb: 1.5, borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 700, color: T.TEXT_PRI }}>
-            {doc.files?.length || 0} file{doc.files?.length !== 1 ? 's' : ''} batch
-          </Typography>
-          <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22` }}>
-            <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: status.color }}>{status.label}</Typography>
+          {editingTitle ? (
+            <TextField size="small" autoFocus fullWidth value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') setEditingTitle(false); }}
+              placeholder={t('dm.batchTitleLabel')}
+              sx={{ '& .MuiOutlinedInput-root': { fontSize: '1rem', fontWeight: 700 } }} />
+          ) : (
+            <Typography
+              onClick={() => can('digitalMarketing:rawContent:edit') && (setEditingTitle(true), setTitleDraft(doc.title || ''))}
+              sx={{ fontSize: '1rem', fontWeight: 700, color: doc.title ? T.TEXT_PRI : T.TEXT_TER,
+                cursor: can('digitalMarketing:rawContent:edit') ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              {doc.title?.trim() || t('dm.filesBatchFallback', { count: doc.files?.length || 0 })}
+              {can('digitalMarketing:rawContent:edit') && <EditOutlinedIcon sx={{ fontSize: 13, color: T.TEXT_TER }} />}
+            </Typography>
+          )}
+          <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22`, flexShrink: 0 }}>
+            <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: status.color }}>{t(status.labelKey)}</Typography>
           </Box>
-          <Box sx={{ flexGrow: 1 }} />
-          <IconButton size="small" onClick={onClose} sx={{ color: T.TEXT_TER }}>
+          <IconButton size="small" onClick={onClose} sx={{ color: T.TEXT_TER, flexShrink: 0 }}>
             <CloseIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Box>
         <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, mt: 0.25 }}>
+          {doc.title?.trim() ? `${t('dm.fileCount', { count: doc.files?.length || 0 })} · ` : ''}
           {doc.language || '—'} · {doc.useCase} · {doc.platform}
-          {doc.createdByName ? ` · by ${doc.createdByName}` : ''}
+          {doc.createdByName ? ` · ${t('crm.byActor', { name: doc.createdByName })}` : ''}
         </Typography>
 
         {/* status actions */}
@@ -159,20 +208,20 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
               <Button key={s} size="small" variant={doc.status === s ? 'contained' : 'outlined'}
                 onClick={() => setStatus(s)}
                 sx={{ fontSize: '0.7rem', textTransform: 'none', borderRadius: '8px', minWidth: 0 }}>
-                {STATUS_META[s].label}
+                {t(STATUS_META[s].labelKey)}
               </Button>
             ))}
             {doc.status === 'ready_to_upload' && doc.readyToUploadId ? (
               <Button size="small" variant="outlined" startIcon={<CloudUploadIcon sx={{ fontSize: 14 }} />}
                 disabled
                 sx={{ fontSize: '0.7rem', textTransform: 'none', borderRadius: '8px' }}>
-                Already ready to upload
+                {t('dm.alreadyReadyToUpload')}
               </Button>
             ) : (
               <Button size="small" variant="outlined" color="success" startIcon={<CloudUploadIcon sx={{ fontSize: 14 }} />}
                 onClick={() => setReadyFormOpen(true)}
                 sx={{ fontSize: '0.7rem', textTransform: 'none', borderRadius: '8px' }}>
-                Mark ready to upload
+                {t('dm.markReadyToUpload')}
               </Button>
             )}
           </Box>
@@ -181,7 +230,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
         {can('digitalMarketing:rawContent:delete') && (
           <Button size="small" startIcon={<DeleteOutlineIcon sx={{ fontSize: 13 }} />} onClick={() => setConfirmDeleteBatch(true)}
             sx={{ fontSize: '0.7rem', textTransform: 'none', color: '#EA005A', mt: 1, px: 0 }}>
-            Delete batch
+            {t('dm.deleteBatch')}
           </Button>
         )}
       </Box>
@@ -191,7 +240,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
         <Box sx={{ px: 3, py: 2 }}>
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
             color: T.TEXT_TER, mb: 1 }}>
-            Files
+            {t('dm.filesLabel')}
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {(doc.files || []).map((f) => (
@@ -222,19 +271,35 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
                     sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, flexGrow: 1, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}
                     noWrap>
-                    <OpenInNewIcon sx={{ fontSize: 12, flexShrink: 0 }} /> {f.name || 'Preview file'}
+                    <OpenInNewIcon sx={{ fontSize: 12, flexShrink: 0 }} /> {f.name || t('dm.previewFileFallback')}
                   </Typography>
                   {f.voiceDescriptionDiskName && (
-                    <Tooltip title="Play voice description">
+                    <Tooltip title={t('dm.playVoiceDescriptionTip')}>
                       <IconButton size="small"
-                        onClick={() => viewFile(f.voiceDescriptionDiskName, 'Voice description', 'audio')}
+                        onClick={() => viewFile(f.voiceDescriptionDiskName, t('dm.voiceDescriptionFallback'), 'audio')}
                         sx={{ color: '#81c784', width: 24, height: 24 }}>
                         <PlayCircleIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
                   )}
+                  {f.diskName && (
+                    <Tooltip title={t('common.download')}>
+                      <IconButton size="small"
+                        onClick={() => handleDownload(f)}
+                        sx={{ color: T.TEXT_SEC, width: 24, height: 24 }}>
+                        <DownloadIcon sx={{ fontSize: 15 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   {can('digitalMarketing:rawContent:edit') && (
-                    <Tooltip title="Remove">
+                    <Tooltip title={t('dm.editFileTip')}>
+                      <IconButton size="small" onClick={() => setEditFile(f)} sx={{ color: T.TEXT_SEC, width: 24, height: 24 }}>
+                        <EditOutlinedIcon sx={{ fontSize: 15 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {can('digitalMarketing:rawContent:edit') && (
+                    <Tooltip title={t('dm.removeTip')}>
                       <IconButton size="small" onClick={() => setConfirmRemoveFile(f.fileId)} sx={{ color: '#EA005A', width: 24, height: 24 }}>
                         <DeleteOutlineIcon sx={{ fontSize: 15 }} />
                       </IconButton>
@@ -251,7 +316,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
                   <Typography onClick={() => can('digitalMarketing:rawContent:edit') && (setEditingDesc(f.fileId), setDescDraft(f.description || ''))}
                     sx={{ fontSize: '0.76rem', color: f.description ? T.TEXT_SEC : T.TEXT_TER, mt: 0.5,
                       cursor: can('digitalMarketing:rawContent:edit') ? 'pointer' : 'default' }}>
-                    {f.description || 'No description — click to add'}
+                    {f.description || t('dm.noDescriptionClickToAdd')}
                   </Typography>
                 )}
               </Box>
@@ -263,19 +328,24 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
               <Button component="label" size="small" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
                 disabled={addProgress !== null}
                 sx={{ mt: 1.25, fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>
-                Add files
+                {t('dm.addFiles')}
                 <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
               </Button>
               {addProgress !== null && (
                 <Box sx={{ mt: 0.75 }}>
                   <LinearProgress variant="determinate" value={addProgress} sx={{ borderRadius: 2, height: 5 }} />
                   <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, mt: 0.25 }}>
-                    Uploading… {addProgress}%
+                    {t('dm.uploadingPercent', { percent: addProgress })}
                   </Typography>
                 </Box>
               )}
             </>
           )}
+        </Box>
+
+        {/* ── Activity (who viewed / downloaded) ── */}
+        <Box sx={{ px: 3, pb: 2 }}>
+          <DmActivityLog endpointBase="raw-contents" id={doc._id} T={T} />
         </Box>
 
         {/* ── Chat ── */}
@@ -286,24 +356,27 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
 
       <ReadyToUploadForm open={readyFormOpen} onClose={() => setReadyFormOpen(false)} rawContentId={doc._id} />
 
+      <DmFileEditDialog open={Boolean(editFile)} onClose={() => setEditFile(null)}
+        file={editFile} recordId={doc._id} kind="rawContent" />
+
       <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
 
       <ConfirmDialog
         open={Boolean(confirmRemoveFile)}
         onClose={() => setConfirmRemoveFile(null)}
         onConfirm={() => removeFile(confirmRemoveFile)}
-        title="Remove file"
-        message="Remove this file from the batch?"
-        confirmLabel="Remove"
+        title={t('dm.removeFileTitle')}
+        message={t('dm.removeFileFromBatchMessage')}
+        confirmLabel={t('common.remove')}
         destructive
       />
       <ConfirmDialog
         open={confirmDeleteBatch}
         onClose={() => setConfirmDeleteBatch(false)}
         onConfirm={handleDelete}
-        title="Delete batch"
-        message="Delete this raw content batch? This cannot be undone."
-        confirmLabel="Delete"
+        title={t('dm.deleteBatch')}
+        message={t('dm.deleteBatchMessage')}
+        confirmLabel={t('common.delete')}
         destructive
       />
     </Box>

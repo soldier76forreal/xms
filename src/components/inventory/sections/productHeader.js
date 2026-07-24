@@ -10,6 +10,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import Tooltip from '@mui/material/Tooltip';
+import { useTranslation } from 'react-i18next';
 
 const STONE_ACCENT = {
   TR: '#c49a6c', MA: '#90afc5', GR: '#7a7a7a', ON: '#c9a84c',
@@ -24,7 +25,14 @@ function formatQty(num) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(num);
 }
 
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
+}
+
 const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, fullView, onToggleFullView }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const accent = STONE_ACCENT[product?.stoneType] || '#888';
@@ -40,10 +48,10 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, f
           <ArrowBackIosNewIcon sx={{ fontSize: 14 }} />
         </IconButton>
         <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1, minWidth: 0 }} noWrap>
-          Inventory
+          {t('nav.inventory')}
         </Typography>
         {onToggleFullView && (
-          <Tooltip title={fullView ? 'Collapse to sidebar' : 'Open in full view'}>
+          <Tooltip title={fullView ? t('inventory.collapseToSidebar') : t('inventory.openInFullView')}>
             <IconButton
               size="small"
               onClick={onToggleFullView}
@@ -62,7 +70,7 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, f
           onClick={onEdit}
           sx={{ borderRadius: 2, fontSize: '0.75rem', flexShrink: 0 }}
         >
-          Edit
+          {t('common.edit')}
         </Button>
         <Button
           size="small"
@@ -70,8 +78,8 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, f
           onClick={onAddVariant}
           sx={{ borderRadius: 2, fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}
         >
-          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>+ Add variant</Box>
-          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>+ Variant</Box>
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('inventory.addVariantFull')}</Box>
+          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>{t('inventory.addVariantShort')}</Box>
         </Button>
       </Box>
 
@@ -142,7 +150,7 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, f
             />
             {product?.status === 'archived' && (
               <Chip
-                label="Archived"
+                label={t('inventory.archived')}
                 size="small"
                 sx={{ height: 22, fontSize: '0.7rem', bgcolor: 'action.disabledBackground' }}
               />
@@ -172,7 +180,7 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, f
                 />
               ))
             ) : (
-              <Typography variant="caption" sx={{ color: 'text.disabled' }}>No stock</Typography>
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>{t('inventory.noStock')}</Typography>
             )}
 
             {product?.priceRange?.min != null && (
@@ -184,9 +192,18 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, f
             )}
 
             <Typography variant="caption" sx={{ color: 'text.disabled', ml: 'auto' }}>
-              {product?.variantCount ?? 0} variant{product?.variantCount !== 1 ? 's' : ''}
+              {t('inventory.variantCount', { count: product?.variantCount ?? 0 })}
             </Typography>
           </Box>
+
+          {(product?.updateDate || product?.insertDate) && (
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.75 }}>
+              {product?.updateDate ? t('inventory.lastUpdatedPrefix') : t('inventory.addedPrefix')}
+              <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                {formatDate(product?.updateDate || product?.insertDate)}
+              </Box>
+            </Typography>
+          )}
         </Box>
       </Box>
     </Box>

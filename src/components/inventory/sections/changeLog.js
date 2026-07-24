@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -21,19 +22,19 @@ const LIMIT = 25;
 const UNIT_LABELS = { M2: 'm²', ML: 'ml', PCS: 'pcs', SQFT: 'ft²', LNFT: 'lnft' };
 
 const TYPE_META = {
-  quantity: { label: 'Stock',  color: '#6fa46f' },
-  price:    { label: 'Price',  color: '#90afc5' },
-  media:    { label: 'Media',  color: '#c49a6c' },
-  created:  { label: 'New',    color: '#888888' },
-  spec:     { label: 'Spec',   color: '#9b8fa0' },
-  status:   { label: 'Status', color: '#888888' },
+  quantity: { labelKey: 'inventory.logTypeStock',  color: '#6fa46f' },
+  price:    { labelKey: 'inventory.logTypePrice',  color: '#90afc5' },
+  media:    { labelKey: 'inventory.logTypeMedia',  color: '#c49a6c' },
+  created:  { labelKey: 'inventory.logTypeNew',    color: '#888888' },
+  spec:     { labelKey: 'inventory.logTypeSpec',   color: '#9b8fa0' },
+  status:   { labelKey: 'inventory.logTypeStatus', color: '#888888' },
 };
 
 const FILTERS = [
-  { key: 'all',      label: 'All' },
-  { key: 'quantity', label: 'Stock' },
-  { key: 'price',    label: 'Price' },
-  { key: 'media',    label: 'Media' },
+  { key: 'all',      labelKey: 'inventory.filterAll' },
+  { key: 'quantity', labelKey: 'inventory.logTypeStock' },
+  { key: 'price',    labelKey: 'inventory.logTypePrice' },
+  { key: 'media',    labelKey: 'inventory.logTypeMedia' },
 ];
 
 function formatDate(d) {
@@ -51,7 +52,9 @@ function formatNum(n) {
 
 // ── Log row ───────────────────────────────────────────────────────────────────
 function LogRow({ log, variantMap }) {
-  const meta = TYPE_META[log.changeType] || { label: log.changeType, color: '#888' };
+  const { t } = useTranslation();
+  const metaEntry = TYPE_META[log.changeType];
+  const meta = metaEntry ? { label: t(metaEntry.labelKey), color: metaEntry.color } : { label: log.changeType, color: '#888' };
   const unit  = UNIT_LABELS[log.unit] || log.unit || '';
 
   // Try to resolve variant code from the variantMap passed in
@@ -102,7 +105,7 @@ function LogRow({ log, variantMap }) {
         <ImageIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
         <Typography variant="caption"
           sx={{ color: isAdded ? 'success.main' : 'error.main', fontWeight: 600 }}>
-          {isAdded ? 'Added' : 'Removed'}
+          {isAdded ? t('inventory.mediaAdded') : t('inventory.mediaRemoved')}
         </Typography>
         {log.mediaRef?.name && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -117,7 +120,7 @@ function LogRow({ log, variantMap }) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
         <FiberNewIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          Variant created{code ? ` — ` : ''}
+          {t('inventory.variantCreated')}{code ? ` — ` : ''}
           {code && (
             <Box component="span" sx={{ fontFamily: 'monospace', fontWeight: 700 }}>{code}</Box>
           )}
@@ -172,7 +175,7 @@ function LogRow({ log, variantMap }) {
             </Typography>
           ) : log.subjectType === 'product' ? (
             <Typography variant="caption" sx={{ fontSize: '0.67rem', color: 'text.disabled' }}>
-              product
+              {t('inventory.productSubject')}
             </Typography>
           ) : null}
         </Box>
@@ -198,7 +201,11 @@ function LogRow({ log, variantMap }) {
 }
 
 // ── ChangeLog ─────────────────────────────────────────────────────────────────
-const ChangeLog = ({ productId }) => {
+// Product-level history by default (all logs for the product, incl. its
+// variants). Pass `variantId` instead to scope to a single SKU's own history
+// (GET /inventory/variants/:id/logs).
+const ChangeLog = ({ productId, variantId }) => {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
 
@@ -214,17 +221,16 @@ const ChangeLog = ({ productId }) => {
   const [skip,    setSkip]    = useState(0);
 
   const fetchLogs = useCallback(async (theSkip, theFilter, append = false) => {
-    if (!productId) return;
+    if (!productId && !variantId) return;
     append ? setMore(true) : setLoading(true);
     try {
       const params = { limit: LIMIT, skip: theSkip };
       if (theFilter !== 'all') params.changeType = theFilter;
 
-      const res = await authCtx.jwtInst({
-        method: 'get',
-        url: `${axiosGlobal.defaultTargetApi}/inventory/products/${productId}/logs`,
-        params,
-      });
+      const url = variantId
+        ? `${axiosGlobal.defaultTargetApi}/inventory/variants/${variantId}/logs`
+        : `${axiosGlobal.defaultTargetApi}/inventory/products/${productId}/logs`;
+      const res = await authCtx.jwtInst({ method: 'get', url, params });
       const incoming = res.data.data || [];
       const tot      = res.data.total || 0;
       setTotal(tot);
@@ -232,14 +238,15 @@ const ChangeLog = ({ productId }) => {
     } catch { /* non-fatal */ } finally {
       append ? setMore(false) : setLoading(false);
     }
-  }, [productId, authCtx, axiosGlobal]);
+  }, [productId, variantId, authCtx, axiosGlobal]);
 
-  // Reset on productId or filter change
+  // Reset on subject or filter change
   useEffect(() => {
     setSkip(0);
     setLogs([]);
     fetchLogs(0, filter, false);
-  }, [productId, filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId, variantId, filter]);
 
   const handleLoadMore = () => {
     const newSkip = skip + LIMIT;
@@ -264,7 +271,7 @@ const ChangeLog = ({ productId }) => {
       }}>
         <Typography variant="caption"
           sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
-          Change log
+          {t('inventory.changeLog')}
           {total > 0 && (
             <Box component="span" sx={{ ml: 1, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
               ({total})
@@ -277,7 +284,7 @@ const ChangeLog = ({ productId }) => {
           {FILTERS.map((f) => (
             <Chip
               key={f.key}
-              label={f.label}
+              label={t(f.labelKey)}
               size="small"
               onClick={() => setFilter(f.key)}
               variant={filter === f.key ? 'filled' : 'outlined'}
@@ -300,7 +307,7 @@ const ChangeLog = ({ productId }) => {
       ) : logs.length === 0 ? (
         <Box sx={{ py: 6, textAlign: 'center' }}>
           <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-            No change history yet.
+            {t('inventory.noChangeHistory')}
           </Typography>
         </Box>
       ) : (
@@ -324,7 +331,7 @@ const ChangeLog = ({ productId }) => {
                   startIcon={more ? <CircularProgress size={12} color="inherit" /> : null}
                   sx={{ fontSize: '0.75rem' }}
                 >
-                  {more ? 'Loading…' : `Load more (${total - logs.length} remaining)`}
+                  {more ? t('inventory.loading') : t('inventory.loadMoreRemaining', { count: total - logs.length })}
                 </Button>
               </Box>
             </>

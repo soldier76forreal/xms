@@ -22,6 +22,7 @@ import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -63,6 +64,7 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const theme       = useTheme();
+  const { t }       = useTranslation();
   const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
   const T           = useT();
 
@@ -106,7 +108,7 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
 
   useEffect(() => {
     if (!userSearch.trim()) { setUserResults([]); return; }
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       setSearching(true);
       try {
         const res = await authCtx.jwtInst({
@@ -118,7 +120,7 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
       } catch { setUserResults([]); }
       finally { setSearching(false); }
     }, 350);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [userSearch, members]);
 
   const addMember = (u) => { setMembers(prev => [...prev, u]); setUserSearch(''); setUserResults([]); };
@@ -132,7 +134,7 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) { setError('Group name is required'); return; }
+    if (!name.trim()) { setError(t('users.groupNameRequired')); return; }
     setSaving(true); setError('');
     try {
       const data = {
@@ -146,11 +148,11 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
       } else {
         await authCtx.jwtInst({ method: 'put', url: `${axiosGlobal.defaultTargetApi}/groups/${group._id}`, data });
       }
-      dispatch(actions.setShowSnackBar({ status: true, msg: isNew ? 'Group created' : 'Group updated', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: isNew ? t('users.groupCreated') : t('users.groupUpdated'), type: 'success' }));
       onSave();
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to save group');
+      setError(err?.response?.data?.message || t('users.failedSaveGroup'));
     } finally {
       setSaving(false);
     }
@@ -163,7 +165,7 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          {isNew ? 'New Group' : `Edit — ${group?.name}`}
+          {isNew ? t('users.newGroupHeader') : t('users.editGroupHeader', { name: group?.name })}
         </Typography>
         <IconButton onClick={onClose} size="small"
           sx={{ color: T.TEXT_SEC, '&:hover': { color: T.TEXT_PRI, bgcolor: T.HVR_BG } }}>
@@ -172,18 +174,18 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
       </Box>
 
       <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-        <TextField label="Group name" size="small" fullWidth value={name}
+        <TextField label={t('users.groupNameLabel')} size="small" fullWidth value={name}
           onChange={e => { setName(e.target.value); setError(''); }} sx={inputSx} />
-        <TextField label="Description" size="small" fullWidth multiline rows={2} value={description}
+        <TextField label={t('users.descriptionLabel')} size="small" fullWidth multiline rows={2} value={description}
           onChange={e => setDescription(e.target.value)} sx={inputSx} />
 
         <Divider sx={{ borderColor: T.DIVIDER }} />
 
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Members · {members.length}
+          {t('users.membersCountLabel', { count: members.length })}
           {admins.length > 0 && (
             <Box component="span" sx={{ ml: 1, color: '#FFB74D' }}>
-              · {admins.length} admin{admins.length !== 1 ? 's' : ''}
+              {t('users.adminsCountSuffix', { count: admins.length })}
             </Box>
           )}
         </Typography>
@@ -209,7 +211,7 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
                     </Box>
                   </Typography>
                   {/* Admin toggle */}
-                  <Tooltip title={isAdmin ? 'Remove admin role' : 'Make group admin'} placement="top">
+                  <Tooltip title={isAdmin ? t('users.removeAdminRole') : t('users.makeGroupAdmin')} placement="top">
                     <IconButton size="small" onClick={() => toggleAdmin(m._id)}
                       sx={{ color: isAdmin ? '#FFB74D' : T.TEXT_TER,
                         '&:hover': { color: '#FFB74D', bgcolor: 'rgba(255,183,77,0.08)' } }}>
@@ -228,7 +230,7 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
 
         {/* Add member search */}
         <TextField size="small" fullWidth
-          placeholder="Search to add a member…"
+          placeholder={t('users.searchAddMember')}
           value={userSearch}
           onChange={e => setUserSearch(e.target.value)}
           InputProps={{
@@ -281,14 +283,14 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
       <DialogActions sx={{ px: 3, pb: 3, pt: 0, gap: 1 }}>
         <Button onClick={onClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={saving}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
           sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
             '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: T.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: T.isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.26)' } }}>
-          {saving ? 'Saving…' : isNew ? 'Create' : 'Save'}
+          {saving ? t('users.saving') : isNew ? t('users.create') : t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -301,6 +303,7 @@ const GroupsManager = ({ onSelect = null, selectedId = null }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const T           = useT();
+  const { t }       = useTranslation();
 
   const [groups,    setGroups]    = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -324,7 +327,7 @@ const GroupsManager = ({ onSelect = null, selectedId = null }) => {
       }));
       setGroups(enriched);
     } catch {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load groups', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedLoadGroups'), type: 'error' }));
     } finally {
       setLoading(false);
     }
@@ -333,14 +336,14 @@ const GroupsManager = ({ onSelect = null, selectedId = null }) => {
   useEffect(() => { fetchGroups(); }, [fetchGroups]);
 
   const handleDelete = async (group) => {
-    if (!window.confirm(`Delete group "${group.name}"?`)) return;
+    if (!window.confirm(t('users.deleteGroupConfirm', { name: group.name }))) return;
     setDeleting(group._id);
     try {
       await authCtx.jwtInst({ method: 'delete', url: `${axiosGlobal.defaultTargetApi}/groups/${group._id}` });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Group deleted', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.groupDeleted'), type: 'success' }));
       fetchGroups();
     } catch (err) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || t('users.failedDelete'), type: 'error' }));
     } finally {
       setDeleting(null);
     }
@@ -356,7 +359,7 @@ const GroupsManager = ({ onSelect = null, selectedId = null }) => {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
         <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER }}>
-          {groups.length} group{groups.length !== 1 ? 's' : ''}
+          {t('users.groupCount', { count: groups.length })}
         </Typography>
         <Can permission="users:group:edit">
           <Button size="small" startIcon={<AddIcon sx={{ fontSize: 15 }} />}
@@ -364,14 +367,14 @@ const GroupsManager = ({ onSelect = null, selectedId = null }) => {
             sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 600, borderRadius: '8px', px: 2, py: '5px',
               fontSize: '0.78rem', textTransform: 'none',
               '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' } }}>
-            New Group
+            {t('users.newGroup')}
           </Button>
         </Can>
       </Box>
 
       {groups.length === 0 ? (
         <Typography sx={{ textAlign: 'center', color: T.TEXT_SEC, py: 6, fontSize: '0.875rem' }}>
-          No groups yet
+          {t('users.noGroupsYet')}
         </Typography>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -403,13 +406,13 @@ const GroupsManager = ({ onSelect = null, selectedId = null }) => {
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
                   <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC }}>
-                    {(group.members || []).length} member{(group.members || []).length !== 1 ? 's' : ''}
+                    {t('users.memberCountShort', { count: (group.members || []).length })}
                   </Typography>
                   {adminCount > 0 && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.25 }}>
                       <StarIcon sx={{ fontSize: 11, color: '#FFB74D' }} />
                       <Typography sx={{ fontSize: '0.65rem', color: '#FFB74D' }}>
-                        {adminCount} admin{adminCount !== 1 ? 's' : ''}
+                        {t('users.adminCountShort', { count: adminCount })}
                       </Typography>
                     </Box>
                   )}

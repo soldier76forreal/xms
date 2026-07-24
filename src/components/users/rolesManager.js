@@ -16,6 +16,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import ShieldIcon from '@mui/icons-material/Shield';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -50,6 +51,7 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const theme       = useTheme();
+  const { t }       = useTranslation();
   const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
   const T           = useT();
 
@@ -127,7 +129,7 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) { setError('Role name is required'); return; }
+    if (!name.trim()) { setError(t('users.roleNameRequired')); return; }
     setSaving(true); setError('');
     try {
       const data = { name: name.trim(), description: description.trim(), permissions: Array.from(selected), dataScopes };
@@ -136,11 +138,11 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
       } else {
         await authCtx.jwtInst({ method: 'put', url: `${axiosGlobal.defaultTargetApi}/roles/${role._id}`, data });
       }
-      dispatch(actions.setShowSnackBar({ status: true, msg: isNew ? 'Role created' : 'Role updated', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: isNew ? t('users.roleCreated') : t('users.roleUpdated'), type: 'success' }));
       onSave();
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to save role');
+      setError(err?.response?.data?.message || t('users.failedSaveRole'));
     } finally {
       setSaving(false);
     }
@@ -167,7 +169,7 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          {isNew ? 'New Role' : `Edit — ${role?.name}`}
+          {isNew ? t('users.newRoleHeader') : t('users.editRoleHeader', { name: role?.name })}
         </Typography>
         <IconButton onClick={onClose} size="small"
           sx={{ color: T.TEXT_SEC, '&:hover': { color: T.TEXT_PRI, bgcolor: T.HVR_BG } }}>
@@ -177,12 +179,12 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
 
       {/* ── Top fields (fixed height) ── */}
       <Box sx={{ px: 3, pt: 2.5, pb: 2, display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
-        <TextField label="Role name" size="small" fullWidth value={name}
+        <TextField label={t('users.roleNameLabel')} size="small" fullWidth value={name}
           onChange={e => { setName(e.target.value); setError(''); }}
           disabled={!isNew && role?.isSystem}
           sx={inputSx}
         />
-        <TextField label="Description" size="small" fullWidth multiline rows={2} value={description}
+        <TextField label={t('users.descriptionLabel')} size="small" fullWidth multiline rows={2} value={description}
           onChange={e => setDescription(e.target.value)} sx={inputSx}
         />
       </Box>
@@ -194,7 +196,7 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
            permission list squeezed above a 280px sub-scroll). ── */}
       <Box sx={{ px: 3, pt: 1.5, pb: 0.5, flexShrink: 0 }}>
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1 }}>
-          Permissions · {selected.size} selected
+          {t('users.permissionsSelectedLabel', { count: selected.size })}
         </Typography>
       </Box>
 
@@ -211,11 +213,11 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
       }}>
         {Object.keys(byModule).length === 0 ? (
           <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, py: 1 }}>
-            No permissions found. Run{' '}
+            {t('users.noPermissionsFoundPre')}{' '}
             <Box component="code" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
               node api/scripts/seedPermissions.js
             </Box>{' '}
-            on the server to load the permission catalog.
+            {t('users.noPermissionsFoundPost')}
           </Typography>
         ) : (
           Object.entries(byModule).map(([mod, perms]) => {
@@ -281,31 +283,31 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
         {/* ── Data Visibility — same scroll region, no more 280px sub-scroll ── */}
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER,
           textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>
-          Data Visibility · per section
+          {t('users.dataVisibilityPerSection')}
         </Typography>
         <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 1.5 }}>
-          Restricts what data users with this role can see. "Own" = only records they created. "Group" = records from their group members. "All" = no restriction.
+          {t('users.dataVisibilityHint')}
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {[
-            { id: 'crm',       label: 'CRM'        },
-            { id: 'mis',       label: 'Invoices'   },
-            { id: 'inventory', label: 'Inventory'  },
-            { id: 'files',     label: 'Files'      },
-            { id: 'tasks',     label: 'Tasks'      },
-          ].map(({ id, label }) => {
+            { id: 'crm',       labelKey: 'users.dsCrm'       },
+            { id: 'mis',       labelKey: 'users.dsInvoices'  },
+            { id: 'inventory', labelKey: 'users.dsInventory' },
+            { id: 'files',     labelKey: 'users.dsFiles'     },
+            { id: 'tasks',     labelKey: 'users.dsTasks'     },
+          ].map(({ id, labelKey }) => {
             const current = dataScopes[id] || 'all';
             return (
               <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, width: 80, flexShrink: 0 }}>
-                  {label}
+                  {t(labelKey)}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
                   {[
-                    { value: 'mine',  label: 'Own'   },
-                    { value: 'group', label: 'Group' },
-                    { value: 'all',   label: 'All'   },
+                    { value: 'mine',  labelKey: 'users.scopeOwn'      },
+                    { value: 'group', labelKey: 'users.scopeGroupOpt' },
+                    { value: 'all',   labelKey: 'users.scopeAllOpt'   },
                   ].map(opt => {
                     const isActive = current === opt.value;
                     return (
@@ -323,14 +325,14 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
                             : 'transparent'}`,
                           '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)', color: T.TEXT_PRI },
                         }}>
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </Button>
                     );
                   })}
                 </Box>
                 {dataScopes[id] && dataScopes[id] !== 'all' && (
                   <Typography sx={{ fontSize: '0.65rem', color: '#FFB74D', ml: 0.5 }}>
-                    restricted
+                    {t('users.restrictedBadge')}
                   </Typography>
                 )}
               </Box>
@@ -350,14 +352,14 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
         borderTop: `1px solid ${T.DIVIDER}` }}>
         <Button onClick={onClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={saving}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
           sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
             '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: T.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: T.isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.26)' } }}>
-          {saving ? 'Saving…' : isNew ? 'Create' : 'Save'}
+          {saving ? t('users.saving') : isNew ? t('users.create') : t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -370,6 +372,7 @@ const RolesManager = ({ onSelect = null, selectedId = null }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const T           = useT();
+  const { t }       = useTranslation();
 
   const [roles,       setRoles]       = useState([]);
   const [permissions, setPermissions] = useState({ byModule: {}, flat: [] });
@@ -393,14 +396,14 @@ const RolesManager = ({ onSelect = null, selectedId = null }) => {
 
   const handleDelete = async (role) => {
     if (role.isSystem) return;
-    if (!window.confirm(`Delete role "${role.name}"? This cannot be undone.`)) return;
+    if (!window.confirm(t('users.deleteRoleConfirm', { name: role.name }))) return;
     setDeleting(role._id);
     try {
       await authCtx.jwtInst({ method: 'delete', url: `${axiosGlobal.defaultTargetApi}/roles/${role._id}` });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Role deleted', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.roleDeleted'), type: 'success' }));
       fetchAll();
     } catch (err) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || t('users.failedDelete'), type: 'error' }));
     } finally {
       setDeleting(null);
     }
@@ -416,7 +419,7 @@ const RolesManager = ({ onSelect = null, selectedId = null }) => {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
         <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER }}>
-          {roles.length} role{roles.length !== 1 ? 's' : ''}
+          {t('users.roleCount', { count: roles.length })}
         </Typography>
         <Can permission="users:role:edit">
           <Button size="small" startIcon={<AddIcon sx={{ fontSize: 15 }} />}
@@ -424,7 +427,7 @@ const RolesManager = ({ onSelect = null, selectedId = null }) => {
             sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 600, borderRadius: '8px', px: 2, py: '5px',
               fontSize: '0.78rem', textTransform: 'none',
               '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' } }}>
-            New Role
+            {t('users.newRole')}
           </Button>
         </Can>
       </Box>
@@ -450,7 +453,7 @@ const RolesManager = ({ onSelect = null, selectedId = null }) => {
                   {role.name}
                 </Typography>
                 {role.isSystem && (
-                  <Chip label="system" size="small" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700,
+                  <Chip label={t('users.systemBadge')} size="small" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700,
                     bgcolor: T.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                     color: T.TEXT_TER, borderRadius: '3px',
                     '& .MuiChip-label': { px: 0.75 } }} />
@@ -464,7 +467,7 @@ const RolesManager = ({ onSelect = null, selectedId = null }) => {
             </Box>
 
             <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC, flexShrink: 0 }}>
-              {(role.permissions || []).length} perms
+              {t('users.permsCount', { count: (role.permissions || []).length })}
             </Typography>
 
             <Can permission="users:role:edit">

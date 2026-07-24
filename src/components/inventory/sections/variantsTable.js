@@ -1,4 +1,5 @@
 import { useState, useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -52,18 +53,19 @@ function FinishChips({ cut, fill, finish }) {
 
 // ── Delete Confirm Dialog ──────────────────────────────────────────────────────
 function DeleteConfirmDialog({ open, count, onConfirm, onClose, busy }) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
-        Delete {count > 1 ? `${count} variants` : 'variant'}?
+        {t('inventory.deleteVariantsCount', { count })}
       </DialogTitle>
       <DialogContent sx={{ px: 3 }}>
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          This will archive the {count > 1 ? 'selected variants' : 'variant'} and remove their stock from the product rollup. This action can be reversed by contacting admin.
+          {t('inventory.archiveNoteCount', { count })}
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} size="small" disabled={busy}>Cancel</Button>
+        <Button onClick={onClose} size="small" disabled={busy}>{t('common.cancel')}</Button>
         <Button
           onClick={onConfirm}
           variant="contained"
@@ -72,7 +74,7 @@ function DeleteConfirmDialog({ open, count, onConfirm, onClose, busy }) {
           disabled={busy}
           startIcon={busy ? <CircularProgress size={12} color="inherit" /> : <DeleteIcon sx={{ fontSize: 14 }} />}
         >
-          Delete
+          {t('common.delete')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -81,6 +83,7 @@ function DeleteConfirmDialog({ open, count, onConfirm, onClose, busy }) {
 
 // ── Stock Adjust Dialog ────────────────────────────────────────────────────────
 function StockDialog({ open, variant, productId, onClose }) {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -105,21 +108,21 @@ function StockDialog({ open, variant, productId, onClose }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
-        Adjust stock — {variant?.code}
+        {t('inventory.adjustStockTitle', { code: variant?.code })}
       </DialogTitle>
       <DialogContent sx={{ px: 3, display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          Current: {formatQty(variant?.quantity)} {UNIT_LABELS[variant?.unit] || variant?.unit}
+          {t('inventory.currentQtyLabel', { qty: formatQty(variant?.quantity), unit: UNIT_LABELS[variant?.unit] || variant?.unit })}
         </Typography>
-        <TextField label="Delta (+ add / − remove)" type="number" fullWidth size="small"
-          value={delta} onChange={(e) => setDelta(e.target.value)} helperText="Use negative to remove" />
-        <TextField label="Reason (optional)" fullWidth size="small"
-          value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. sale, return, correction" />
+        <TextField label={t('inventory.deltaLabel')} type="number" fullWidth size="small"
+          value={delta} onChange={(e) => setDelta(e.target.value)} helperText={t('inventory.deltaHelper')} />
+        <TextField label={t('inventory.reasonOptionalLabel')} fullWidth size="small"
+          value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('inventory.reasonPlaceholder')} />
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} size="small">Cancel</Button>
+        <Button onClick={onClose} size="small">{t('common.cancel')}</Button>
         <Button onClick={handleSubmit} variant="contained" size="small"
-          disabled={busy || delta === '' || parseFloat(delta) === 0}>Save</Button>
+          disabled={busy || delta === '' || parseFloat(delta) === 0}>{t('common.save')}</Button>
       </DialogActions>
     </Dialog>
   );
@@ -127,6 +130,7 @@ function StockDialog({ open, variant, productId, onClose }) {
 
 // ── Price Dialog ───────────────────────────────────────────────────────────────
 function PriceDialog({ open, variant, productId, onClose }) {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -149,18 +153,18 @@ function PriceDialog({ open, variant, productId, onClose }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
-        Edit price — {variant?.code}
+        {t('inventory.editPriceTitle', { code: variant?.code })}
       </DialogTitle>
       <DialogContent sx={{ px: 3, pt: '12px !important' }}>
         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
-          Current: {variant?.price != null ? `${variant.price} AED` : '—'}
+          {t('inventory.currentPriceLabel', { price: variant?.price != null ? `${variant.price} AED` : '—' })}
         </Typography>
-        <TextField label="New price (AED)" type="number" fullWidth size="small"
+        <TextField label={t('inventory.newPriceAedLabel')} type="number" fullWidth size="small"
           value={price} onChange={(e) => setPrice(e.target.value)} inputProps={{ min: 0 }} />
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} size="small">Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" size="small" disabled={busy || price === ''}>Save</Button>
+        <Button onClick={onClose} size="small">{t('common.cancel')}</Button>
+        <Button onClick={handleSubmit} variant="contained" size="small" disabled={busy || price === ''}>{t('common.save')}</Button>
       </DialogActions>
     </Dialog>
   );
@@ -168,6 +172,7 @@ function PriceDialog({ open, variant, productId, onClose }) {
 
 // ── Variant Row ───────────────────────────────────────────────────────────────
 function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSingle }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
@@ -208,7 +213,7 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
               </Typography>
             )}
             {spec.unsized && (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{spec.thicknessMm} mm slab</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('inventory.slabSuffix', { mm: spec.thicknessMm })}</Typography>
             )}
           </Box>
           <Box sx={{ mt: 0.5 }}><FinishChips cut={spec.cut} fill={spec.fill} finish={spec.finish} /></Box>
@@ -220,7 +225,7 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Typography variant="body2" sx={{ fontWeight: 600 }}>{formatQty(variant.quantity)}</Typography>
-          <Tooltip title="Adjust stock">
+          <Tooltip title={t('inventory.adjustStockTooltip')}>
             <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setStockOpen(true)}>
               <AddCircleOutlineIcon sx={{ fontSize: 14 }} />
             </IconButton>
@@ -229,7 +234,7 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Typography variant="body2">{variant.price != null ? `${variant.price} AED` : '—'}</Typography>
-          <Tooltip title="Edit price">
+          <Tooltip title={t('inventory.editPriceTooltip')}>
             <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setPriceOpen(true)}>
               <EditIcon sx={{ fontSize: 12 }} />
             </IconButton>
@@ -237,15 +242,15 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
         </Box>
 
         <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
-          <Tooltip title="View details">
+          <Tooltip title={t('inventory.viewDetailsTooltip')}>
             <IconButton size="small" onClick={handleViewDetail}><OpenInNewIcon sx={{ fontSize: 14 }} /></IconButton>
           </Tooltip>
-          <Tooltip title="Edit variant">
+          <Tooltip title={t('inventory.editVariantTooltip')}>
             <IconButton size="small" onClick={() => dispatch(actions.invSetEditVariant(variant))}>
               <EditIcon sx={{ fontSize: 14 }} />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Delete variant">
+          <Tooltip title={t('inventory.deleteVariantTooltip')}>
             <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => onDeleteSingle(variant)}>
               <DeleteIcon sx={{ fontSize: 14 }} />
             </IconButton>
@@ -279,7 +284,7 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
               </Typography>
             )}
             {spec.unsized && (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{spec.thicknessMm}mm slab</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('inventory.slabSuffix', { mm: spec.thicknessMm })}</Typography>
             )}
             <FinishChips cut={spec.cut} fill={spec.fill} finish={spec.finish} />
           </Box>
@@ -320,6 +325,7 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
 
 // ── VariantsTable ─────────────────────────────────────────────────────────────
 const VariantsTable = ({ variants, productId, onAddVariant }) => {
+  const { t } = useTranslation();
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
@@ -368,19 +374,19 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
           indeterminate={selected.length > 0 && selected.length < active.length}
           onChange={toggleAll} />
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
-          Variant (SKU)
+          {t('inventory.variantSkuHeader')}
         </Typography>
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
-          Unit
+          {t('inventory.fieldUnit')}
         </Typography>
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
-          Qty
+          {t('inventory.qtyHeader')}
         </Typography>
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
-          Price
+          {t('inventory.priceLabel')}
         </Typography>
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
-          Edit
+          {t('common.edit')}
         </Typography>
       </Box>
       {/* Mobile select-all row */}
@@ -393,7 +399,7 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
           checked={active.length > 0 && selected.length === active.length}
           indeterminate={selected.length > 0 && selected.length < active.length}
           onChange={toggleAll} />
-        <Typography variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>Select all</Typography>
+        <Typography variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>{t('inventory.selectAll')}</Typography>
       </Box>
 
       {/* Bulk action bar */}
@@ -401,14 +407,14 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
         <Box sx={{ px: 2, py: 0.75, bgcolor: 'action.selected',
           display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="caption" sx={{ fontWeight: 600 }}>
-            {selected.length} selected
+            {t('common.selected', { count: selected.length })}
           </Typography>
           <Button size="small" color="error" startIcon={<DeleteIcon sx={{ fontSize: 13 }} />}
             onClick={handleDeleteBulk} sx={{ ml: 'auto', fontSize: '0.72rem' }}>
-            Delete selected
+            {t('inventory.deleteSelected')}
           </Button>
           <Button size="small" onClick={() => setSelected([])} sx={{ fontSize: '0.72rem' }}>
-            Clear
+            {t('inventory.clear')}
           </Button>
         </Box>
       )}
@@ -416,8 +422,8 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
       {/* Rows */}
       {active.length === 0 ? (
         <Box sx={{ py: 5, textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>No variants yet.</Typography>
-          <Button size="small" variant="outlined" onClick={onAddVariant}>+ Add first variant</Button>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>{t('inventory.noVariantsYetTable')}</Typography>
+          <Button size="small" variant="outlined" onClick={onAddVariant}>{t('inventory.addFirstVariant')}</Button>
         </Box>
       ) : (
         active.map((v, i) => (
@@ -433,7 +439,7 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
           <Box sx={{ px: 2, py: 1 }}>
             <Button size="small" startIcon={<AddCircleOutlineIcon sx={{ fontSize: 14 }} />}
               onClick={onAddVariant} sx={{ fontSize: '0.75rem' }}>
-              Add variant
+              {t('inventory.addVariant')}
             </Button>
           </Box>
         </>

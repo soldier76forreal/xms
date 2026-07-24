@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -22,33 +23,33 @@ import { fetchMisCompanyProfile, saveMisCompanyProfile } from '../../../store/st
 
 const SECTIONS = [
   {
-    title: 'Seller identity',
+    titleKey: 'mis.settingsSellerIdentity',
     fields: [
-      { key: 'nameAr',          label: 'Company name (Arabic)', rtl: true },
-      { key: 'nameEn',          label: 'Company name (English)' },
-      { key: 'trn',             label: 'TRN (seller VAT no.)' },
-      { key: 'branchAddressAr', label: 'Branch / address (Arabic)', rtl: true },
-      { key: 'phonesText',      label: 'Phones (comma-separated)' },
-      { key: 'email',           label: 'Email' },
-      { key: 'website',         label: 'Website' },
+      { key: 'nameAr',          labelKey: 'mis.fieldCompanyNameAr', rtl: true },
+      { key: 'nameEn',          labelKey: 'mis.fieldCompanyNameEn' },
+      { key: 'trn',             labelKey: 'mis.fieldTrn' },
+      { key: 'branchAddressAr', labelKey: 'mis.fieldBranchAddressAr', rtl: true },
+      { key: 'phonesText',      labelKey: 'mis.fieldPhones' },
+      { key: 'email',           labelKey: 'mis.fieldEmail' },
+      { key: 'website',         labelKey: 'mis.fieldWebsite' },
     ],
   },
   {
-    title: 'Bank details',
+    titleKey: 'mis.settingsBankDetails',
     fields: [
-      { key: 'bank.name',          label: 'Bank name' },
-      { key: 'bank.accountNumber', label: 'Account number' },
-      { key: 'bank.iban',          label: 'IBAN' },
-      { key: 'bank.branch',        label: 'Branch' },
-      { key: 'bank.swift',         label: 'SWIFT' },
+      { key: 'bank.name',          labelKey: 'mis.fieldBankName' },
+      { key: 'bank.accountNumber', labelKey: 'mis.fieldAccountNumber' },
+      { key: 'bank.iban',          labelKey: 'mis.fieldIban' },
+      { key: 'bank.branch',        labelKey: 'mis.fieldBankBranch' },
+      { key: 'bank.swift',         labelKey: 'mis.fieldSwift' },
     ],
   },
   {
-    title: 'Document defaults',
+    titleKey: 'mis.settingsDocDefaults',
     fields: [
-      { key: 'vatRate',                      label: 'VAT rate (%)', type: 'number' },
-      { key: 'quotationValidityDefaultDays', label: 'Quote validity (days)', type: 'number' },
-      { key: 'thankYouNoteAr',               label: 'Thank-you note (Arabic)', rtl: true, multiline: true },
+      { key: 'vatRate',                      labelKey: 'mis.fieldVatRate', type: 'number' },
+      { key: 'quotationValidityDefaultDays', labelKey: 'mis.fieldQuoteValidityDays', type: 'number' },
+      { key: 'thankYouNoteAr',               labelKey: 'mis.fieldThankYouNoteAr', rtl: true, multiline: true },
     ],
   },
 ];
@@ -66,6 +67,7 @@ const setPath = (obj, path, value) => {
 };
 
 export default function CompanyProfileDrawer({ open, onClose }) {
+  const { t } = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -118,7 +120,7 @@ export default function CompanyProfileDrawer({ open, onClose }) {
       <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5,
         borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
         <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-          Invoice template settings
+          {t('mis.templateSettingsTitle')}
         </Typography>
         <IconButton size="small" onClick={onClose} sx={{ color: T.TEXT_TER }}>
           <CloseIcon sx={{ fontSize: 16 }} />
@@ -128,15 +130,15 @@ export default function CompanyProfileDrawer({ open, onClose }) {
       <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 2, py: 2,
         display: 'flex', flexDirection: 'column', gap: 2.5 }}>
         {SECTIONS.map(section => (
-          <Box key={section.title}>
+          <Box key={section.titleKey}>
             <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
               textTransform: 'uppercase', color: T.TEXT_TER, mb: 1.25 }}>
-              {section.title}
+              {t(section.titleKey)}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {section.fields.map(f => (
                 <TextField key={f.key} size="small" fullWidth
-                  label={f.label}
+                  label={t(f.labelKey)}
                   type={f.type || 'text'}
                   multiline={Boolean(f.multiline)}
                   minRows={f.multiline ? 2 : undefined}
@@ -155,7 +157,7 @@ export default function CompanyProfileDrawer({ open, onClose }) {
         <Button fullWidth variant="contained" size="small" disabled={saving} onClick={handleSave}
           sx={{ fontSize: '0.78rem', textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}>
           {saving ? <CircularProgress size={14} sx={{ mr: 0.75 }} /> : null}
-          Save settings
+          {t('mis.saveSettings')}
         </Button>
       </Box>
     </Drawer>

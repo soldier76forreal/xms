@@ -6,6 +6,7 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
+import Switch from '@mui/material/Switch';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
@@ -17,6 +18,7 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import { useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -28,23 +30,32 @@ import UserLogs from './userLogs';
 import AssignCustomersDialog from '../crm/assignCustomersDialog';
 import InvoiceDetailDialog from '../mis/invoiceDetailDialog';
 
+// Per-type push categories (must match backend notificationPrefs keys).
+const NOTIF_TYPES = [
+  { key: 'tasks',         labelKey: 'users.notifTypeTasks' },
+  { key: 'assignments',   labelKey: 'users.notifTypeAssignments' },
+  { key: 'invoices',      labelKey: 'users.notifTypeInvoicesShort' },
+  { key: 'dmChat',        labelKey: 'users.notifTypeDmChat' },
+  { key: 'readyToUpload', labelKey: 'users.notifTypeReadyToUpload' },
+];
+
 const TASK_STATUS_CFG = {
-  open:    { label: 'Open',    color: '#64B5F6', bg: 'rgba(100,181,246,0.1)' },
-  claimed: { label: 'Claimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.1)'  },
-  done:    { label: 'Done',    color: '#81C784', bg: 'rgba(129,199,132,0.1)' },
+  open:    { labelKey: 'users.taskStatusOpen',    color: '#64B5F6', bg: 'rgba(100,181,246,0.1)' },
+  claimed: { labelKey: 'users.taskStatusClaimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.1)'  },
+  done:    { labelKey: 'users.taskStatusDone',    color: '#81C784', bg: 'rgba(129,199,132,0.1)' },
 };
 
 // mirrors invoiceCard.js's STATUS_META (kept local — showUser only needs the label/color)
 const INVOICE_STATUS_CFG = {
-  draft:          { label: 'Draft',     color: '#9e9e9e' },
-  sent:           { label: 'Sent',      color: '#64b5f6' },
-  accepted:       { label: 'Accepted',  color: '#81c784' },
-  converted:      { label: 'Converted', color: '#ba68c8' },
-  expired:        { label: 'Expired',   color: '#ffb74d' },
-  issued:         { label: 'Issued',    color: '#64b5f6' },
-  paid:           { label: 'Paid',      color: '#81c784' },
-  partially_paid: { label: 'Partial',   color: '#ffb74d' },
-  cancelled:      { label: 'Cancelled', color: '#e57373' },
+  draft:          { labelKey: 'mis.statusDraft',     color: '#9e9e9e' },
+  sent:           { labelKey: 'mis.statusSent',      color: '#64b5f6' },
+  accepted:       { labelKey: 'mis.statusAccepted',  color: '#81c784' },
+  converted:      { labelKey: 'mis.statusConverted', color: '#ba68c8' },
+  expired:        { labelKey: 'mis.statusExpired',   color: '#ffb74d' },
+  issued:         { labelKey: 'mis.statusIssued',    color: '#64b5f6' },
+  paid:           { labelKey: 'mis.statusPaid',      color: '#81c784' },
+  partially_paid: { labelKey: 'mis.statusPartial',   color: '#ffb74d' },
+  cancelled:      { labelKey: 'mis.statusCancelled', color: '#e57373' },
 };
 
 const getInitials = (user) => {
@@ -56,16 +67,16 @@ const getInitials = (user) => {
 const formatDate = (d) =>
   d ? new Date(d).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
 
-const formatLastSeen = (d) => {
-  if (!d) return 'Never';
+const formatLastSeen = (d, t) => {
+  if (!d) return t('users.never');
   const diff = Date.now() - new Date(d).getTime();
   const m  = Math.floor(diff / 60000);
   const h  = Math.floor(diff / 3600000);
   const dy = Math.floor(diff / 86400000);
-  if (m  < 1)  return 'Just now';
-  if (m  < 60) return `${m}m ago`;
-  if (h  < 24) return `${h}h ago`;
-  if (dy < 30) return `${dy}d ago`;
+  if (m  < 1)  return t('users.justNow');
+  if (m  < 60) return t('users.minutesAgo', { count: m });
+  if (h  < 24) return t('users.hoursAgo', { count: h });
+  if (dy < 30) return t('users.daysAgo', { count: dy });
   return formatDate(d);
 };
 
@@ -83,6 +94,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
+  const { t }       = useTranslation();
   const theme       = useTheme();
   const isDark      = theme.palette.mode === 'dark';
 
@@ -120,13 +132,33 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
       });
       setData(res.data);
     } catch {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load user', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedLoadUser'), type: 'error' }));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { fetchUser(); }, [userId]);
+
+  // Admin toggle of a single push-notification category for THIS user.
+  const [savingPref, setSavingPref] = useState(null);
+  const updateNotifPref = async (key, value) => {
+    setSavingPref(key);
+    // optimistic
+    setData((prev) => prev ? { ...prev, user: { ...prev.user,
+      notificationPrefs: { ...(prev.user?.notificationPrefs || {}), [key]: value } } } : prev);
+    try {
+      await authCtx.jwtInst({
+        method: 'put',
+        url: `${axiosGlobal.defaultTargetApi}/users/${userId}`,
+        data: { notificationPrefs: { [key]: value } },
+      });
+    } catch {
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedUpdateNotifPref'), type: 'error' }));
+      fetchUser();   // revert to server truth
+    }
+    setSavingPref(null);
+  };
 
   const fetchCrmTasks = useCallback(async () => {
     setCrmLoading(true);
@@ -189,11 +221,11 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
         method: 'post',
         url: `${axiosGlobal.defaultTargetApi}/users/${userId}/unlock`,
       });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Account unlocked', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.accountUnlocked'), type: 'success' }));
       await fetchUser();
       if (onUnlock) onUnlock();
     } catch {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to unlock account', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedUnlockAccount'), type: 'error' }));
     } finally {
       setUnlocking(false);
     }
@@ -228,7 +260,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
           >
             <ArrowBackIcon sx={{ fontSize: 18 }} />
           </IconButton>
-          <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_SEC }}>Users</Typography>
+          <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_SEC }}>{t('users.usersBreadcrumb')}</Typography>
         </Box>
       )}
 
@@ -237,7 +269,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
           <CircularProgress size={26} sx={{ color: T.TEXT_TER }} />
         </Box>
       ) : !user ? (
-        <Typography sx={{ color: T.TEXT_SEC, textAlign: 'center', py: 8 }}>User not found</Typography>
+        <Typography sx={{ color: T.TEXT_SEC, textAlign: 'center', py: 8 }}>{t('users.userNotFound')}</Typography>
       ) : (
         <Box sx={{ maxWidth: panelMode ? 'none' : 600, mx: panelMode ? 0 : 'auto' }}>
 
@@ -282,13 +314,13 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                   </Typography>
                 </Box>
                 <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, mt: 0.25 }}>
-                  {user.isOnline ? 'Online now' : `Last seen ${formatLastSeen(user.lastSeen)}`}
+                  {user.isOnline ? t('users.onlineNow') : t('users.lastSeenLabel', { when: formatLastSeen(user.lastSeen, t) })}
                 </Typography>
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
                 <Chip
-                  label={user.validation ? 'Active' : 'Inactive'}
+                  label={user.validation ? t('users.activeLabel') : t('users.inactiveBadge')}
                   size="small"
                   sx={{
                     height: 22, fontSize: '0.7rem', fontWeight: 600, borderRadius: '6px',
@@ -313,22 +345,22 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
             <Divider sx={{ my: 2, borderColor: T.CARD_BD }} />
 
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-              Info
+              {t('users.infoLabel')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               <Box>
-                <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>Joined</Typography>
+                <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{t('users.joinedLabel')}</Typography>
                 <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_SEC }}>{formatDate(user.insertDate)}</Typography>
               </Box>
               {user.city && (
                 <Box>
-                  <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>City</Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{t('users.cityLabel')}</Typography>
                   <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_SEC }}>{user.city}</Typography>
                 </Box>
               )}
               {countryInfo && (
                 <Box>
-                  <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>Country</Typography>
+                  <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{t('users.countryLabel')}</Typography>
                   <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_SEC }}>
                     {countryInfo.flag} {countryInfo.name}
                   </Typography>
@@ -348,7 +380,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
             }}>
               <LockIcon sx={{ color: T.ERR_CLR, fontSize: 18, flexShrink: 0 }} />
               <Typography sx={{ flexGrow: 1, fontSize: '0.85rem', color: T.ERR_CLR }}>
-                Account locked{remain ? ` — ${remain} remaining` : ''}
+                {remain ? t('users.accountLockedRemain', { remain }) : t('users.accountLocked')}
               </Typography>
               <Can permission="users:unlock">
                 <Button
@@ -369,7 +401,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                     '&.Mui-disabled': { color: 'rgba(255,77,141,0.3)', borderColor: 'rgba(255,77,141,0.1)' },
                   }}
                 >
-                  Unlock
+                  {t('users.unlockButton')}
                 </Button>
               </Can>
             </Box>
@@ -378,11 +410,11 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
           {/* ── Effective permissions ────────────────────────────────────── */}
           <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px', mb: 2 }}>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 2 }}>
-              Effective Permissions
+              {t('users.effectivePermissions')}
             </Typography>
 
             {Object.keys(groupedPerms).length === 0 ? (
-              <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_TER }}>No permissions assigned</Typography>
+              <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_TER }}>{t('users.noPermissionsAssigned')}</Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {Object.entries(groupedPerms).map(([mod, keys]) => (
@@ -420,7 +452,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
           {Object.keys(effectiveScopes).length > 0 && (
             <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px', mb: 2 }}>
               <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1.5 }}>
-                Data Visibility
+                {t('users.dataVisibilityHeader')}
               </Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                 {Object.entries(effectiveScopes).map(([mod, scope]) => {
@@ -446,13 +478,34 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
             </Box>
           )}
 
+          {/* ── Notification preferences (admin-editable) ─────────────────── */}
+          <Can permission="users:edit">
+            <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px', mb: 2 }}>
+              <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1.5 }}>
+                {t('users.notificationPreferences')}
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                {NOTIF_TYPES.map(({ key, labelKey }) => {
+                  const on = (user?.notificationPrefs?.[key]) !== false;   // default ON
+                  return (
+                    <Box key={key} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 0.25 }}>
+                      <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_SEC }}>{t(labelKey)}</Typography>
+                      <Switch size="small" checked={on} disabled={savingPref === key}
+                        onChange={(e) => updateNotifPref(key, e.target.checked)} />
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+          </Can>
+
           {/* ── CRM Customer Tasks ────────────────────────────────────────── */}
           <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px', mb: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
               <AssignmentIcon sx={{ fontSize: 14, color: T.TEXT_TER, mr: 0.75 }} />
               <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase',
                 letterSpacing: 1, flexGrow: 1 }}>
-                CRM Customer Tasks
+                {t('users.crmCustomerTasks')}
               </Typography>
               <Can permission="crm:task:assign">
                 <Button size="small" onClick={() => setAssignOpen(true)}
@@ -461,7 +514,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                     borderRadius: '7px', color: T.TEXT_SEC,
                     border: `1px solid ${T.CARD_BD}`,
                     '&:hover': { color: T.TEXT_PRI, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' } }}>
-                  Assign customers
+                  {t('users.assignCustomersBtn')}
                 </Button>
               </Can>
             </Box>
@@ -472,7 +525,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
               </Box>
             ) : crmTasks.length === 0 ? (
               <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, textAlign: 'center', py: 2 }}>
-                No CRM tasks assigned to this user
+                {t('users.noCrmTasksAssigned')}
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
@@ -502,17 +555,17 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.4, flexWrap: 'wrap' }}>
                           {subjCount > 0 && (
                             <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER }}>
-                              {subjCount} customer{subjCount !== 1 ? 's' : ''}
+                              {t('users.taskSubjectCount', { count: subjCount })}
                             </Typography>
                           )}
                           {task.createdByName && (
                             <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER }}>
-                              · by {task.createdByName}
+                              · {t('crm.byActor', { name: task.createdByName })}
                             </Typography>
                           )}
                         </Box>
                       </Box>
-                      <Chip label={st.label} size="small"
+                      <Chip label={t(st.labelKey)} size="small"
                         sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700, borderRadius: '4px',
                           bgcolor: st.bg, color: st.color,
                           '& .MuiChip-label': { px: 0.6 }, flexShrink: 0 }} />
@@ -530,7 +583,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                 <ReceiptLongIcon sx={{ fontSize: 14, color: T.TEXT_TER, mr: 0.75 }} />
                 <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase',
                   letterSpacing: 1, flexGrow: 1 }}>
-                  Assigned Invoices
+                  {t('users.assignedInvoicesHeader')}
                 </Typography>
               </Box>
 
@@ -540,7 +593,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                 </Box>
               ) : assignedInvoices.length === 0 ? (
                 <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, textAlign: 'center', py: 2 }}>
-                  No invoices or quotes have been sent to this user
+                  {t('users.noInvoicesAssigned')}
                 </Typography>
               ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
@@ -567,7 +620,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                             {(Number(inv.grandTotal) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AED
                           </Typography>
                         </Box>
-                        <Chip label={st.label} size="small"
+                        <Chip label={t(st.labelKey)} size="small"
                           sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700, borderRadius: '4px',
                             bgcolor: `${st.color}22`, color: st.color,
                             '& .MuiChip-label': { px: 0.6 }, flexShrink: 0 }} />

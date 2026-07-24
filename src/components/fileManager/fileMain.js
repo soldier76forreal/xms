@@ -11,6 +11,7 @@ import Checkbox from '@mui/material/Checkbox';
 import Menu from '@mui/material/Menu';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import SearchIcon from '@mui/icons-material/Search';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
@@ -23,6 +24,7 @@ import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import StorageIcon from '@mui/icons-material/Storage';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -39,6 +41,7 @@ import ShareTheLink from './shareTheLink';
 import FilePickerModal from './filePickerModal';
 import TransferCenter from './transferCenter';
 import SearchInputForTags from './searchInputForTags';
+import StorageManagement from './storageManagement';
 
 // ── File Manager — Phase 9 makeover ────────────────────────────────────────────
 // Same dark/opacity master-detail shell as CRM/MIS/Inventory. Data layer
@@ -48,6 +51,7 @@ import SearchInputForTags from './searchInputForTags';
 // dispatch(actions.setFolder()) re-derives the tree view from the now-updated
 // window.location.pathname against the already-fetched state.data.
 export default function FileMain() {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMob  = useMediaQuery(theme.breakpoints.down('md'));
@@ -99,6 +103,7 @@ export default function FileMain() {
   const [successToast, setSuccessToast] = useState({ status: false, msg: '' });
   const [tagMenuAnchor, setTagMenuAnchor] = useState(null);
   const [viewerMedia, setViewerMedia] = useState(null);   // { url, name, kind } — in-app preview from a card click
+  const [storageOpen, setStorageOpen] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -179,7 +184,7 @@ export default function FileMain() {
       await authCtx.jwtInst({ method: 'post', url: `${apiBase}/files/togglePin`, data: { itemId: id, kind } });
       dispatch(actions.refresh());
     } catch (err) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to toggle pin', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('files.failedTogglePin'), type: 'error' }));
     }
   };
   const isPinned = (doc) => (doc?.pinnedBy || []).map(String).includes(myId);
@@ -272,7 +277,7 @@ export default function FileMain() {
 
           <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0,
             display: { xs: 'none', sm: 'block' } }}>
-            Files
+            {t('dm.filesLabel')}
           </Typography>
 
           {/* Breadcrumb — horizontally scrollable on phones instead of wrapping */}
@@ -296,26 +301,26 @@ export default function FileMain() {
             // ── Bulk action bar ──
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexGrow: 1, justifyContent: 'flex-end' }}>
               <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC, mr: 1 }}>
-                {selectedItems.length} selected
+                {t('files.selectedCount', { count: selectedItems.length })}
               </Typography>
-              <Tooltip title="Download">
+              <Tooltip title={t('common.download')}>
                 <IconButton size="small" onClick={handleDownloadMulti} sx={{ color: T.TEXT_SEC }}>
                   <DownloadIcon sx={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>
               {can('files:upload') && (
                 <>
-                  <Tooltip title="Move">
+                  <Tooltip title={t('files.moveTip')}>
                     <IconButton size="small" onClick={openMoveMulti} sx={{ color: T.TEXT_SEC }}>
                       <DriveFileMoveIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Copy">
+                  <Tooltip title={t('common.copy')}>
                     <IconButton size="small" onClick={openCopyMulti} sx={{ color: T.TEXT_SEC }}>
                       <ContentCopyIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Tag">
+                  <Tooltip title={t('files.tagTip')}>
                     <IconButton size="small" onClick={(e) => setTagMenuAnchor(e.currentTarget)} sx={{ color: T.TEXT_SEC }}>
                       <LocalOfferIcon sx={{ fontSize: 16 }} />
                     </IconButton>
@@ -328,14 +333,14 @@ export default function FileMain() {
                 </>
               )}
               {can('files:share') && (
-                <Tooltip title="Share">
+                <Tooltip title={t('common.share')}>
                   <IconButton size="small" onClick={openShareMulti} sx={{ color: T.TEXT_SEC }}>
                     <ShareIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 </Tooltip>
               )}
               {can('files:delete') && (
-                <Tooltip title="Delete">
+                <Tooltip title={t('common.delete')}>
                   <IconButton size="small" onClick={openDeleteMulti} sx={{ color: '#EA005A' }}>
                     <DeleteOutlineIcon sx={{ fontSize: 18 }} />
                   </IconButton>
@@ -343,7 +348,7 @@ export default function FileMain() {
               )}
               <Button size="small" onClick={() => dispatch(actions.unselectAll())}
                 sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_TER }}>
-                Clear
+                {t('files.clearSelection')}
               </Button>
             </Box>
           ) : (
@@ -351,16 +356,22 @@ export default function FileMain() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexGrow: 1, maxWidth: 320,
                 bgcolor: T.CTRL_BG, borderRadius: '8px', px: 1.25, py: '4px', border: `1px solid ${T.BD}` }}>
                 <SearchIcon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />
-                <TextField variant="standard" placeholder="Search this folder…" fullWidth
+                <TextField variant="standard" placeholder={t('files.searchThisFolderPlaceholder')} fullWidth
                   value={search} onChange={(e) => setSearch(e.target.value)}
                   InputProps={{ disableUnderline: true, sx: { fontSize: '0.8rem', color: T.TEXT_PRI } }} />
               </Box>
 
               <Box sx={{ flexGrow: 1 }} />
 
+              <Tooltip title={t('files.storageUsageTip')}>
+                <IconButton size="small" onClick={() => setStorageOpen(true)} sx={{ color: T.TEXT_SEC }}>
+                  <StorageIcon sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+
               {can('files:upload') && (
                 <>
-                  <Tooltip title="New folder">
+                  <Tooltip title={t('common.newFolder')}>
                     <IconButton size="small" onClick={() => { setNewFolderType('mainNewFolderBtn'); setNewFileModal(true); }}
                       sx={{ color: T.TEXT_SEC }}>
                       <CreateNewFolderIcon sx={{ fontSize: 19 }} />
@@ -370,7 +381,7 @@ export default function FileMain() {
                     sx={{ bgcolor: isDark ? '#fff' : '#000', color: isDark ? '#000' : '#fff', fontWeight: 600,
                       borderRadius: '8px', px: 1.75, py: '5px', fontSize: '0.78rem', textTransform: 'none',
                       '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' } }}>
-                    Upload
+                    {t('files.uploadAction')}
                     <input ref={fileInputRef} type="file" hidden multiple onChange={handleFileChange} />
                   </Button>
                 </>
@@ -396,7 +407,7 @@ export default function FileMain() {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
                     <StarIcon sx={{ fontSize: 14, color: '#FFB74D' }} />
                     <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: T.TEXT_TER }}>
-                      Pinned
+                      {t('files.pinnedHeader')}
                     </Typography>
                   </Box>
                   {cardGrid(pinnedDocs)}
@@ -407,7 +418,7 @@ export default function FileMain() {
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, py: 8, opacity: 0.4 }}>
                   <InsertDriveFileIcon sx={{ fontSize: 42, color: T.TEXT_TER }} />
                   <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_SEC }}>
-                    {search ? 'No matches' : 'This folder is empty'}
+                    {search ? t('files.noMatches') : t('files.folderEmpty')}
                   </Typography>
                 </Box>
               ) : (
@@ -418,7 +429,7 @@ export default function FileMain() {
                       onClick={() => dispatch(actions.selectAll())}
                       sx={{ p: '4px', color: T.TEXT_TER, '&.Mui-checked': { color: T.TEXT_PRI } }} />
                     <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>
-                      {filteredDocs.length} item{filteredDocs.length !== 1 ? 's' : ''}
+                      {t('files.itemsCount', { count: filteredDocs.length })}
                     </Typography>
                   </Box>
                   {cardGrid(filteredDocs)}
@@ -434,7 +445,7 @@ export default function FileMain() {
               {selectedEntry && (
                 <FileDetailPanel entry={selectedEntry} pinned={isPinned(selectedEntry.file || selectedEntry.doc)}
                   onClose={closeDetail}
-                  onRename={(t, n) => openRename(t, n)} onMove={openMove} onCopy={openCopy}
+                  onRename={(target, name) => openRename(target, name)} onMove={openMove} onCopy={openCopy}
                   onShare={openShare} onDelete={openDelete} onDownload={handleDownload}
                   onTogglePin={() => togglePin((selectedEntry.file || selectedEntry.doc)._id, selectedEntry.file ? 'file' : 'folder')}
                 />
@@ -447,12 +458,12 @@ export default function FileMain() {
                   <IconButton onClick={closeDetail} size="small" sx={{ color: T.TEXT_SEC }}>
                     <ArrowBackIcon sx={{ fontSize: 20 }} />
                   </IconButton>
-                  <Typography sx={{ fontSize: '0.875rem', color: T.TEXT_SEC, ml: 1 }}>Back</Typography>
+                  <Typography sx={{ fontSize: '0.875rem', color: T.TEXT_SEC, ml: 1 }}>{t('users.backButton')}</Typography>
                 </Box>
                 <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
                   <FileDetailPanel entry={selectedEntry} pinned={isPinned(selectedEntry.file || selectedEntry.doc)}
                     panelMode={false} onClose={closeDetail}
-                    onRename={(t, n) => openRename(t, n)} onMove={openMove} onCopy={openCopy}
+                    onRename={(target, name) => openRename(target, name)} onMove={openMove} onCopy={openCopy}
                     onShare={openShare} onDelete={openDelete} onDownload={handleDownload}
                     onTogglePin={() => togglePin((selectedEntry.file || selectedEntry.doc)._id, selectedEntry.file ? 'file' : 'folder')}
                   />
@@ -464,6 +475,8 @@ export default function FileMain() {
       )}
 
       <TransferCenter />
+
+      <StorageManagement open={storageOpen} onClose={() => setStorageOpen(false)} />
 
       <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
 

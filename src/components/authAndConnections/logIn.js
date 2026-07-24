@@ -7,9 +7,16 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import InputAdornment from '@mui/material/InputAdornment';
+import IconButton from '@mui/material/IconButton';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import TranslateIcon from '@mui/icons-material/Translate';
+import CheckIcon from '@mui/icons-material/Check';
 import { useHistory } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AuthContext from './auth';
 import AxiosGlobal from './axiosGlobalUrl';
+import LanguageCtx from '../../contextApi/languageContext';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../users/countryData';
 
 // ── Design tokens (dark/opacity shell) ────────────────────────────────────────
@@ -41,13 +48,17 @@ const inputSx = {
 const OTP_LENGTH = 6;
 
 const LogIn = () => {
+  const { t }       = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const history     = useHistory();
+  const { language, setLanguage, languages } = useContext(LanguageCtx);
+  const [langAnchor, setLangAnchor] = useState(null);
 
   const [step,     setStep]     = useState('phone');   // 'phone' | 'code' | 'password'
   const [phone,    setPhone]    = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [digits,   setDigits]   = useState(Array(OTP_LENGTH).fill(''));
   const [busy,     setBusy]     = useState(false);
   const [error,    setError]    = useState('');
@@ -101,7 +112,7 @@ const LogIn = () => {
   };
 
   const handleSendCode = async () => {
-    if (!phone.trim()) { setError('Enter your phone number'); return; }
+    if (!phone.trim()) { setError(t('auth.errPhoneRequired')); return; }
     setBusy(true); setError('');
     try {
       await authCtx.jwtInst({
@@ -118,17 +129,17 @@ const LogIn = () => {
       const msg    = err?.response?.data?.message;
       if (status === 423) {
         setLocked({ until: err.response.data.lockedUntil });
-        setError(msg || 'Account is locked');
+        setError(msg || t('auth.errAccountLocked'));
       } else if (status === 429) {
         const s = err?.response?.data?.cooldownSeconds;
         if (s) startCooldown(s);
-        setError(msg || 'Too many requests — please wait');
+        setError(msg || t('auth.errTooManyRequests'));
       } else if (status === 404) {
-        setError('This number is not registered');
+        setError(t('auth.errNotRegistered'));
       } else if (status === 403) {
-        setError('Account is not active');
+        setError(t('auth.errAccountInactive'));
       } else {
-        setError(msg || 'Failed to send code — please try again');
+        setError(msg || t('auth.errSendCodeFailed'));
       }
     } finally {
       setBusy(false);
@@ -137,7 +148,7 @@ const LogIn = () => {
 
   const handleVerify = async () => {
     const otp = digits.join('');
-    if (otp.length < OTP_LENGTH) { setError('Enter the complete 6-digit code'); return; }
+    if (otp.length < OTP_LENGTH) { setError(t('auth.errCodeIncomplete')); return; }
     setBusy(true); setError(''); setAttLeft(null);
     try {
       const res = await authCtx.jwtInst({
@@ -152,14 +163,14 @@ const LogIn = () => {
       const data   = err?.response?.data;
       if (status === 423) {
         setLocked({ until: data?.lockedUntil });
-        setError(data?.message || 'Account is locked');
+        setError(data?.message || t('auth.errAccountLocked'));
       } else if (status === 400 && data?.attemptsLeft !== undefined) {
         setAttLeft(data.attemptsLeft);
-        setError(data?.message || 'Incorrect code');
+        setError(data?.message || t('auth.errIncorrectCode'));
       } else if (status === 400) {
-        setError(data?.message || 'Invalid or expired code');
+        setError(data?.message || t('auth.errInvalidOrExpiredCode'));
       } else {
-        setError(data?.message || 'Server error — please try again');
+        setError(data?.message || t('auth.errServerRetry'));
       }
       setDigits(Array(OTP_LENGTH).fill(''));
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
@@ -171,8 +182,8 @@ const LogIn = () => {
   // Password fallback (reinstated 2026-07-11) — for users who can't receive
   // the OTP SMS. Same lockout as OTP; 10 attempts instead of 5.
   const handlePasswordLogin = async () => {
-    if (!phone.trim())    { setError('Enter your phone number'); return; }
-    if (!password)        { setError('Enter your password');     return; }
+    if (!phone.trim())    { setError(t('auth.errPhoneRequired'));    return; }
+    if (!password)        { setError(t('auth.errPasswordRequired')); return; }
     setBusy(true); setError(''); setAttLeft(null);
     try {
       const res = await authCtx.jwtInst({
@@ -187,16 +198,16 @@ const LogIn = () => {
       const data   = err?.response?.data;
       if (status === 423) {
         setLocked({ until: data?.lockedUntil });
-        setError(data?.message || 'Account is locked');
+        setError(data?.message || t('auth.errAccountLocked'));
       } else if (status === 400 && data?.attemptsLeft !== undefined) {
         setAttLeft(data.attemptsLeft);
-        setError(data?.message || 'Incorrect password');
+        setError(data?.message || t('auth.errIncorrectPassword'));
       } else if (status === 404) {
-        setError('This number is not registered');
+        setError(t('auth.errNotRegistered'));
       } else if (status === 403) {
-        setError('Account is not active');
+        setError(t('auth.errAccountInactive'));
       } else {
-        setError(data?.message || 'Server error — please try again');
+        setError(data?.message || t('auth.errServerRetry'));
       }
     } finally {
       setBusy(false);
@@ -222,7 +233,7 @@ const LogIn = () => {
         const s = data?.cooldownSeconds;
         if (s) startCooldown(s);
       }
-      setError(data?.message || 'Failed to resend code');
+      setError(data?.message || t('auth.errResendFailed'));
     } finally {
       setBusy(false);
     }
@@ -267,7 +278,36 @@ const LogIn = () => {
     : COUNTRIES;
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: BG, px: { xs: 2, sm: 0 } }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: BG, px: { xs: 2, sm: 0 }, position: 'relative' }}>
+      {/* Language switcher — the ONLY way to change language before logging in,
+          since the in-app rail/drawer picker isn't reachable yet. */}
+      <IconButton
+        onClick={(e) => setLangAnchor(e.currentTarget)}
+        sx={{ position: 'fixed', top: 16, insetInlineEnd: 16, color: TEXT_SEC,
+          border: `1px solid ${INPUT_BD}`, borderRadius: '10px', width: 36, height: 36,
+          '&:hover': { color: TEXT_PRI, bgcolor: INPUT_BG } }}
+      >
+        <TranslateIcon sx={{ fontSize: 18 }} />
+      </IconButton>
+      <Menu
+        anchorEl={langAnchor}
+        open={Boolean(langAnchor)}
+        onClose={() => setLangAnchor(null)}
+        PaperProps={{ sx: { bgcolor: '#181818', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', minWidth: 160 } }}
+      >
+        {languages.map((l) => {
+          const active = l.code === language;
+          return (
+            <MenuItem key={l.code} dense
+              onClick={() => { setLanguage(l.code); setLangAnchor(null); }}
+              sx={{ fontSize: '0.82rem', gap: 1 }}>
+              <Box sx={{ flexGrow: 1 }}>{l.nativeLabel}</Box>
+              {active && <CheckIcon sx={{ fontSize: 15 }} />}
+            </MenuItem>
+          );
+        })}
+      </Menu>
+
       <Box sx={{
         width: '100%',
         maxWidth: 360,
@@ -288,7 +328,7 @@ const LogIn = () => {
         {step === 'phone' && (
           <>
             <Typography variant="body2" sx={{ color: TEXT_SEC, textAlign: 'center', lineHeight: 1.7 }}>
-              Enter your mobile number
+              {t('auth.enterMobileNumber')}
             </Typography>
 
             {/* Country code + phone input row */}
@@ -317,7 +357,7 @@ const LogIn = () => {
               {/* Phone number input */}
               <TextField
                 fullWidth size="small"
-                placeholder="09xxxxxxxxx"
+                placeholder={t('auth.phonePlaceholder')}
                 value={phone}
                 onChange={e => { setPhone(e.target.value); setError(''); setLocked(null); }}
                 onKeyDown={e => e.key === 'Enter' && handleSendCode()}
@@ -384,7 +424,7 @@ const LogIn = () => {
 
             {locked && (
               <Typography variant="caption" sx={{ color: ERR_CLR, textAlign: 'center', display: 'block' }}>
-                Account locked — {lockRemaining()} remaining
+                {t('auth.accountLockedRemaining', { time: lockRemaining() })}
               </Typography>
             )}
             {error && !locked && (
@@ -403,7 +443,7 @@ const LogIn = () => {
                 '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.25)' },
               }}
             >
-              {busy ? 'Sending…' : 'Send code'}
+              {busy ? t('auth.sending') : t('auth.sendCode')}
             </Button>
 
             {/* Password fallback — for users who can't receive the SMS */}
@@ -411,7 +451,7 @@ const LogIn = () => {
               onClick={() => { setStep('password'); setError(''); setAttLeft(null); }}
               sx={{ fontSize: '0.75rem', color: TEXT_SEC, textAlign: 'center', cursor: 'pointer',
                 '&:hover': { color: TEXT_PRI, textDecoration: 'underline' } }}>
-              Can't receive the code? Sign in with password
+              {t('auth.cantReceiveCode')}
             </Typography>
           </>
         )}
@@ -420,12 +460,12 @@ const LogIn = () => {
         {step === 'password' && (
           <>
             <Typography variant="body2" sx={{ color: TEXT_SEC, textAlign: 'center', lineHeight: 1.7 }}>
-              Sign in with your phone number and password
+              {t('auth.signInWithPhoneAndPassword')}
             </Typography>
 
             <TextField
               fullWidth size="small"
-              placeholder="09xxxxxxxxx"
+              placeholder={t('auth.phonePlaceholder')}
               value={phone}
               onChange={e => { setPhone(e.target.value); setError(''); setLocked(null); }}
               inputProps={{ inputMode: 'numeric', dir: 'ltr' }}
@@ -435,24 +475,39 @@ const LogIn = () => {
 
             <TextField
               fullWidth size="small"
-              type="password"
-              placeholder="Password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder={t('auth.password')}
               value={password}
               onChange={e => { setPassword(e.target.value); setError(''); }}
               onKeyDown={e => e.key === 'Enter' && handlePasswordLogin()}
               inputProps={{ dir: 'ltr' }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      edge="end"
+                      sx={{ color: TEXT_SEC }}
+                    >
+                      {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
               sx={inputSx}
               autoFocus={!!phone}
             />
 
             {locked && (
               <Typography variant="caption" sx={{ color: ERR_CLR, textAlign: 'center', display: 'block' }}>
-                Account locked — {lockRemaining()} remaining
+                {t('auth.accountLockedRemaining', { time: lockRemaining() })}
               </Typography>
             )}
             {error && !locked && (
               <Typography variant="caption" sx={{ color: ERR_CLR, textAlign: 'center', display: 'block' }}>
-                {error}{attLeft !== null ? ` — ${attLeft} attempts left` : ''}
+                {error}{attLeft !== null ? ` ${t('auth.attemptsLeft', { count: attLeft })}` : ''}
               </Typography>
             )}
 
@@ -466,14 +521,14 @@ const LogIn = () => {
                 '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.25)' },
               }}
             >
-              {busy ? 'Signing in…' : 'Sign in'}
+              {busy ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
 
             <Typography
-              onClick={() => { setStep('phone'); setPassword(''); setError(''); setAttLeft(null); }}
+              onClick={() => { setStep('phone'); setPassword(''); setShowPassword(false); setError(''); setAttLeft(null); }}
               sx={{ fontSize: '0.75rem', color: TEXT_SEC, textAlign: 'center', cursor: 'pointer',
                 '&:hover': { color: TEXT_PRI, textDecoration: 'underline' } }}>
-              Use verification code instead
+              {t('auth.useCodeInstead')}
             </Typography>
           </>
         )}
@@ -521,7 +576,7 @@ const LogIn = () => {
                 <Typography variant="caption" sx={{ color: ERR_CLR, display: 'block' }}>{error}</Typography>
                 {attLeft !== null && (
                   <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'block', mt: 0.5 }}>
-                    {attLeft} attempt{attLeft !== 1 ? 's' : ''} remaining
+                    {t('auth.attemptsRemaining', { count: attLeft })}
                   </Typography>
                 )}
               </Box>
@@ -529,7 +584,7 @@ const LogIn = () => {
 
             {locked && (
               <Typography variant="caption" sx={{ color: ERR_CLR, textAlign: 'center', display: 'block' }}>
-                Account locked — {lockRemaining()} remaining
+                {t('auth.accountLockedRemaining', { time: lockRemaining() })}
               </Typography>
             )}
 
@@ -544,7 +599,7 @@ const LogIn = () => {
                 '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.25)' },
               }}
             >
-              {busy ? 'Verifying…' : 'Verify'}
+              {busy ? t('auth.verifying') : t('auth.verify')}
             </Button>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -558,7 +613,7 @@ const LogIn = () => {
                   '&.Mui-disabled': { color: TEXT_TER },
                 }}
               >
-                {cooldown > 0 ? `Resend code (${cooldown}s)` : 'Resend code'}
+                {cooldown > 0 ? t('auth.resendCodeIn', { seconds: cooldown }) : t('auth.resendCode')}
               </Button>
 
               <Button
@@ -570,7 +625,7 @@ const LogIn = () => {
                   '&:hover': { bgcolor: 'transparent', color: TEXT_PRI },
                 }}
               >
-                Change number
+                {t('auth.changeNumber')}
               </Button>
             </Box>
 
@@ -579,7 +634,7 @@ const LogIn = () => {
               onClick={() => { setStep('password'); setError(''); setAttLeft(null); setDigits(Array(OTP_LENGTH).fill('')); }}
               sx={{ fontSize: '0.75rem', color: TEXT_SEC, textAlign: 'center', cursor: 'pointer',
                 '&:hover': { color: TEXT_PRI, textDecoration: 'underline' } }}>
-              Can't receive the code? Sign in with password
+              {t('auth.cantReceiveCode')}
             </Typography>
           </>
         )}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
@@ -25,6 +26,7 @@ import { useBranch } from '../../contextApi/BranchContext';
 // Gated by the doc-type :edit permission (backend enforces; here the caller
 // already checked before opening).
 const SendToDialog = ({ doc, open, onClose, onDone }) => {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -62,8 +64,8 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
   }, [open, doc]);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(search), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(search), 300);
+    return () => clearTimeout(timer);
   }, [search]);
 
   const fetchUsers = useCallback(async () => {
@@ -102,13 +104,13 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
         url: `${axiosGlobal.defaultTargetApi}/mis/invoices/${doc._id}/assign`,
         data: { assignedTo: Array.from(selected) },
       });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Invoice sent', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('mis.invoiceSent'), type: 'success' }));
       onDone && onDone(res.data);
       onClose();
     } catch (err) {
       dispatch(actions.setShowSnackBar({
         status: true,
-        msg: err?.response?.data?.message || 'Failed to send',
+        msg: err?.response?.data?.message || t('mis.failedToSend'),
         type: 'error',
       }));
     } finally {
@@ -116,7 +118,7 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
     }
   };
 
-  const label = doc?.docType === 'invoice' ? 'Invoice' : 'Quote';
+  const label = doc?.docType === 'invoice' ? t('mis.invoiceType') : t('mis.quoteType');
 
   return (
     <Dialog open={open} onClose={onClose} fullScreen={isXs} maxWidth="xs" fullWidth
@@ -129,7 +131,7 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          Send {label} #{doc?.docNumber}
+          {t('mis.sendDocTitle', { type: label, number: doc?.docNumber })}
         </Typography>
         <IconButton onClick={onClose} size="small"
           sx={{ color: T.TEXT_SEC, '&:hover': { color: T.TEXT_PRI, bgcolor: T.HVR_BG } }}>
@@ -138,7 +140,7 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
       </Box>
 
       <Box sx={{ px: 3, pt: 2, pb: 1, flexShrink: 0 }}>
-        <TextField fullWidth size="small" placeholder="Search users…"
+        <TextField fullWidth size="small" placeholder={t('mis.searchUsersPlaceholder')}
           value={search} onChange={e => setSearch(e.target.value)}
           InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 16, color: T.TEXT_SEC }} /></InputAdornment> }}
           sx={{
@@ -151,7 +153,7 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
           }}
         />
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 1 }}>
-          {selected.size} selected
+          {t('common.selected', { count: selected.size })}
         </Typography>
       </Box>
 
@@ -162,7 +164,7 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
           </Box>
         ) : users.length === 0 ? (
           <Typography sx={{ textAlign: 'center', color: T.TEXT_SEC, py: 6, fontSize: '0.85rem' }}>
-            No users found
+            {t('mis.noUsersFound')}
           </Typography>
         ) : users.map(u => {
           const id  = String(u._id);
@@ -192,14 +194,14 @@ const SendToDialog = ({ doc, open, onClose, onDone }) => {
         borderTop: `1px solid ${T.DIVIDER}` }}>
         <Button onClick={onClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={saving}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : <SendIcon sx={{ fontSize: 15 }} />}
           sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
             '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.26)' } }}>
-          {saving ? 'Sending…' : 'Send'}
+          {saving ? t('mis.sending') : t('mis.send')}
         </Button>
       </DialogActions>
     </Dialog>

@@ -3,6 +3,7 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import ShieldIcon from '@mui/icons-material/Shield';
 import { useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
 const useT = () => {
   const theme  = useTheme();
@@ -34,6 +35,7 @@ const groupByModule = (permissions = []) => {
 
 const RolePanel = ({ role }) => {
   const T = useT();
+  const { t } = useTranslation();
   if (!role) return null;
 
   const byModule = groupByModule(role.permissions);
@@ -54,7 +56,7 @@ const RolePanel = ({ role }) => {
               {role.name}
             </Typography>
             {role.isSystem && (
-              <Chip label="system" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700,
+              <Chip label={t('users.systemBadge')} size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700,
                 bgcolor: T.SYS_BG, color: T.TEXT_TER, borderRadius: '4px',
                 '& .MuiChip-label': { px: 0.75 } }} />
             )}
@@ -74,7 +76,7 @@ const RolePanel = ({ role }) => {
             {(role.permissions || []).length}
           </Typography>
           <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.8, mt: 0.25 }}>
-            Permissions
+            {t('users.permissionsStat')}
           </Typography>
         </Box>
         <Box sx={{ width: '1px', bgcolor: T.DIVIDER }} />
@@ -83,7 +85,7 @@ const RolePanel = ({ role }) => {
             {moduleCount}
           </Typography>
           <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.8, mt: 0.25 }}>
-            Modules
+            {t('users.modulesStat')}
           </Typography>
         </Box>
       </Box>
@@ -92,7 +94,7 @@ const RolePanel = ({ role }) => {
       {Object.keys(role.dataScopes || {}).length > 0 && (
         <Box sx={{ mb: 2.5 }}>
           <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-            Data Visibility
+            {t('users.dataVisibility')}
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
             {Object.entries(role.dataScopes).map(([mod, scope]) => {
@@ -118,7 +120,7 @@ const RolePanel = ({ role }) => {
       {/* Permissions by module */}
       {(role.permissions || []).length === 0 ? (
         <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_TER, textAlign: 'center', py: 4 }}>
-          No permissions assigned
+          {t('users.noPermissionsAssigned')}
         </Typography>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>

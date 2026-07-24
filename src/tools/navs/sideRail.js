@@ -13,13 +13,16 @@ import StoreIcon from '@mui/icons-material/Store';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import CheckIcon from '@mui/icons-material/Check';
+import TranslateIcon from '@mui/icons-material/Translate';
 import { useTheme } from '@mui/material/styles';
 import { useHistory } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import AuthContext from '../../components/authAndConnections/auth';
 import AxiosGlobal from '../../components/authAndConnections/axiosGlobalUrl';
 import PageSection from '../../contextApi/pageSection';
 import ThemeCtx from '../../contextApi/themeContext';
+import LanguageCtx from '../../contextApi/languageContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
 import NormalMenuForProfile from './normalMenuForProfile';
@@ -38,6 +41,8 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { themeMode, toggleTheme } = useContext(ThemeCtx);
+  const { language, setLanguage, languages } = useContext(LanguageCtx);
+  const { t }       = useTranslation();
   const { can }     = usePermissions();
   const { branches, activeBranchId, activeBranch, setActiveBranchId } = useBranch();
 
@@ -48,6 +53,8 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
   const logOut = () => { authCtx.logout(); setAnchorEl(null); };
 
   const [branchAnchor, setBranchAnchor] = useState(null);
+  const [langAnchor, setLangAnchor] = useState(null);
+  const activeLanguage = languages.find((l) => l.code === language);
 
   const T = {
     BG:       isDark ? '#0d0d0d'                : theme.palette.background.paper,
@@ -125,6 +132,28 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
         })}
       </Menu>
 
+      {/* Language picker menu */}
+      <Menu
+        anchorEl={langAnchor}
+        open={Boolean(langAnchor)}
+        onClose={() => setLangAnchor(null)}
+        anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
+        PaperProps={{ sx: { bgcolor: T.MENU_BG, border: `1px solid ${T.BD}`, borderRadius: '10px', minWidth: 160 } }}
+      >
+        {languages.map((l) => {
+          const active = l.code === language;
+          return (
+            <MenuItem key={l.code} dense
+              onClick={() => { setLanguage(l.code); setLangAnchor(null); }}
+              sx={{ fontSize: '0.82rem', gap: 1 }}>
+              <TranslateIcon sx={{ fontSize: 15, color: T.ICON }} />
+              <Box sx={{ flexGrow: 1 }}>{l.nativeLabel}</Box>
+              {active && <CheckIcon sx={{ fontSize: 15 }} />}
+            </MenuItem>
+          );
+        })}
+      </Menu>
+
       <Box sx={{
         display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
@@ -187,13 +216,13 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
                     fontSize: '0.8rem', fontWeight: active ? 700 : 500,
                     color: active ? T.ICON_ACT : T.LABEL,
                   }}>
-                    {item.label}
+                    {t(`nav.${item.navKey}`)}
                   </Typography>
                 )}
               </Box>
             );
             return expanded ? btn : (
-              <Tooltip key={item.section} title={item.label} placement="right">{btn}</Tooltip>
+              <Tooltip key={item.section} title={t(`nav.${item.navKey}`)} placement="right">{btn}</Tooltip>
             );
           })}
         </Box>
@@ -210,8 +239,15 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
           )}
 
           {utilRow(
+            <TranslateIcon />,
+            activeLanguage?.nativeLabel || 'Language',
+            (e) => setLangAnchor(e.currentTarget),
+            `${t('profile.language')} — ${activeLanguage?.nativeLabel || ''}`
+          )}
+
+          {utilRow(
             themeMode === 'light' ? <DarkModeIcon /> : <LightModeIcon />,
-            themeMode === 'light' ? 'Dark mode' : 'Light mode',
+            themeMode === 'light' ? t('profile.darkMode') : t('profile.lightMode'),
             toggleTheme
           )}
 

@@ -1,5 +1,6 @@
 import Style from "./showTheLink.module.scss"; 
 import { Fragment  , useState} from "react";
+import { useTranslation } from 'react-i18next';
 import ReactDom from 'react-dom';
 import FileManagerNav from "../../tools/navs/fileManagerNav";
 import * as React from 'react';
@@ -67,6 +68,7 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import '../overalStyle/fileFolderGrid.scss'
 
 const ShowTheLinkPortal = (props) =>{
+    const { t } = useTranslation();
     const [listStyle , setListStyle] =  useState('hr')
     const authCtx = useContext(AuthContext);
     const axiosGlobal = useContext(AxiosGlobal);
@@ -174,8 +176,8 @@ const ShowTheLinkPortal = (props) =>{
             :   
                 <div className={Style.topSection}>
                     <div className={Style.nameAndMessage}>
-                        {filesFolders.linkDoc.showName===true?<span className={Style.prName}><AccountCircleIcon sx={{fontSize:'24px'}}></AccountCircleIcon><spam style={{fontFamily:'YekanBold' , marginLeft:'2px'}}>From:</spam>{filesFolders.user.firstName} {filesFolders.user.lastName}</span>:null}
-                        {filesFolders.linkDoc.msg!==null?<div className={Style.prSubName}><EmailIcon sx={{fontSize:'24px'}}></EmailIcon><spam style={{fontFamily:'YekanBold',marginLeft:'2px'}}>Message:</spam>{filesFolders.linkDoc.msg}</div>:null}
+                        {filesFolders.linkDoc.showName===true?<span className={Style.prName}><AccountCircleIcon sx={{fontSize:'24px'}}></AccountCircleIcon><spam style={{fontFamily:'YekanBold' , marginLeft:'2px'}}>{t('files.fromLabel')}</spam>{filesFolders.user.firstName} {filesFolders.user.lastName}</span>:null}
+                        {filesFolders.linkDoc.msg!==null?<div className={Style.prSubName}><EmailIcon sx={{fontSize:'24px'}}></EmailIcon><spam style={{fontFamily:'YekanBold',marginLeft:'2px'}}>{t('files.messageLabel')}</spam>{filesFolders.linkDoc.msg}</div>:null}
                     </div>
                     <div className={Style.logoDiv}>
                         <CompanyLogo link={axiosGlobal.externalLink} width='80px'></CompanyLogo>
@@ -219,7 +221,7 @@ const ShowTheLinkPortal = (props) =>{
                                                     <span style={{justifyContent:'center' , marginLeft:'15px' , display:'flex' , alignItems:'center'}}>{e.doc.name}</span>
                                                 </div>
                                                 <div className='modified'>
-                                                    <span>Modified:</span>{moment(e.doc.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}
+                                                    <span>{t('files.modifiedLabel')}</span>{moment(e.doc.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}
                                                 </div>
                                         </div>
                                     </div>
@@ -242,7 +244,7 @@ const ShowTheLinkPortal = (props) =>{
                                                             <span className='hrLine'>{e.doc.name}</span>
                                                         </div>
                                                         <div className='modified'>
-                                                            <span>Modified:</span>{moment(e.doc.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}
+                                                            <span>{t('files.modifiedLabel')}</span>{moment(e.doc.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}
                                                         </div>
                                                 </div>
                                             </div>
@@ -261,7 +263,7 @@ const ShowTheLinkPortal = (props) =>{
                                                         <span style={{justifyContent:'center' , marginLeft:'8px' , display:'flex' , alignItems:'center'}}>{e.doc.name}</span>
                                                     </div>
                                                     <div className='modified'>
-                                                        <span>Modified:</span>{moment(e.doc.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}
+                                                        <span>{t('files.modifiedLabel')}</span>{moment(e.doc.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}
                                                     </div>
                                             </div>
                                         </div>
@@ -279,7 +281,7 @@ const ShowTheLinkPortal = (props) =>{
                                                         <span style={{justifyContent:'center' , marginLeft:'8px' , display:'flex' , alignItems:'center'}}>{e.doc.name}</span>
                                                     </div>
                                                     <div className='modified'>
-                                                        <span>Modified:</span>{moment(e.doc.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}
+                                                        <span>{t('files.modifiedLabel')}</span>{moment(e.doc.insertDate, 'YYYY/MM/DD').format('YYYY/MM/DD')}
                                                     </div>
                                             </div>
                                         </div>
@@ -297,7 +299,7 @@ const ShowTheLinkPortal = (props) =>{
 
 
                 <div className={Style.footer}>
-                    POWERD BY <span> XCAPITAL</span>
+                    {t('files.poweredBy')} <span> XCAPITAL</span>
                 </div>
             </div>
         </Fragment>

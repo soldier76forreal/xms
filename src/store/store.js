@@ -6,6 +6,7 @@ import thunk from 'redux-thunk'; // Import the redux-thunk middleware
 import { getImageSize  } from 'react-image-size';
 import fileDownload from 'js-file-download';
 import Fuse from 'fuse.js';
+import { printHtmlDocument } from '../tools/printDocument';
 
 const getRootFileEntries = (items = [], wrapAsFile = false) => {
   const rootEntry = items.find(e => e?.doc === 'root');
@@ -483,25 +484,20 @@ export const updateMisPayment = createAsyncThunk('overallAssets/updateMisPayment
 });
 
 // downloads the rendered PDF as a blob → triggers the browser save
+// Invoice/quotation PDF — generated CLIENT-SIDE via the browser's print engine
+// (see tools/printDocument.js) instead of server Puppeteer. Fetches the same
+// HTML the preview uses, then opens the browser's "Save as PDF" dialog.
 export const downloadMisInvoicePdf = createAsyncThunk('overallAssets/downloadMisInvoicePdf', async (theData, { dispatch }) => {
   try {
     const response = await theData.authCtx.jwtInst({
       method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}/pdf`,
+      url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}/html`,
       params: theData.lang ? { lang: theData.lang } : {},
-      responseType: 'blob',
+      responseType: 'text',
     });
-    const prefix = theData.docType === 'invoice' ? 'invoice' : 'quotation';
-    const url  = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${prefix}-${theData.docNumber || theData.id}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    printHtmlDocument(response.data);
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to generate PDF', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to open the document', type: 'error' }));
   }
 });
 
@@ -677,6 +673,25 @@ export const sendRawContentChatMessage = createAsyncThunk('overallAssets/sendRaw
     return response.data;
   } catch (err) {
     dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to send message', type: 'error' }));
+    throw err;
+  }
+});
+
+// theData.formData — files[] (finals), title, language, platform, caption.
+// Standalone create — no source raw content, rawContentId stays unset.
+export const createReadyToUpload = createAsyncThunk('overallAssets/createReadyToUpload', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/ready-to-upload`,
+      data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
+    });
+    dispatch(actions.dmBumpRefresh());
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Ready-to-upload content created', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to create ready-to-upload content', type: 'error' }));
     throw err;
   }
 });

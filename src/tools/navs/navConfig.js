@@ -12,13 +12,16 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 // `section` indexes are stable and sparse: 3 (Job Report) and 4 (Project
 // Manager) were retired 2026-07-09 — do not reuse their numbers.
 // Session 58 extends these entries with per-section `topBar` configs.
+// `navKey` maps to i18n/locales/<lang>.json's `nav.*` — consumers call
+// t(`nav.${item.navKey}`) instead of the hardcoded `label` so a new section
+// only needs a navKey + one line per locale file, nothing else.
 export const NAV_ITEMS = [
-  { label: 'Invoices',          icon: <ReceiptIcon />,         section: 0, path: '/mis',              permission: 'mis:view' },
-  { label: 'Customers',         icon: <PeopleAltIcon />,       section: 2, path: '/crm',              permission: 'crm:view' },
-  { label: 'Files',             icon: <InsertDriveFileIcon />, section: 1, path: '/files',            permission: 'files:view' },
-  { label: 'Inventory',         icon: <InventoryIcon />,       section: 5, path: '/inventory',        permission: 'inventory:view' },
-  { label: 'People',            icon: <Diversity2Icon />,      section: 6, path: '/users',            permission: 'users:view' },
-  { label: 'Digital Marketing', icon: <MovieIcon />,           section: 7, path: '/digitalMarketing', permission: 'digitalMarketing:view' },
+  { label: 'Invoices',          navKey: 'invoices',          icon: <ReceiptIcon />,         section: 0, path: '/mis',              permission: 'mis:view' },
+  { label: 'Customers',         navKey: 'customers',         icon: <PeopleAltIcon />,       section: 2, path: '/crm',              permission: 'crm:view' },
+  { label: 'Files',             navKey: 'files',             icon: <InsertDriveFileIcon />, section: 1, path: '/files',            permission: 'files:view' },
+  { label: 'Inventory',         navKey: 'inventory',         icon: <InventoryIcon />,       section: 5, path: '/inventory',        permission: 'inventory:view' },
+  { label: 'People',            navKey: 'people',            icon: <Diversity2Icon />,      section: 6, path: '/users',            permission: 'users:view' },
+  { label: 'Digital Marketing', navKey: 'digitalMarketing',  icon: <MovieIcon />,           section: 7, path: '/digitalMarketing', permission: 'digitalMarketing:view' },
 ];
 
 export const RAIL_WIDTH_COLLAPSED = 52;

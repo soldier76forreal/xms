@@ -16,6 +16,7 @@ import Avatar          from '@mui/material/Avatar';
 import InputAdornment  from '@mui/material/InputAdornment';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 import PersonIcon   from '@mui/icons-material/Person';
 import GroupsIcon   from '@mui/icons-material/Groups';
@@ -40,6 +41,7 @@ const AssignCustomersDialog = ({
   prefilledUserId = null,
   prefilledUserName = '',
 }) => {
+  const { t }   = useTranslation();
   const theme   = useTheme();
   const isDark  = theme.palette.mode === 'dark';
   const isXs    = useMediaQuery(theme.breakpoints.down('sm'));
@@ -132,7 +134,7 @@ const AssignCustomersDialog = ({
   // ── Debounced user search ─────────────────────────────────────────────────
   useEffect(() => {
     if (assigneeType !== 'user' || !open) return;
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       if (!userSearch.trim()) { setUserResults([]); return; }
       try {
         const res = await authCtx.jwtInst({
@@ -142,7 +144,7 @@ const AssignCustomersDialog = ({
         setUserResults(res.data.data || res.data || []);
       } catch (_) {}
     }, 280);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [userSearch, assigneeType, open, authCtx, axiosGlobal]);
 
   // ── Customer list helpers ─────────────────────────────────────────────────
@@ -214,7 +216,7 @@ const AssignCustomersDialog = ({
       });
       dispatch(actions.setShowSnackBar({
         status: true,
-        msg: `Assigned ${effectiveIds.length} customer${effectiveIds.length !== 1 ? 's' : ''}`,
+        msg: t('crm.assignedCount', { count: effectiveIds.length }),
         type: 'success',
       }));
       onSave && onSave();
@@ -222,7 +224,7 @@ const AssignCustomersDialog = ({
     } catch (err) {
       dispatch(actions.setShowSnackBar({
         status: true,
-        msg: err?.response?.data?.message || 'Failed to assign',
+        msg: err?.response?.data?.message || t('crm.failedAssign'),
         type: 'error',
       }));
     }
@@ -242,14 +244,14 @@ const AssignCustomersDialog = ({
         <Box sx={{ flexGrow: 1 }}>
           <Typography sx={{ fontSize: '0.875rem', fontWeight: 700, color: T.TEXT_PRI }}>
             {isUserMode
-              ? `Assign customers to ${prefilledUserName || 'user'}`
-              : 'Assign customers'}
+              ? t('crm.assignCustomersToUser', { name: prefilledUserName || t('crm.assigneeUser') })
+              : t('crm.assignCustomers')}
           </Typography>
           <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mt: 0.25 }}>
-            A task will be created and the assignee notified
+            {t('crm.assignTaskCreatedNote')}
           </Typography>
         </Box>
-        <IconButton size="small" onClick={onClose} aria-label="Close"
+        <IconButton size="small" onClick={onClose} aria-label={t('common.close')}
           sx={{ color: T.TEXT_TER, mt: -0.5, mr: -0.5 }}>
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
@@ -263,10 +265,10 @@ const AssignCustomersDialog = ({
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.75, gap: 1 }}>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER,
               textTransform: 'uppercase', letterSpacing: '0.08em', flexGrow: 1 }}>
-              Customers
+              {t('crm.customers')}
             </Typography>
             {selectedIds.size > 0 && (
-              <Chip label={`${selectedIds.size} selected`} size="small"
+              <Chip label={t('common.selected', { count: selectedIds.size })} size="small"
                 sx={{ height: 20, fontSize: '0.68rem', borderRadius: '6px',
                   bgcolor: isDark ? 'rgba(100,181,246,0.12)' : 'rgba(33,150,243,0.1)',
                   color: '#64B5F6', fontWeight: 700,
@@ -276,7 +278,7 @@ const AssignCustomersDialog = ({
 
           {/* Search filter */}
           <TextField
-            placeholder="Filter customers…"
+            placeholder={t('crm.filterCustomersPlaceholder')}
             size="small" fullWidth
             value={custFilter}
             onChange={e => setCustFilter(e.target.value)}
@@ -306,10 +308,10 @@ const AssignCustomersDialog = ({
                   '&.Mui-checked, &.MuiCheckbox-indeterminate': { color: T.TEXT_PRI } }}
               />
               <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC }}>
-                {allFilteredSelected ? 'Deselect all' : `Select all${custFilter ? ' matching' : ''}`}
+                {allFilteredSelected ? t('crm.deselectAll') : (custFilter ? t('crm.selectAllMatching') : t('crm.selectAll'))}
                 {filteredCustomers.length !== allCustomers.length && (
                   <Box component="span" sx={{ color: T.TEXT_TER, ml: 0.5 }}>
-                    ({filteredCustomers.length} of {allCustomers.length})
+                    {t('crm.xOfY', { x: filteredCustomers.length, y: allCustomers.length })}
                   </Box>
                 )}
               </Typography>
@@ -330,7 +332,7 @@ const AssignCustomersDialog = ({
             ) : filteredCustomers.length === 0 ? (
               <Box sx={{ py: 3, textAlign: 'center' }}>
                 <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER }}>
-                  {allCustomers.length === 0 ? 'No customers found' : 'No matches'}
+                  {allCustomers.length === 0 ? t('crm.noCustomersFound') : t('crm.noMatches')}
                 </Typography>
               </Box>
             ) : (
@@ -383,12 +385,12 @@ const AssignCustomersDialog = ({
         </Box>
 
         {/* ── Task title ── */}
-        <TextField label="Task title" size="small" fullWidth
+        <TextField label={t('crm.taskTitleLabel')} size="small" fullWidth
           value={title} onChange={e => setTitle(e.target.value)}
           sx={inputSx(T)} InputLabelProps={{ sx: { fontSize: '0.8rem' } }} />
 
         {/* ── Description ── */}
-        <TextField label="Notes (optional)" size="small" fullWidth multiline rows={2}
+        <TextField label={t('crm.notesOptional')} size="small" fullWidth multiline rows={2}
           value={description} onChange={e => setDescription(e.target.value)}
           sx={inputSx(T)} InputLabelProps={{ sx: { fontSize: '0.8rem' } }} />
 
@@ -396,8 +398,8 @@ const AssignCustomersDialog = ({
         {!isUserMode && (
           <Box sx={{ display: 'flex', gap: 0.75 }}>
             {[
-              { id: 'user',  label: 'User',  Icon: PersonIcon  },
-              { id: 'group', label: 'Group', Icon: GroupsIcon  },
+              { id: 'user',  label: t('crm.assigneeUser'),  Icon: PersonIcon  },
+              { id: 'group', label: t('crm.assigneeGroup'), Icon: GroupsIcon  },
             ].map(({ id, label, Icon }) => (
               <Chip key={id}
                 icon={<Icon sx={{ fontSize: 14, color: assigneeType === id ? T.TEXT_PRI : T.TEXT_TER }} />}
@@ -429,13 +431,13 @@ const AssignCustomersDialog = ({
                   <Button size="small" onClick={() => { setSelectedUser(null); setUserSearch(''); }}
                     sx={{ minWidth: 0, px: 0.75, py: 0.25, fontSize: '0.7rem', color: T.TEXT_TER,
                       textTransform: 'none', '&:hover': { color: T.TEXT_SEC } }}>
-                    Change
+                    {t('crm.change')}
                   </Button>
                 )}
               </Box>
             ) : (
               <>
-                <TextField placeholder="Search by name or phone…" size="small" fullWidth
+                <TextField placeholder={t('crm.searchByNameOrPhone')} size="small" fullWidth
                   value={userSearch} onChange={e => setUserSearch(e.target.value)}
                   sx={inputSx(T)} />
                 {userResults.length > 0 && (
@@ -468,7 +470,7 @@ const AssignCustomersDialog = ({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {groups.length === 0 ? (
               <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, textAlign: 'center', py: 2 }}>
-                No groups found
+                {t('crm.noGroupsFound')}
               </Typography>
             ) : groups.map(g => (
               <Box key={g._id} onClick={() => setSelectedGroup(g)}
@@ -482,7 +484,7 @@ const AssignCustomersDialog = ({
                   <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, fontWeight: 600 }}>{g.name}</Typography>
                   {g.members?.length > 0 && (
                     <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
-                      {g.members.length} member{g.members.length !== 1 ? 's' : ''}
+                      {t('crm.memberCount', { count: g.members.length })}
                     </Typography>
                   )}
                 </Box>
@@ -499,7 +501,7 @@ const AssignCustomersDialog = ({
       <DialogActions sx={{ px: 2, pb: 2, gap: 1 }}>
         <Button onClick={onClose} disabled={saving} size="small"
           sx={{ color: T.TEXT_SEC, textTransform: 'none', fontSize: '0.8rem' }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button variant="contained" size="small" onClick={handleSave}
           disabled={
@@ -516,7 +518,7 @@ const AssignCustomersDialog = ({
             '&:disabled': { opacity: 0.4 } }}>
           {saving
             ? <CircularProgress size={16} sx={{ color: 'inherit' }} />
-            : `Assign${effectiveIds.length > 0 ? ` (${effectiveIds.length})` : ''}`}
+            : (effectiveIds.length > 0 ? t('crm.assignWithCount', { count: effectiveIds.length }) : t('crm.assignAction'))}
         </Button>
       </DialogActions>
     </Dialog>

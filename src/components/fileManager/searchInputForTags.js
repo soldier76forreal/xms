@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import AddIcon from '@mui/icons-material/Add';
 import { useTheme } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -18,6 +19,7 @@ const filter = createFilterOptions();
 // already on the selection), applies to state.selectedItems via POST /addTag
 // (existing tag by id, or a brand-new one by label), then refreshTag.
 export default function SearchInputForTags() {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -56,9 +58,9 @@ export default function SearchInputForTags() {
         },
       });
       dispatch(actions.refreshTag());
-      dispatch(actions.setShowSnackBar({ status: true, msg: `Tag “${option.label}” added`, type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('files.tagAddedMsg', { label: option.label }), type: 'success' }));
     } catch (err) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to add tag', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('files.failedToAddTag'), type: 'error' }));
     }
     setValue(null);
     setBusy(false);
@@ -83,7 +85,7 @@ export default function SearchInputForTags() {
         const filtered = filter(opts, params);
         const input = params.inputValue.trim();
         if (input !== '' && !opts.some((o) => o.label.toLowerCase() === input.toLowerCase())) {
-          filtered.push({ inputValue: input, label: `Add new tag: “${input}”`, isNew: true });
+          filtered.push({ inputValue: input, label: t('files.addNewTagOption', { input }), isNew: true });
         }
         return filtered;
       }}
@@ -97,7 +99,7 @@ export default function SearchInputForTags() {
         </Box>
       )}
       renderInput={(params) => (
-        <TextField {...params} placeholder="Add a tag…"
+        <TextField {...params} placeholder={t('files.addTagPlaceholder')}
           sx={{
             '& .MuiOutlinedInput-root': {
               bgcolor: T.INPUT_BG, borderRadius: '10px', color: T.TEXT_PRI, fontSize: '0.82rem',

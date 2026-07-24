@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -41,28 +42,28 @@ import SendToDialog from './sendToDialog';
 // payment quick-record (invoice, mis:payment:edit) · activity timeline.
 
 const STATUS_META = {
-  draft:          { label: 'Draft',     color: '#9e9e9e' },
-  sent:           { label: 'Sent',      color: '#64b5f6' },
-  accepted:       { label: 'Accepted',  color: '#81c784' },
-  converted:      { label: 'Converted', color: '#ba68c8' },
-  expired:        { label: 'Expired',   color: '#ffb74d' },
-  issued:         { label: 'Issued',    color: '#64b5f6' },
-  paid:           { label: 'Paid',      color: '#81c784' },
-  partially_paid: { label: 'Partial',   color: '#ffb74d' },
-  cancelled:      { label: 'Cancelled', color: '#e57373' },
+  draft:          { labelKey: 'mis.statusDraft',     color: '#9e9e9e' },
+  sent:           { labelKey: 'mis.statusSent',      color: '#64b5f6' },
+  accepted:       { labelKey: 'mis.statusAccepted',  color: '#81c784' },
+  converted:      { labelKey: 'mis.statusConverted', color: '#ba68c8' },
+  expired:        { labelKey: 'mis.statusExpired',   color: '#ffb74d' },
+  issued:         { labelKey: 'mis.statusIssued',    color: '#64b5f6' },
+  paid:           { labelKey: 'mis.statusPaid',      color: '#81c784' },
+  partially_paid: { labelKey: 'mis.statusPartial',   color: '#ffb74d' },
+  cancelled:      { labelKey: 'mis.statusCancelled', color: '#e57373' },
 };
 
 const ACTIVITY_META = {
-  created:           { label: 'Created',            Icon: AddCircleOutlineIcon },
-  updated:           { label: 'Updated',            Icon: EditIcon },
-  status:            { label: 'Status changed',     Icon: SyncAltIcon },
-  converted:         { label: 'Converted',          Icon: SwapHorizIcon },
-  pdf_generated:     { label: 'PDF generated',      Icon: PictureAsPdfIcon },
-  payment:           { label: 'Payment recorded',   Icon: PaidIcon },
-  stock_decremented: { label: 'Stock decremented',  Icon: Inventory2Icon },
-  stock_restored:    { label: 'Stock restored',     Icon: RestoreIcon },
-  assigned:          { label: 'Sent to user(s)',    Icon: SendIcon },
-  deleted:           { label: 'Deleted',            Icon: DeleteOutlineIcon },
+  created:           { labelKey: 'mis.activityCreated',           Icon: AddCircleOutlineIcon },
+  updated:           { labelKey: 'mis.activityUpdated',           Icon: EditIcon },
+  status:            { labelKey: 'mis.activityStatusChanged',     Icon: SyncAltIcon },
+  converted:         { labelKey: 'mis.activityConverted',         Icon: SwapHorizIcon },
+  pdf_generated:     { labelKey: 'mis.activityPdfGenerated',      Icon: PictureAsPdfIcon },
+  payment:           { labelKey: 'mis.activityPaymentRecorded',   Icon: PaidIcon },
+  stock_decremented: { labelKey: 'mis.activityStockDecremented',  Icon: Inventory2Icon },
+  stock_restored:    { labelKey: 'mis.activityStockRestored',     Icon: RestoreIcon },
+  assigned:          { labelKey: 'mis.activitySentToUsers',       Icon: SendIcon },
+  deleted:           { labelKey: 'mis.activityDeleted',           Icon: DeleteOutlineIcon },
 };
 
 const fmtMoney = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -73,6 +74,7 @@ const fmtDateTime = (d) => {
 };
 
 export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, onDelete }) {
+  const { t } = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -148,20 +150,22 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
       <Box sx={{ px: 3, pt: 2, pb: 1.5, borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography sx={{ fontSize: '1.02rem', fontWeight: 700, color: T.TEXT_PRI }}>
-            {isInvoice ? 'Invoice' : 'Quotation'} #{live.docNumber}
+            {isInvoice ? t('mis.invoiceType') : t('mis.quotationLong')} #{live.docNumber}
           </Typography>
           <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22` }}>
             <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: status.color }}>
-              {status.label}
+              {t(status.labelKey)}
             </Typography>
           </Box>
           {isInvoice && live.stockDecremented && (
-            <Tooltip title="Stock decremented on payment">
+            <Tooltip title={t('mis.stockDecrementedTooltip')}>
               <Inventory2Icon sx={{ fontSize: 14, color: T.TEXT_TER }} />
             </Tooltip>
           )}
           {(live.assignedTo || []).length > 0 && (
-            <Tooltip title={`${live.assignedByName ? `Sent by ${live.assignedByName}` : 'Sent'} to ${live.assignedTo.length} user(s)`}>
+            <Tooltip title={live.assignedByName
+              ? t('mis.sentByToUsers', { name: live.assignedByName, count: live.assignedTo.length })
+              : t('mis.sentToUsers', { count: live.assignedTo.length })}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
                 <PeopleAltIcon sx={{ fontSize: 14, color: T.TEXT_TER }} />
                 <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, color: T.TEXT_TER }}>
@@ -169,7 +173,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
                 </Typography>
                 {live.assignedByName && (
                   <Typography sx={{ fontSize: '0.68rem', color: '#64b5f6', fontWeight: 600 }}>
-                    · from {live.assignedByName}
+                    {t('mis.fromName', { name: live.assignedByName })}
                   </Typography>
                 )}
               </Box>
@@ -197,7 +201,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               onClick={() => onEdit && onEdit(live)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
                 color: T.TEXT_SEC, borderColor: T.BD2 }}>
-              Edit
+              {t('common.edit')}
             </Button>
           )}
           {can(`${permBase}:pdf`) && (
@@ -212,7 +216,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               <Button size="small" variant="contained" startIcon={<PictureAsPdfIcon sx={{ fontSize: 14 }} />}
                 onClick={() => onPdf && onPdf(live, previewLang)}
                 sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px' }}>
-                Download PDF
+                {t('mis.savePdf')}
               </Button>
             </>
           )}
@@ -221,7 +225,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               onClick={() => onConvert && onConvert(live)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
                 color: T.TEXT_SEC, borderColor: T.BD2 }}>
-              Convert
+              {t('mis.convert')}
             </Button>
           )}
           {isInvoice && can('mis:payment:edit') && (
@@ -229,7 +233,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               onClick={() => setPayOpen(o => !o)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
                 color: payOpen ? T.TEXT_PRI : T.TEXT_SEC, borderColor: T.BD2 }}>
-              Payment
+              {t('mis.paymentButton')}
             </Button>
           )}
           {can(`${permBase}:edit`) && (
@@ -237,7 +241,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               onClick={() => setAssignOpen(true)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
                 color: T.TEXT_SEC, borderColor: T.BD2 }}>
-              Send to…
+              {t('mis.sendToEllipsis')}
             </Button>
           )}
           {can(`${permBase}:delete`) && (
@@ -245,7 +249,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               onClick={() => onDelete && onDelete(live)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
                 color: '#EA005A', '&:hover': { bgcolor: 'rgba(234,0,90,0.07)' } }}>
-              Delete
+              {t('common.delete')}
             </Button>
           )}
         </Box>
@@ -255,7 +259,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 1.25,
             p: 1.25, border: `1px solid ${T.BD}`, borderRadius: '10px', bgcolor: T.CTRL_BG }}>
             {[
-              ['cash', 'Cash'], ['chequeBank', 'Cheque / bank'], ['card', 'Card'],
+              ['cash', t('mis.paymentCash')], ['chequeBank', t('mis.paymentChequeBank')], ['card', t('mis.paymentCard')],
             ].map(([key, label]) => (
               <TextField key={key} size="small" label={label} type="number" value={pay[key]}
                 onChange={(e) => setPay(p => ({ ...p, [key]: e.target.value }))}
@@ -264,7 +268,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
                 sx={{ width: 130, '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }} />
             ))}
             <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC }}>
-              Remaining:&nbsp;
+              {t('mis.remainingLabel')}&nbsp;
               <Box component="span" sx={{ fontWeight: 700, color: T.TEXT_PRI }}>
                 {fmtMoney((live.grandTotal || 0)
                   - (Number(pay.cash) || 0) - (Number(pay.chequeBank) || 0) - (Number(pay.card) || 0))}
@@ -273,7 +277,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
             <Button size="small" variant="contained" disabled={paySaving} onClick={handleSavePayment}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px', ml: 'auto' }}>
               {paySaving ? <CircularProgress size={13} sx={{ mr: 0.5 }} /> : null}
-              Save
+              {t('common.save')}
             </Button>
           </Box>
         )}
@@ -286,7 +290,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
         <Box sx={{ px: 3, py: 2 }}>
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
             textTransform: 'uppercase', color: T.TEXT_TER, mb: 1 }}>
-            Document preview
+            {t('mis.documentPreview')}
           </Typography>
 
           {loading && !previewHtml ? (
@@ -303,7 +307,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
             <Box sx={{ py: 4, textAlign: 'center', border: `1px dashed ${T.BD}`, borderRadius: '10px' }}>
               <DescriptionIcon sx={{ fontSize: 28, color: T.TEXT_TER, mb: 0.5 }} />
               <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_TER }}>
-                Preview unavailable
+                {t('mis.previewUnavailable')}
               </Typography>
             </Box>
           )}
@@ -314,7 +318,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
             textTransform: 'uppercase', color: T.TEXT_TER, mb: 1,
             display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <HistoryIcon sx={{ fontSize: 13 }} /> Activity
+            <HistoryIcon sx={{ fontSize: 13 }} /> {t('mis.activityHeader')}
           </Typography>
 
           {loading && activity.length === 0 ? (
@@ -324,7 +328,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               ))}
             </Box>
           ) : activity.length === 0 ? (
-            <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_TER }}>No activity yet.</Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_TER }}>{t('mis.noActivityYet')}</Typography>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               {activity.map((a, i) => {
@@ -345,17 +349,17 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
                     </Box>
                     <Box sx={{ minWidth: 0 }}>
                       <Typography sx={{ fontSize: '0.76rem', color: T.TEXT_PRI, lineHeight: 1.3 }}>
-                        {meta.label}
+                        {t(meta.labelKey)}
                         {a.type === 'status' && a.oldValue && a.newValue && (
                           <Box component="span" sx={{ color: T.TEXT_SEC }}>
                             {' '}— {String(a.oldValue).replace('_', ' ')} → {String(a.newValue).replace('_', ' ')}
                           </Box>
                         )}
                         {a.type === 'converted' && a.newValue && (
-                          <Box component="span" sx={{ color: T.TEXT_SEC }}> — invoice #{a.newValue}</Box>
+                          <Box component="span" sx={{ color: T.TEXT_SEC }}>{t('mis.convertedToInvoiceNum', { number: a.newValue })}</Box>
                         )}
                         {a.type === 'assigned' && typeof a.newValue === 'number' && (
-                          <Box component="span" sx={{ color: T.TEXT_SEC }}> — {a.newValue} user(s)</Box>
+                          <Box component="span" sx={{ color: T.TEXT_SEC }}>{t('mis.assignedCountUsers', { count: a.newValue })}</Box>
                         )}
                       </Typography>
                       {a.body && (

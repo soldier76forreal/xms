@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useContext, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -28,6 +29,7 @@ function fileDisplayName(file) { return file.format ? `${file.name}.${file.forma
 
 // ── single batch tile (image full-size / video full-size player) ──────────────
 function BatchTile({ file, apiBase }) {
+  const { t } = useTranslation();
   const theme    = useTheme();
   const isDark   = theme.palette.mode === 'dark';
   const dispatch = useDispatch();
@@ -93,7 +95,7 @@ function BatchTile({ file, apiBase }) {
               position: 'absolute', top: 4, right: 4, opacity: 0, transition: 'opacity 0.15s',
             }}
           >
-            <Tooltip title="Download">
+            <Tooltip title={t('inventory.downloadButton')}>
               <IconButton size="small" onClick={handleDownload} disabled={downloading}
                 sx={{ bgcolor: 'rgba(0,0,0,0.55)', color: '#fff', p: 0.5, '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' } }}>
                 {downloading ? <CircularProgress size={12} color="inherit" /> : <DownloadIcon sx={{ fontSize: 14 }} />}
@@ -129,6 +131,7 @@ function BatchTile({ file, apiBase }) {
 
 // ── upload / replace dialog ────────────────────────────────────────────────────
 function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onDone }) {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -183,20 +186,20 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
   return (
     <Dialog open={open} onClose={busy ? undefined : onClose} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
-        {isReplace ? 'Delete & replace media batch' : 'Upload media batch'}
+        {isReplace ? t('inventory.deleteReplaceBatchTitle') : t('inventory.uploadBatchTitle')}
       </DialogTitle>
       <DialogContent sx={{ px: 3, display: 'flex', flexDirection: 'column', gap: 2, pt: '4px !important' }}>
         {isReplace && (
           <Typography variant="caption" sx={{ color: 'warning.main' }}>
-            This removes the current batch — all existing images/videos for this variant will be replaced.
+            {t('inventory.replaceBatchWarning')}
           </Typography>
         )}
 
         <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <TextField label="Upload date" type="date" size="small" fullWidth
+          <TextField label={t('inventory.uploadDateLabel')} type="date" size="small" fullWidth
             InputLabelProps={{ shrink: true }} disabled={busy}
             value={uploadDate} onChange={(e) => setUploadDate(e.target.value)} />
-          <TextField label="Expiration date" type="date" size="small" fullWidth
+          <TextField label={t('inventory.expirationDateLabel')} type="date" size="small" fullWidth
             InputLabelProps={{ shrink: true }} disabled={busy}
             value={expirationDate} onChange={(e) => setExpirationDate(e.target.value)} />
         </Box>
@@ -217,7 +220,7 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
         >
           <UploadFileIcon sx={{ color: 'text.disabled', fontSize: 28, mb: 0.5 }} />
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-            Drop images/videos here or click to select
+            {t('inventory.dropFilesHint')}
           </Typography>
         </Box>
         <input ref={fileInput} type="file" multiple accept="image/*,video/*"
@@ -240,13 +243,13 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
           <Box>
             <LinearProgress variant="determinate" value={progress} sx={{ borderRadius: 4, height: 6 }} />
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5, textAlign: 'right' }}>
-              Uploading… {progress}%
+              {t('inventory.uploadingProgress', { percent: progress })}
             </Typography>
           </Box>
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
-        <Button onClick={onClose} size="small" disabled={busy}>Cancel</Button>
+        <Button onClick={onClose} size="small" disabled={busy}>{t('common.cancel')}</Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
@@ -255,7 +258,7 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
           disabled={busy || !files.length}
           startIcon={busy ? <CircularProgress size={12} color="inherit" /> : null}
         >
-          {isReplace ? 'Delete & Replace' : 'Upload'}
+          {isReplace ? t('inventory.deleteReplace') : t('inventory.upload')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -264,6 +267,7 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
 
 // ── VariantMediaBatch ──────────────────────────────────────────────────────────
 const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -315,7 +319,7 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
     }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, gap: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'text.disabled' }}>
-          Media batch{batch.length ? ` (${batch.length})` : ''}
+          {batch.length ? t('inventory.mediaBatchCount', { count: batch.length }) : t('inventory.mediaBatch')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {batch.length > 0 && (
@@ -326,7 +330,7 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
               disabled={downloadingAll}
               sx={{ borderRadius: 2, fontSize: '0.72rem' }}
             >
-              Download all
+              {t('inventory.downloadAll')}
             </Button>
           )}
           <Button
@@ -336,7 +340,7 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
             onClick={() => setFormOpen(true)}
             sx={{ borderRadius: 2, fontSize: '0.72rem' }}
           >
-            {batch.length ? 'Delete & Replace' : 'Upload batch'}
+            {batch.length ? t('inventory.deleteReplace') : t('inventory.uploadBatch')}
           </Button>
         </Box>
       </Box>
@@ -344,16 +348,18 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
       {meta && (
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 1.5 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Uploaded {new Date(meta.uploadDate).toLocaleDateString()}
+            {t('inventory.uploadedOn', { date: new Date(meta.uploadDate).toLocaleDateString() })}
           </Typography>
           {meta.expirationDate && (
             <Typography variant="caption" sx={{ color: isExpired ? 'error.main' : 'text.secondary', fontWeight: isExpired ? 700 : 400 }}>
-              {isExpired ? 'Expired' : 'Expires'} {new Date(meta.expirationDate).toLocaleDateString()}
+              {isExpired
+                ? t('inventory.expiredOn', { date: new Date(meta.expirationDate).toLocaleDateString() })
+                : t('inventory.expiresOn', { date: new Date(meta.expirationDate).toLocaleDateString() })}
             </Typography>
           )}
           {meta.uploadedByName && (
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              By {meta.uploadedByName}
+              {t('inventory.byUploader', { name: meta.uploadedByName })}
             </Typography>
           )}
         </Box>
@@ -375,7 +381,7 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
         >
           <ImageIcon sx={{ color: 'text.disabled', fontSize: 32, mb: 0.5 }} />
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-            No media batch yet — click to upload
+            {t('inventory.noMediaBatchYet')}
           </Typography>
         </Box>
       ) : (

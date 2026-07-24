@@ -15,6 +15,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import StoreIcon from '@mui/icons-material/Store';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -54,6 +55,7 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const theme       = useTheme();
+  const { t }       = useTranslation();
   const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
   const T           = useT();
 
@@ -91,7 +93,7 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
   }, [open, branch]);
 
   const handleSave = async () => {
-    if (!name.trim()) { setError('Branch name is required'); return; }
+    if (!name.trim()) { setError(t('users.branchNameRequired')); return; }
     setSaving(true); setError('');
     try {
       const data = { name: name.trim(), description: description.trim(), status };
@@ -100,11 +102,11 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
       } else {
         await authCtx.jwtInst({ method: 'put', url: `${axiosGlobal.defaultTargetApi}/branches/${branch._id}`, data });
       }
-      dispatch(actions.setShowSnackBar({ status: true, msg: isNew ? 'Branch created' : 'Branch updated', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: isNew ? t('users.branchCreated') : t('users.branchUpdated'), type: 'success' }));
       onSave();
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to save branch');
+      setError(err?.response?.data?.message || t('users.failedSaveBranch'));
     } finally {
       setSaving(false);
     }
@@ -121,7 +123,7 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          {isNew ? 'New Branch' : `Edit — ${branch?.name}`}
+          {isNew ? t('users.newBranch') : t('users.editBranch', { name: branch?.name })}
         </Typography>
         <IconButton onClick={onClose} size="small"
           sx={{ color: T.TEXT_SEC, '&:hover': { color: T.TEXT_PRI, bgcolor: T.HVR_BG } }}>
@@ -130,18 +132,18 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
       </Box>
 
       <Box sx={{ px: 3, pt: 2.5, pb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <TextField label="Branch name" size="small" fullWidth value={name}
+        <TextField label={t('users.branchNameLabel')} size="small" fullWidth value={name}
           onChange={e => { setName(e.target.value); setError(''); }} sx={inputSx} autoFocus />
-        <TextField label="Description" size="small" fullWidth multiline rows={2} value={description}
+        <TextField label={t('users.descriptionLabel')} size="small" fullWidth multiline rows={2} value={description}
           onChange={e => setDescription(e.target.value)} sx={inputSx} />
 
         {!isNew && (
           <Box>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-              Status
+              {t('users.statusLabel')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.75 }}>
-              {[{ v: 'active', l: 'Active' }, { v: 'archived', l: 'Archived' }].map(opt => {
+              {[{ v: 'active', l: t('users.statusActive') }, { v: 'archived', l: t('users.statusArchived') }].map(opt => {
                 const sel = status === opt.v;
                 return (
                   <Button key={opt.v} size="small" onClick={() => setStatus(opt.v)}
@@ -165,14 +167,14 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 0.5, gap: 1 }}>
         <Button onClick={onClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={saving}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
           sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
             '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: T.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: T.isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.26)' } }}>
-          {saving ? 'Saving…' : isNew ? 'Create' : 'Save'}
+          {saving ? t('users.saving') : isNew ? t('users.create') : t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -185,6 +187,7 @@ const BranchesManager = () => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const T           = useT();
+  const { t }       = useTranslation();
   const { refreshBranches } = useBranch();
 
   const [branches,  setBranches]  = useState([]);
@@ -209,14 +212,14 @@ const BranchesManager = () => {
   const afterMutation = () => { fetchAll(); refreshBranches(); };
 
   const handleDelete = async (branch) => {
-    if (!window.confirm(`Delete branch "${branch.name}"? Its inventory and invoices stay in the database but become inaccessible.`)) return;
+    if (!window.confirm(t('users.deleteBranchConfirm', { name: branch.name }))) return;
     setDeleting(branch._id);
     try {
       await authCtx.jwtInst({ method: 'delete', url: `${axiosGlobal.defaultTargetApi}/branches/${branch._id}` });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Branch deleted', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.branchDeleted'), type: 'success' }));
       afterMutation();
     } catch (err) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || t('users.failedDelete'), type: 'error' }));
     } finally {
       setDeleting(null);
     }
@@ -232,25 +235,24 @@ const BranchesManager = () => {
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
         <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER }}>
-          {branches.length} branch{branches.length !== 1 ? 'es' : ''}
+          {t('users.branchCount', { count: branches.length })}
         </Typography>
         <Button size="small" startIcon={<AddIcon sx={{ fontSize: 15 }} />}
           onClick={() => { setEditBranch(null); setFormOpen(true); }}
           sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 600, borderRadius: '8px', px: 2, py: '5px',
             fontSize: '0.78rem', textTransform: 'none',
             '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' } }}>
-          New Branch
+          {t('users.newBranch')}
         </Button>
       </Box>
 
       <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 2, lineHeight: 1.5 }}>
-        Each branch is a fully isolated Inventory catalog + Invoice numbering. Assign users to branches
-        from a user's Edit form.
+        {t('users.branchesIntro')}
       </Typography>
 
       {branches.length === 0 ? (
         <Typography sx={{ textAlign: 'center', color: T.TEXT_SEC, py: 6, fontSize: '0.875rem' }}>
-          No branches yet — create the first one.
+          {t('users.noBranchesYet')}
         </Typography>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -268,7 +270,7 @@ const BranchesManager = () => {
                     {branch.name}
                   </Typography>
                   {branch.status === 'archived' && (
-                    <Chip label="archived" size="small" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700,
+                    <Chip label={t('users.archivedBadge')} size="small" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700,
                       bgcolor: T.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                       color: T.TEXT_TER, borderRadius: '3px', '& .MuiChip-label': { px: 0.75 } }} />
                   )}

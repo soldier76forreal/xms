@@ -13,6 +13,7 @@ import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 import CallIcon          from '@mui/icons-material/Call';
 import EmailIcon         from '@mui/icons-material/Email';
@@ -45,12 +46,14 @@ import { ISO_MAP, NAME_MAP } from './util/countryData';
 
 // ── status config ─────────────────────────────────────────────────────────────
 
+// labelKey resolved at render time via t(`crm.${labelKey}`) — module scope has
+// no hook access, so the label itself can't be translated here.
 const STATUS_CONFIG = {
-  new:       { bg: 'rgba(100,149,237,0.15)', text: 'rgb(100,149,237)', Icon: FiberNewIcon,    label: 'New'       },
-  active:    { bg: 'rgba(72,199,142,0.15)',  text: 'rgb(72,199,142)',  Icon: CheckCircleIcon, label: 'Active'    },
-  follow_up: { bg: 'rgba(255,183,77,0.15)',  text: 'rgb(255,183,77)',  Icon: ScheduleIcon,    label: 'Follow-up' },
-  won:       { bg: 'rgba(72,199,142,0.2)',   text: 'rgb(50,180,120)',  Icon: EmojiEventsIcon, label: 'Won'       },
-  lost:      { bg: 'rgba(255,77,141,0.15)',  text: 'rgb(255,77,141)', Icon: CancelIcon,      label: 'Lost'      },
+  new:       { bg: 'rgba(100,149,237,0.15)', text: 'rgb(100,149,237)', Icon: FiberNewIcon,    labelKey: 'statusNew'      },
+  active:    { bg: 'rgba(72,199,142,0.15)',  text: 'rgb(72,199,142)',  Icon: CheckCircleIcon, labelKey: 'statusActive'   },
+  follow_up: { bg: 'rgba(255,183,77,0.15)',  text: 'rgb(255,183,77)',  Icon: ScheduleIcon,    labelKey: 'statusFollowUp' },
+  won:       { bg: 'rgba(72,199,142,0.2)',   text: 'rgb(50,180,120)',  Icon: EmojiEventsIcon, labelKey: 'statusWon'      },
+  lost:      { bg: 'rgba(255,77,141,0.15)',  text: 'rgb(255,77,141)', Icon: CancelIcon,      labelKey: 'statusLost'     },
 };
 
 // ── channel contact links ─────────────────────────────────────────────────────
@@ -91,15 +94,15 @@ function getContactLinks(customer) {
   return links.slice(0, 5);
 }
 
-function relativeDate(d) {
+function relativeDate(d, t) {
   if (!d) return null;
   const diff = Date.now() - new Date(d).getTime();
   const days = Math.floor(diff / 86400000);
-  if (days === 0)   return 'today';
-  if (days === 1)   return 'yesterday';
-  if (days < 30)   return `${days}d ago`;
-  if (days < 365)  return `${Math.floor(days / 30)}mo ago`;
-  return `${Math.floor(days / 365)}y ago`;
+  if (days === 0)  return t('crm.relativeToday');
+  if (days === 1)  return t('crm.relativeYesterday');
+  if (days < 30)   return t('crm.relativeDaysAgo', { count: days });
+  if (days < 365)  return t('crm.relativeMonthsAgo', { count: Math.floor(days / 30) });
+  return t('crm.relativeYearsAgo', { count: Math.floor(days / 365) });
 }
 
 /** Resolve flag + country name from phone country code or from personal-information.country */
@@ -128,6 +131,7 @@ const CustomerCard = ({
   onSelect, onCheck, expanded, onExpand,
   onEdit, onAddToMyDesk,
 }) => {
+  const { t }   = useTranslation();
   const theme   = useTheme();
   const isDark  = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -165,7 +169,7 @@ const CustomerCard = ({
 
   const tags     = customer.tags || [];
   const links    = getContactLinks(customer);
-  const lastCall = relativeDate(customer.lastCallAt);
+  const lastCall = relativeDate(customer.lastCallAt, t);
   const followUp = customer.nextFollowUpAt ? new Date(customer.nextFollowUpAt) : null;
   const isOverdue = followUp && followUp < new Date();
   const countryDisplay = resolveCountryDisplay(customer);
@@ -196,9 +200,9 @@ const CustomerCard = ({
     setDeleting(true);
     try {
       await dispatch(deleteCrmCustomer({ authCtx, axiosGlobal, id: customer._id }));
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Customer deleted', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('crm.customerDeleted'), type: 'success' }));
     } catch (_) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to delete customer', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('crm.failedDeleteCustomer'), type: 'error' }));
     }
     setDeleting(false);
   };
@@ -257,7 +261,7 @@ const CustomerCard = ({
           </Box>
 
           {/* Status icon */}
-          <Tooltip title={statusCfg.label}>
+          <Tooltip title={t(`crm.${statusCfg.labelKey}`)}>
             <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
               <StatusIcon sx={{ fontSize: 16, color: statusCfg.text }} />
             </Box>
@@ -292,6 +296,13 @@ const CustomerCard = ({
                   </Typography>
                 </Box>
               </Box>
+            )}
+
+            {/* Who entered this record */}
+            {customer.createdByName && (
+              <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.15 }}>
+                {t('crm.addedBy', { name: customer.createdByName })}
+              </Typography>
             )}
           </Box>
 
@@ -371,15 +382,16 @@ const CustomerCard = ({
               {lastCall && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <CallIcon sx={{ fontSize: 12, color: T.TEXT_TER }} />
-                  <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC }}>Last call: {lastCall}</Typography>
+                  <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC }}>
+                    {t('crm.lastCallLabel', { value: lastCall })}
+                  </Typography>
                 </Box>
               )}
               {followUp && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <ScheduleIcon sx={{ fontSize: 16, color: isOverdue ? '#FFB74D' : T.TEXT_TER }} />
                   <Typography sx={{ fontSize: '0.72rem', color: isOverdue ? '#FFB74D' : T.TEXT_SEC }}>
-                    {isOverdue ? 'Overdue: ' : 'Follow-up: '}
-                    {followUp.toLocaleDateString()}
+                    {t(isOverdue ? 'crm.overdueLabel' : 'crm.followUpLabel', { date: followUp.toLocaleDateString() })}
                   </Typography>
                 </Box>
               )}
@@ -401,12 +413,12 @@ const CustomerCard = ({
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
               {pi.attractedBy && (
                 <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>
-                  via {pi.attractedBy}
+                  {t('crm.viaAttractedBy', { source: pi.attractedBy })}
                 </Typography>
               )}
               {(customer.interestedProducts || []).length > 0 && (
                 <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>
-                  {customer.interestedProducts.length} product interest{customer.interestedProducts.length !== 1 ? 's' : ''}
+                  {t('crm.productInterest', { count: customer.interestedProducts.length })}
                 </Typography>
               )}
             </Box>
@@ -446,7 +458,7 @@ const CustomerCard = ({
             <ListItemIcon sx={{ minWidth: 28 }}>
               <EditIcon sx={{ fontSize: 15, color: T.TEXT_SEC }} />
             </ListItemIcon>
-            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>Edit</Typography>
+            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>{t('common.edit')}</Typography>
           </MenuItem>
         </Can>
 
@@ -455,7 +467,7 @@ const CustomerCard = ({
             <ListItemIcon sx={{ minWidth: 28 }}>
               <AddCommentIcon sx={{ fontSize: 15, color: T.TEXT_SEC }} />
             </ListItemIcon>
-            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>New communication</Typography>
+            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>{t('crm.menuNewCommunication')}</Typography>
           </MenuItem>
         )}
 
@@ -463,7 +475,7 @@ const CustomerCard = ({
           <ListItemIcon sx={{ minWidth: 28 }}>
             <DashboardIcon sx={{ fontSize: 15, color: T.TEXT_SEC }} />
           </ListItemIcon>
-          <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>Add to My Desk</Typography>
+          <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>{t('crm.addToMyDesk')}</Typography>
         </MenuItem>
 
         {(can('mis:invoice:create') || can('mis:preinvoice:create')) && (
@@ -471,7 +483,7 @@ const CustomerCard = ({
             <ListItemIcon sx={{ minWidth: 28 }}>
               <ReceiptLongIcon sx={{ fontSize: 15, color: T.TEXT_SEC }} />
             </ListItemIcon>
-            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>Invoices / quotes</Typography>
+            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>{t('crm.menuInvoicesQuotes')}</Typography>
           </MenuItem>
         )}
 
@@ -480,7 +492,7 @@ const CustomerCard = ({
             <ListItemIcon sx={{ minWidth: 28 }}>
               <ImageIcon sx={{ fontSize: 15, color: T.TEXT_SEC }} />
             </ListItemIcon>
-            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>Send image</Typography>
+            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>{t('crm.menuSendImage')}</Typography>
           </MenuItem>
         )}
 
@@ -490,7 +502,7 @@ const CustomerCard = ({
             <ListItemIcon sx={{ minWidth: 28 }}>
               <DeleteOutlineIcon sx={{ fontSize: 15, color: '#EA005A' }} />
             </ListItemIcon>
-            <Typography sx={{ fontSize: '0.8rem', color: '#EA005A' }}>Delete</Typography>
+            <Typography sx={{ fontSize: '0.8rem', color: '#EA005A' }}>{t('common.delete')}</Typography>
           </MenuItem>
         </Can>
       </Menu>
@@ -500,9 +512,9 @@ const CustomerCard = ({
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleDeleteConfirm}
-        title="Delete customer"
-        message={`Delete "${name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('crm.deleteCustomerTitle')}
+        message={t('crm.deleteCustomerMessage', { name })}
+        confirmLabel={t('common.delete')}
         destructive
       />
     </>

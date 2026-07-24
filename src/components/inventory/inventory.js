@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
@@ -52,23 +53,24 @@ const CHROME_SX = {
 
 // Filter section with expandable accordion list
 const FINISH_OPTIONS = [
-  { label: 'Polished', value: 'P' },
-  { label: 'Honed',    value: 'H' },
+  { labelKey: 'inventory.finishPolished', value: 'P' },
+  { labelKey: 'inventory.finishHoned',    value: 'H' },
 ];
 const CUT_OPTIONS = [
-  { label: 'Veincut',   value: 'V' },
-  { label: 'Crosscut',  value: 'C' },
+  { labelKey: 'inventory.cutVeincut',   value: 'V' },
+  { labelKey: 'inventory.cutCrosscut',  value: 'C' },
 ];
 const GRADE_OPTIONS = [
-  { label: 'Super (Q)',   value: 'Q'  },
-  { label: 'Super+ (QS)', value: 'QS' },
-  { label: 'Momtaz (W)', value: 'W'  },
-  { label: 'Grade 1 (E)',value: 'E'  },
-  { label: 'Grade 2 (R)',value: 'R'  },
-  { label: 'Grade 3 (T)',value: 'T'  },
+  { labelKey: 'inventory.gradeSuper',     value: 'Q'  },
+  { labelKey: 'inventory.gradeSuperPlus', value: 'QS' },
+  { labelKey: 'inventory.gradeMomtaz',    value: 'W'  },
+  { labelKey: 'inventory.gradeGrade1',    value: 'E'  },
+  { labelKey: 'inventory.gradeGrade2',    value: 'R'  },
+  { labelKey: 'inventory.gradeGrade3',    value: 'T'  },
 ];
 
 function FilterGroup({ title, options, selected, onChange }) {
+  const { t } = useTranslation();
   return (
     <Accordion disableGutters elevation={0}
       sx={{ border: 'none', bgcolor: 'transparent', '&:before': { display: 'none' } }}>
@@ -87,7 +89,7 @@ function FilterGroup({ title, options, selected, onChange }) {
           {options.map((opt) => {
             const active = selected.includes(opt.value);
             return (
-              <Chip key={opt.value} label={opt.label} size="small"
+              <Chip key={opt.value} label={opt.labelKey ? t(opt.labelKey) : opt.label} size="small"
                 onClick={() => onChange(active
                   ? selected.filter((v) => v !== opt.value)
                   : [...selected, opt.value])}
@@ -102,6 +104,7 @@ function FilterGroup({ title, options, selected, onChange }) {
 }
 
 const Inventory = () => {
+  const { t } = useTranslation();
   const authCtx    = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch   = useDispatch();
@@ -146,8 +149,8 @@ const Inventory = () => {
   };
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(timer);
   }, [search]);
 
   useEffect(() => {
@@ -191,7 +194,6 @@ const Inventory = () => {
 
   const handleNewProduct = useCallback(() => dispatch(actions.invToggleNewProduct()), [dispatch]);
 
-  const uniqueStones = [...new Set(invProducts.map((p) => p.stoneType))].length;
   const stoneTypes   = invLookups?.stoneTypes || [];
 
   // Apply client-side filters (finish/cut/grade/category are variant-level — approximate filter on product)
@@ -215,21 +217,21 @@ const Inventory = () => {
       {/* ── Header ── */}
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
         <Box>
-          <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>Inventory</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{t('nav.inventory')}</Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Products and Varieties
+            {t('inventory.productsAndVarieties')}
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {(can('inventory:import') || can('inventory:export')) && (
             <Button variant="outlined" startIcon={<ImportExportIcon />} size="small"
               onClick={() => setImportExportOpen(true)} sx={{ borderRadius: 2 }}>
-              Import / Export
+              {t('inventory.importExportButton')}
             </Button>
           )}
           <Button variant="contained" startIcon={<AddIcon />} size="small"
             onClick={handleNewProduct} sx={{ borderRadius: 2 }}>
-            New product
+            {t('inventory.newProductButton')}
           </Button>
         </Box>
       </Box>
@@ -243,18 +245,16 @@ const Inventory = () => {
         {/* 3-col grid on mobile, single flex row on sm+ */}
         <Box sx={{
           display: { xs: 'grid', sm: 'flex' },
-          gridTemplateColumns: { xs: 'repeat(3, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)' },
           gap: { xs: 2, sm: 0 },
           alignItems: 'center',
           flexWrap: 'nowrap',
         }}>
           {[
-            { label: 'Varieties',     value: invTotal,                                      color: undefined },
-            { label: 'Stone types',   value: uniqueStones,                                  color: undefined },
-            { label: 'SKUs',          value: invProducts.reduce((a, p) => a + (p.variantCount || 0), 0), color: undefined },
-            { label: 'Qty',           value: totalQtyDisplay,                               color: undefined, small: true },
-            { label: 'Added (7d)',    value: `+${invStats?.addedThisWeek ?? '—'}`,          color: 'success.main' },
-            { label: 'Sold (7d)',     value: `-${invStats?.soldThisWeek ?? '—'}`,           color: 'error.main' },
+            { label: t('inventory.statBalance'),           value: totalQtyDisplay,                        color: undefined, small: true },
+            { label: t('inventory.statAvailableProducts'), value: invStats?.inStockProductCount ?? '—',  color: undefined },
+            { label: t('inventory.statAvailableSkus'),     value: invStats?.inStockVariantCount ?? '—',   color: undefined },
+            { label: t('inventory.statTotalSkus'),         value: invStats?.variantCount ?? '—',          color: undefined },
           ].map((stat, i) => (
             <Box key={i} sx={{
               flex: { sm: 1 },
@@ -294,7 +294,7 @@ const Inventory = () => {
                 },
               }}
             >
-              <Box component="span" sx={CHROME_SX}>Full Analytics</Box>
+              <Box component="span" sx={CHROME_SX}>{t('inventory.fullAnalytics')}</Box>
             </Button>
           </Box>
         </Box>
@@ -305,7 +305,7 @@ const Inventory = () => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <TextField
             fullWidth size="small"
-            placeholder="Search by code or name…"
+            placeholder={t('inventory.searchByCodeOrName')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{
@@ -321,14 +321,14 @@ const Inventory = () => {
             startIcon={<FilterListIcon sx={{ fontSize: 16 }} />}
             onClick={() => setFilterOpen((p) => !p)}
             sx={{ borderRadius: 2, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            Filters{hasFilters ? ` (${[stoneFilter, finishFilter, cutFilter, gradeFilter, catFilter].filter((f) => f.length > 0).length + (createdByFilter && !createdByDisabled ? 1 : 0)})` : ''}
+            {t('common.filters')}{hasFilters ? ` (${[stoneFilter, finishFilter, cutFilter, gradeFilter, catFilter].filter((f) => f.length > 0).length + (createdByFilter && !createdByDisabled ? 1 : 0)})` : ''}
           </Button>
           {/* Sort — visible inline on sm+ */}
           <TextField select size="small" value={sortBy} onChange={(e) => setSortBy(e.target.value)}
             sx={{ width: 165, flexShrink: 0, display: { xs: 'none', sm: 'block' } }}>
-            <MenuItem value="code">Sort: Code</MenuItem>
-            <MenuItem value="insertDate">Sort: Newest</MenuItem>
-            <MenuItem value="variantCount">Sort: Variants</MenuItem>
+            <MenuItem value="code">{t('inventory.sortCode')}</MenuItem>
+            <MenuItem value="insertDate">{t('inventory.sortNewest')}</MenuItem>
+            <MenuItem value="variantCount">{t('inventory.sortVariants')}</MenuItem>
           </TextField>
           <PageSizeSelect value={pageSize} onChange={setPageSize}
             sx={{ flexShrink: 0, display: { xs: 'none', sm: 'block' } }} />
@@ -336,9 +336,9 @@ const Inventory = () => {
         {/* Sort + page size — full-width below search on xs */}
         <Box sx={{ display: { xs: 'flex', sm: 'none' }, gap: 1 }}>
           <TextField select size="small" value={sortBy} onChange={(e) => setSortBy(e.target.value)} sx={{ flex: 1 }}>
-            <MenuItem value="code">Sort: Code</MenuItem>
-            <MenuItem value="insertDate">Sort: Newest</MenuItem>
-            <MenuItem value="variantCount">Sort: Variants</MenuItem>
+            <MenuItem value="code">{t('inventory.sortCode')}</MenuItem>
+            <MenuItem value="insertDate">{t('inventory.sortNewest')}</MenuItem>
+            <MenuItem value="variantCount">{t('inventory.sortVariants')}</MenuItem>
           </TextField>
           <PageSizeSelect value={pageSize} onChange={setPageSize} />
         </Box>
@@ -349,33 +349,33 @@ const Inventory = () => {
         <Box sx={{ border: '1.5px solid', borderColor: 'divider', borderRadius: '14px',
           bgcolor: 'background.paper', px: 2.5, pt: 1.5, pb: 2, mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>Filters</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary' }}>{t('common.filters')}</Typography>
             {hasFilters && (
-              <Button size="small" onClick={clearFilters} sx={{ fontSize: '0.7rem' }}>Clear all</Button>
+              <Button size="small" onClick={clearFilters} sx={{ fontSize: '0.7rem' }}>{t('inventory.clearAll')}</Button>
             )}
           </Box>
           <Divider sx={{ mb: 1 }} />
 
-          <FilterGroup title="Stone type"
+          <FilterGroup title={t('inventory.stoneTypeLabel')}
             options={stoneTypes.map((s) => ({ label: s.name, value: s.code }))}
             selected={stoneFilter} onChange={setStoneFilter} />
           <Divider sx={{ my: 0.5 }} />
 
-          <FilterGroup title="Finish" options={FINISH_OPTIONS}
+          <FilterGroup title={t('inventory.finishFilterLabel')} options={FINISH_OPTIONS}
             selected={finishFilter} onChange={setFinishFilter} />
           <Divider sx={{ my: 0.5 }} />
 
-          <FilterGroup title="Cut" options={CUT_OPTIONS}
+          <FilterGroup title={t('inventory.cutLabel')} options={CUT_OPTIONS}
             selected={cutFilter} onChange={setCutFilter} />
           <Divider sx={{ my: 0.5 }} />
 
-          <FilterGroup title="Quality / Grade" options={GRADE_OPTIONS}
+          <FilterGroup title={t('inventory.qualityGradeLabel')} options={GRADE_OPTIONS}
             selected={gradeFilter} onChange={setGradeFilter} />
 
           {invCategories.length > 0 && (
             <>
               <Divider sx={{ my: 0.5 }} />
-              <FilterGroup title="Category"
+              <FilterGroup title={t('inventory.categoryLabel')}
                 options={invCategories.map((c) => ({ label: c.name, value: c._id }))}
                 selected={catFilter} onChange={setCatFilter} />
             </>
@@ -383,20 +383,20 @@ const Inventory = () => {
 
           <Divider sx={{ my: 1 }} />
           <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled', display: 'block', mb: 0.5 }}>
-            Created by
+            {t('common.createdBy')}
           </Typography>
           <TextField select size="small" fullWidth
             value={createdByDisabled ? '' : createdByFilter}
             onChange={(e) => setCreatedByFilter(e.target.value)}
             disabled={createdByDisabled}>
-            <MenuItem value="">Anyone</MenuItem>
+            <MenuItem value="">{t('common.anyone')}</MenuItem>
             {creators.map((c) => (
               <MenuItem key={c._id} value={c._id}>{c.name}</MenuItem>
             ))}
           </TextField>
           {createdByDisabled && (
             <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 0.5 }}>
-              Disabled — your Inventory access is scoped to your own records
+              {t('inventory.scopeDisabledNoteInventory')}
             </Typography>
           )}
         </Box>
@@ -404,7 +404,7 @@ const Inventory = () => {
 
       {/* ── Stone type quick-filter pills ── */}
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
-        <Chip label="All" size="small"
+        <Chip label={t('common.all')} size="small"
           onClick={() => setStoneFilter([])}
           variant={stoneFilter.length === 0 ? 'filled' : 'outlined'}
           sx={{ fontWeight: stoneFilter.length === 0 ? 700 : 400 }} />
@@ -424,11 +424,11 @@ const Inventory = () => {
         {filteredProducts.length === 0 ? (
           <Box sx={{ py: 8, textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-              {search || hasFilters ? 'No products match your filters.' : 'No products yet. Add the first one.'}
+              {search || hasFilters ? t('inventory.noProductsMatchFilters') : t('inventory.noProductsYetAddFirst')}
             </Typography>
             {!search && !hasFilters && (
               <Button variant="outlined" startIcon={<AddIcon />} size="small" onClick={handleNewProduct} sx={{ mt: 1 }}>
-                New product
+                {t('inventory.newProductButton')}
               </Button>
             )}
           </Box>

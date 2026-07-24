@@ -1,5 +1,6 @@
 import { useState, useContext, useRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useTheme, useMediaQuery } from '@mui/material';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -27,9 +28,30 @@ import { createRawContent } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer from './mediaViewer';
 
-const USE_CASES = ['Anything', 'Ad campaign', 'Organic post', 'Product showcase', 'Behind the scenes', 'Announcement'];
-const PLATFORMS = ['Anything', 'Instagram', 'TikTok', 'YouTube', 'Facebook', 'LinkedIn', 'X'];
-const LANGUAGES = ['English', 'Arabic', 'Farsi'];
+// value stays the literal English word (stored on the record); only the displayed label translates.
+const USE_CASES = [
+  { value: 'Anything',          labelKey: 'dm.optAnything' },
+  { value: 'Ad campaign',       labelKey: 'dm.optAdCampaign' },
+  { value: 'Organic post',      labelKey: 'dm.optOrganicPost' },
+  { value: 'Product showcase',  labelKey: 'dm.optProductShowcase' },
+  { value: 'Behind the scenes', labelKey: 'dm.optBehindTheScenes' },
+  { value: 'Announcement',      labelKey: 'dm.optAnnouncement' },
+];
+// Platform names are brand names — never translated, only "Anything" is a real label.
+const PLATFORMS = [
+  { value: 'Anything',  labelKey: 'dm.optAnything' },
+  { value: 'Instagram', label: 'Instagram' },
+  { value: 'TikTok',    label: 'TikTok' },
+  { value: 'YouTube',   label: 'YouTube' },
+  { value: 'Facebook',  label: 'Facebook' },
+  { value: 'LinkedIn',  label: 'LinkedIn' },
+  { value: 'X',         label: 'X' },
+];
+const LANGUAGES = [
+  { value: 'English', labelKey: 'dm.langEnglish' },
+  { value: 'Arabic',  labelKey: 'dm.langArabic' },
+  { value: 'Farsi',   labelKey: 'dm.langFarsi' },
+];
 
 // Local (not-yet-uploaded) File → viewer kind, from its MIME type.
 const kindFromFile = (file) => {
@@ -48,6 +70,7 @@ const nextLocalKey = () => `f${Date.now()}_${localKeyCounter++}`;
 // with per-file Delete/Replace, a text description field, and a voice-message
 // button (native MediaRecorder — no new package) as an alternative to typing.
 export default function RawContentForm({ open, onClose }) {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isXs   = useMediaQuery(theme.breakpoints.down('sm'));
@@ -68,10 +91,11 @@ export default function RawContentForm({ open, onClose }) {
     ERR_CLR:   '#FF4D8D',
   };
 
+  const [title, setTitle]       = useState('');
   const [language, setLanguage] = useState('');
   const [useCase, setUseCase]   = useState('Anything');
   const [platform, setPlatform] = useState('Anything');
-  const [pendingFiles, setPendingFiles] = useState([]);   // [{ key, file, description, voiceFile }]
+  const [pendingFiles, setPendingFiles] = useState([]);   // [{ key, file, name, description, voiceFile }]
   const [saving, setSaving]     = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);   // 0-100 during submit
   const [error, setError]       = useState('');
@@ -84,9 +108,12 @@ export default function RawContentForm({ open, onClose }) {
   const replaceTargetKey = useRef(null);
 
   const resetForm = () => {
-    setLanguage(''); setUseCase('Anything'); setPlatform('Anything');
+    setTitle(''); setLanguage(''); setUseCase('Anything'); setPlatform('Anything');
     setPendingFiles([]); setError('');
   };
+
+  // Default a friendly per-file name from the filename (extension stripped).
+  const baseName = (filename) => (filename || '').replace(/\.[^.]+$/, '');
 
   const handleClose = () => {
     if (pendingFiles.length) { setConfirmDiscard(true); return; }
@@ -100,12 +127,15 @@ export default function RawContentForm({ open, onClose }) {
 
   const addFiles = (fileList) => {
     const newEntries = Array.from(fileList).map((file) => ({
-      key: nextLocalKey(), file, description: '', voiceFile: null,
+      key: nextLocalKey(), file, name: baseName(file.name), description: '', voiceFile: null,
     }));
     setPendingFiles((prev) => [...prev, ...newEntries]);
   };
 
   const removeFile = (key) => setPendingFiles((prev) => prev.filter((f) => f.key !== key));
+
+  const updateName = (key, name) =>
+    setPendingFiles((prev) => prev.map((f) => (f.key === key ? { ...f, name } : f)));
 
   const updateDescription = (key, text) =>
     setPendingFiles((prev) => prev.map((f) => (f.key === key ? { ...f, description: text } : f)));
@@ -133,7 +163,7 @@ export default function RawContentForm({ open, onClose }) {
       chunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((track) => track.stop());
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const voiceFile = new File([blob], `voice-desc-${Date.now()}.webm`, { type: 'audio/webm' });
         setPendingFiles((prev) => prev.map((f) => (f.key === key ? { ...f, voiceFile } : f)));
@@ -142,7 +172,7 @@ export default function RawContentForm({ open, onClose }) {
       mediaRecorderRef.current = recorder;
       setRecordingKey(key);
     } catch (_) {
-      setError('Microphone access denied or unavailable');
+      setError(t('dm.micAccessDenied'));
     }
   };
   const stopVoiceDescription = () => {
@@ -151,21 +181,25 @@ export default function RawContentForm({ open, onClose }) {
   };
 
   const handleSave = async () => {
-    if (!pendingFiles.length) { setError('Add at least one file'); return; }
+    if (!pendingFiles.length) { setError(t('dm.addAtLeastOneFileGeneric')); return; }
     setSaving(true); setError('');
     try {
       const formData = new FormData();
+      formData.append('title', title);
       formData.append('language', language);
       formData.append('useCase', useCase);
       formData.append('platform', platform);
 
       const descriptions = [];
+      const names         = [];
       const voiceFlags    = [];
       pendingFiles.forEach((f) => {
         formData.append('files', f.file);
+        names.push(f.name || baseName(f.file.name));
         descriptions.push(f.description || '');
         voiceFlags.push(!!f.voiceFile);
       });
+      formData.append('names', JSON.stringify(names));
       formData.append('descriptions', JSON.stringify(descriptions));
       formData.append('voiceDescriptionFlags', JSON.stringify(voiceFlags));
       pendingFiles.forEach((f) => { if (f.voiceFile) formData.append('voiceDescriptions', f.voiceFile); });
@@ -178,7 +212,7 @@ export default function RawContentForm({ open, onClose }) {
       resetForm();
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to upload');
+      setError(err?.response?.data?.message || t('dm.failedToUpload'));
     } finally {
       setSaving(false);
       setUploadProgress(null);
@@ -192,7 +226,7 @@ export default function RawContentForm({ open, onClose }) {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          New raw content batch
+          {t('dm.newRawContentBatch')}
         </Typography>
         <IconButton onClick={handleClose} size="small" sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -201,13 +235,19 @@ export default function RawContentForm({ open, onClose }) {
 
       <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 3, py: 2.5, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
 
+        {/* ── Batch title ── */}
+        <TextField label={t('dm.batchTitleLabel')} size="small" fullWidth value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={t('dm.batchTitlePlaceholderExample')}
+          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
+
         {/* ── File picker ── */}
         <Box>
           <Button component="label" fullWidth startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 16 }} />}
             sx={{ borderRadius: '10px', border: `1.5px dashed ${T.INPUT_BD}`, py: 1.5,
               color: T.TEXT_SEC, textTransform: 'none', fontSize: '0.8rem',
               '&:hover': { borderColor: T.TEXT_PRI, color: T.TEXT_PRI } }}>
-            Select images, videos, voice messages, PDFs, or other files
+            {t('dm.selectFilesPrompt')}
             <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
           </Button>
           <input ref={replaceInputRef} type="file" hidden onChange={handleReplaceChosen} />
@@ -225,29 +265,33 @@ export default function RawContentForm({ open, onClose }) {
                     <OpenInNewIcon sx={{ fontSize: 13, color: T.TEXT_TER }} />
                     {f.file.name}
                   </Typography>
-                  <Tooltip title="Replace file">
+                  <Tooltip title={t('dm.replaceFile')}>
                     <IconButton size="small" onClick={() => openReplace(f.key)} sx={{ color: T.TEXT_TER, width: 26, height: 26 }}>
                       <ChangeCircleIcon sx={{ fontSize: 16 }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Remove file">
+                  <Tooltip title={t('dm.removeFileTitle')}>
                     <IconButton size="small" onClick={() => removeFile(f.key)} sx={{ color: T.ERR_CLR, width: 26, height: 26 }}>
                       <DeleteOutlineIcon sx={{ fontSize: 16 }} />
                     </IconButton>
                   </Tooltip>
                 </Box>
 
+                <TextField size="small" fullWidth placeholder={t('dm.fileNamePlaceholder')}
+                  value={f.name} onChange={(e) => updateName(f.key, e.target.value)}
+                  sx={{ mt: 1, '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '8px', fontSize: '0.78rem' } }} />
+
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                  <TextField size="small" fullWidth placeholder="Description…"
+                  <TextField size="small" fullWidth placeholder={t('dm.descriptionPlaceholder')}
                     value={f.description} onChange={(e) => updateDescription(f.key, e.target.value)}
                     sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '8px', fontSize: '0.78rem' } }} />
                   {f.voiceFile && !((recordingKey === f.key)) ? (
-                    <Tooltip title="Play voice description">
+                    <Tooltip title={t('dm.playVoiceDescriptionTip')}>
                       <PlayCircleIcon sx={{ fontSize: 20, color: '#81c784', flexShrink: 0, cursor: 'pointer' }}
-                        onClick={() => setViewerMedia({ url: URL.createObjectURL(f.voiceFile), name: 'Voice description', kind: 'audio' })} />
+                        onClick={() => setViewerMedia({ url: URL.createObjectURL(f.voiceFile), name: t('dm.voiceDescriptionFallback'), kind: 'audio' })} />
                     </Tooltip>
                   ) : (
-                    <Tooltip title={recordingKey === f.key ? 'Stop recording' : 'Record a voice description'}>
+                    <Tooltip title={recordingKey === f.key ? t('dm.stopRecordingTip') : t('dm.recordVoiceDescriptionTip')}>
                       <IconButton size="small"
                         onClick={() => (recordingKey === f.key ? stopVoiceDescription() : startVoiceDescription(f.key))}
                         sx={{ color: recordingKey === f.key ? T.ERR_CLR : T.TEXT_TER, flexShrink: 0 }}>
@@ -264,26 +308,26 @@ export default function RawContentForm({ open, onClose }) {
         <Divider sx={{ borderColor: T.DIVIDER }} />
 
         {/* ── Batch-level fields ── */}
-        <TextField select label="Language" size="small" fullWidth value={language}
+        <TextField select label={t('dm.languageLabel')} size="small" fullWidth value={language}
           onChange={(e) => setLanguage(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
           SelectProps={{ native: true }}>
-          <option value="">Select language…</option>
-          {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+          <option value="">{t('dm.selectLanguageEllipsis')}</option>
+          {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{t(l.labelKey)}</option>)}
         </TextField>
 
-        <TextField select label="Suggested use case" size="small" fullWidth value={useCase}
+        <TextField select label={t('dm.suggestedUseCaseLabel')} size="small" fullWidth value={useCase}
           onChange={(e) => setUseCase(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
           SelectProps={{ native: true }}>
-          {USE_CASES.map((u) => <option key={u} value={u}>{u}</option>)}
+          {USE_CASES.map((u) => <option key={u.value} value={u.value}>{t(u.labelKey)}</option>)}
         </TextField>
 
-        <TextField select label="Suggested platform" size="small" fullWidth value={platform}
+        <TextField select label={t('dm.suggestedPlatformLabel')} size="small" fullWidth value={platform}
           onChange={(e) => setPlatform(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
           SelectProps={{ native: true }}>
-          {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
+          {PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.labelKey ? t(p.labelKey) : p.label}</option>)}
         </TextField>
 
         {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
@@ -294,17 +338,17 @@ export default function RawContentForm({ open, onClose }) {
           <Box sx={{ mb: 1.25 }}>
             <LinearProgress variant="determinate" value={uploadProgress} sx={{ borderRadius: 2, height: 6 }} />
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.5 }}>
-              Uploading batch… {uploadProgress}%
+              {t('dm.uploadingBatchPercent', { percent: uploadProgress })}
             </Typography>
           </Box>
         )}
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>Cancel</Button>
+          <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>{t('common.cancel')}</Button>
           <Box sx={{ flexGrow: 1 }} />
           <Button onClick={handleSave} disabled={saving} variant="contained"
             startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
             sx={{ borderRadius: '8px', px: 3, textTransform: 'none', fontWeight: 700 }}>
-            {saving ? 'Uploading…' : 'Upload batch'}
+            {saving ? t('dm.uploadingEllipsis') : t('dm.uploadBatch')}
           </Button>
         </Box>
       </Box>
@@ -315,9 +359,9 @@ export default function RawContentForm({ open, onClose }) {
         open={confirmDiscard}
         onClose={() => setConfirmDiscard(false)}
         onConfirm={discardAndClose}
-        title="Discard batch"
-        message="Discard this raw content batch? Selected files and descriptions will be lost."
-        confirmLabel="Discard"
+        title={t('dm.discardBatchTitle')}
+        message={t('dm.discardBatchMessage')}
+        confirmLabel={t('common.discard')}
         destructive
       />
     </Drawer>

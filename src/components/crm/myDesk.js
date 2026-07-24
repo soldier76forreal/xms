@@ -7,6 +7,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 import ArrowBackIcon          from '@mui/icons-material/ArrowBack';
 import AssignmentIcon         from '@mui/icons-material/Assignment';
@@ -23,21 +24,23 @@ import CustomerCard   from './customerCard';
 import CustomerDetail from './customerDetail';
 import CustomerForm   from './customerForm';
 
+// labelKey resolved at render time via t(`crm.${labelKey}`) — module scope has
+// no hook access.
 const TASK_STATUS = {
-  open:    { label: 'Open',    color: '#64B5F6', bg: 'rgba(100,181,246,0.12)' },
-  claimed: { label: 'Claimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.12)'  },
-  done:    { label: 'Done',    color: '#81C784', bg: 'rgba(129,199,132,0.12)' },
+  open:    { labelKey: 'taskStatusOpen',    color: '#64B5F6', bg: 'rgba(100,181,246,0.12)' },
+  claimed: { labelKey: 'taskStatusClaimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.12)'  },
+  done:    { labelKey: 'taskStatusDone',    color: '#81C784', bg: 'rgba(129,199,132,0.12)' },
 };
 
-function dayLabel(dateVal) {
-  if (!dateVal) return 'Unknown date';
+function dayLabel(dateVal, t) {
+  if (!dateVal) return t('crm.unknownDate');
   const d     = new Date(dateVal);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const start = new Date(d); start.setHours(0, 0, 0, 0);
   const diffDays = Math.round((today - start) / 86400000);
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
+  if (diffDays === 0) return t('crm.dayToday');
+  if (diffDays === 1) return t('crm.dayYesterday');
   return d.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
 }
 
@@ -50,6 +53,7 @@ function isOverdueOrToday(d) {
 // ── MyDesk ───────────────────────────────────────────────────────────────────
 
 const MyDesk = ({ onAddToMyDesk }) => {
+  const { t }   = useTranslation();
   const theme   = useTheme();
   const isDark  = theme.palette.mode === 'dark';
   const isMob   = useMediaQuery(theme.breakpoints.down('md'));
@@ -115,7 +119,7 @@ const MyDesk = ({ onAddToMyDesk }) => {
     const order = [];
 
     tasks.forEach(task => {
-      const label = dayLabel(task.insertDate);
+      const label = dayLabel(task.insertDate, t);
       if (!byDay[label]) { byDay[label] = []; order.push(label); }
 
       (task.subjects || []).forEach(subj => {
@@ -205,11 +209,11 @@ const MyDesk = ({ onAddToMyDesk }) => {
   const handleDone = async (taskId, isPersonal) => {
     try {
       await authCtx.jwtInst({ method: 'put', url: `${axiosGlobal.defaultTargetApi}/tasks/${taskId}/done` });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Task marked done', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('crm.taskMarkedDone'), type: 'success' }));
       if (isPersonal) loadPersonal(); else loadAssigned();
     } catch (err) {
       dispatch(actions.setShowSnackBar({ status: true,
-        msg: err?.response?.data?.message || 'Failed', type: 'error' }));
+        msg: err?.response?.data?.message || t('crm.failedGeneric'), type: 'error' }));
     }
   };
 
@@ -267,7 +271,7 @@ const MyDesk = ({ onAddToMyDesk }) => {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: st.color, flexShrink: 0 }} />
                 <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER }}>
-                  {st.label}
+                  {t(`crm.${st.labelKey}`)}
                   {task.title && task.title !== 'My Desk' && task.title !== 'CRM task'
                     ? ` · ${task.title}` : ''}
                 </Typography>
@@ -278,7 +282,7 @@ const MyDesk = ({ onAddToMyDesk }) => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
                   <PersonIcon sx={{ fontSize: 10, color: T.TEXT_TER }} />
                   <Typography sx={{ fontSize: '0.64rem', color: T.TEXT_TER }}>
-                    by {assignerName}
+                    {t('crm.byActor', { name: assignerName })}
                   </Typography>
                 </Box>
               )}
@@ -290,7 +294,7 @@ const MyDesk = ({ onAddToMyDesk }) => {
                     startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 12 }} />}
                     sx={{ ml: 'auto', fontSize: '0.66rem', textTransform: 'none', py: 0,
                       color: T.TEXT_TER, minWidth: 0, '&:hover': { color: '#81C784' } }}>
-                    Mark done
+                    {t('crm.markDone')}
                   </Button>
                 </Can>
               )}
@@ -315,7 +319,7 @@ const MyDesk = ({ onAddToMyDesk }) => {
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#FFB74D',
             textTransform: 'uppercase', letterSpacing: '0.1em',
             display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <ScheduleIcon sx={{ fontSize: 11 }} /> Follow-ups due
+            <ScheduleIcon sx={{ fontSize: 11 }} /> {t('crm.followUpsDue')}
           </Typography>
           <Box sx={{ flexGrow: 1, height: '1px', bgcolor: T.BD }} />
         </Box>
@@ -355,17 +359,17 @@ const MyDesk = ({ onAddToMyDesk }) => {
       <Box sx={{ px: 2.5, py: 1.25, borderBottom: `1px solid ${T.BD}`, flexShrink: 0,
         display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, mr: 1 }}>
-          My Desk
+          {t('crm.myDesk')}
         </Typography>
-        {[{ id: 'personal', label: 'Personal' }, { id: 'tasks', label: 'Assigned' }].map(t => (
-          <Button key={t.id} size="small" onClick={() => { setTab(t.id); setSelectedCustomer(null); }}
+        {[{ id: 'personal', labelKey: 'tabPersonal' }, { id: 'tasks', labelKey: 'tabAssigned' }].map(subTab => (
+          <Button key={subTab.id} size="small" onClick={() => { setTab(subTab.id); setSelectedCustomer(null); }}
             sx={{ minWidth: 0, px: 1.5, py: '3px', borderRadius: '7px',
-              fontSize: '0.75rem', fontWeight: tab === t.id ? 700 : 400,
+              fontSize: '0.75rem', fontWeight: tab === subTab.id ? 700 : 400,
               textTransform: 'none',
-              color: tab === t.id ? T.TEXT_PRI : T.TEXT_TER,
-              bgcolor: tab === t.id ? T.TAB_BG : 'transparent',
+              color: tab === subTab.id ? T.TEXT_PRI : T.TEXT_TER,
+              bgcolor: tab === subTab.id ? T.TAB_BG : 'transparent',
               '&:hover': { bgcolor: T.TAB_BG, color: T.TEXT_PRI } }}>
-            {t.label}
+            {t(`crm.${subTab.labelKey}`)}
           </Button>
         ))}
       </Box>
@@ -388,8 +392,8 @@ const MyDesk = ({ onAddToMyDesk }) => {
               : (personalGroups.length === 0 && followUps.length === 0)
                 ? <EmptyState T={T}
                     icon={<InboxIcon sx={{ fontSize: 44, color: T.TEXT_TER }} />}
-                    title="Your desk is clear"
-                    sub='Select customers and use "Add to My Desk" to start your working set' />
+                    title={t('crm.emptyDeskTitle')}
+                    sub={t('crm.emptyDeskSub')} />
                 : (
                   <Box>
                     {renderFollowUps()}
@@ -404,8 +408,8 @@ const MyDesk = ({ onAddToMyDesk }) => {
               : assignedGroups.length === 0
                 ? <EmptyState T={T}
                     icon={<AssignmentIcon sx={{ fontSize: 44, color: T.TEXT_TER }} />}
-                    title="No assigned customers"
-                    sub="Customers assigned to you by managers will appear here" />
+                    title={t('crm.emptyAssignedTitle')}
+                    sub={t('crm.emptyAssignedSub')} />
                 : (
                   <Box>
                     {assignedGroups.map(g => renderDayGroup(g, false))}

@@ -19,6 +19,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { actions, uploadFile, setFileForRetry, startDownload } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -43,6 +44,12 @@ const uploadState = (e) => {
   return 'queued';
 };
 
+const STATE_LABEL_KEYS = {
+  paused: 'files.statePaused', queued: 'files.stateQueued', done: 'files.stateDone',
+  canceled: 'files.stateCanceled', error: 'files.stateError', downloading: 'files.stateDownloading',
+};
+const stateLabel = (st, t) => t(STATE_LABEL_KEYS[st] || st);
+
 const StatusIcon = ({ state, size = 16 }) => {
   if (state === 'done')     return <CheckCircleIcon sx={{ fontSize: size, color: '#81c784' }} />;
   if (state === 'error')    return <ErrorOutlineIcon sx={{ fontSize: size, color: '#EA005A' }} />;
@@ -52,7 +59,7 @@ const StatusIcon = ({ state, size = 16 }) => {
 };
 
 // ── Row (shared shape for upload + download entries) ──────────────────────────
-const TransferRow = ({ icon, name, sub, progress, state, T, onPause, onResume, onCancel, onRetry, onDismiss }) => (
+const TransferRow = ({ icon, name, sub, progress, state, T, t, onPause, onResume, onCancel, onRetry, onDismiss }) => (
   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, py: 1, px: 1.5,
     borderBottom: `1px solid ${T.DIVIDER}`,
     '&:last-of-type': { borderBottom: 'none' } }}>
@@ -65,22 +72,22 @@ const TransferRow = ({ icon, name, sub, progress, state, T, onPause, onResume, o
       <StatusIcon state={state} />
       <Box sx={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
         {state === 'uploading' && onPause && (
-          <Tooltip title="Pause"><IconButton size="small" onClick={onPause} sx={{ p: '3px', color: T.TEXT_SEC }}><PauseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+          <Tooltip title={t('files.pauseTip')}><IconButton size="small" onClick={onPause} sx={{ p: '3px', color: T.TEXT_SEC }}><PauseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
         )}
         {state === 'downloading' && onPause && (
-          <Tooltip title="Cancel"><IconButton size="small" onClick={onPause} sx={{ p: '3px', color: T.TEXT_SEC }}><CloseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+          <Tooltip title={t('common.cancel')}><IconButton size="small" onClick={onPause} sx={{ p: '3px', color: T.TEXT_SEC }}><CloseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
         )}
         {state === 'paused' && onResume && (
-          <Tooltip title="Resume"><IconButton size="small" onClick={onResume} sx={{ p: '3px', color: '#64b5f6' }}><PlayArrowIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+          <Tooltip title={t('files.resumeTip')}><IconButton size="small" onClick={onResume} sx={{ p: '3px', color: '#64b5f6' }}><PlayArrowIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
         )}
         {(state === 'canceled' || state === 'error') && onRetry && (
-          <Tooltip title="Retry"><IconButton size="small" onClick={onRetry} sx={{ p: '3px', color: '#64b5f6' }}><ReplayIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+          <Tooltip title={t('files.retryTip')}><IconButton size="small" onClick={onRetry} sx={{ p: '3px', color: '#64b5f6' }}><ReplayIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
         )}
         {state === 'uploading' && onCancel && (
-          <Tooltip title="Cancel"><IconButton size="small" onClick={onCancel} sx={{ p: '3px', color: T.TEXT_SEC }}><CloseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+          <Tooltip title={t('common.cancel')}><IconButton size="small" onClick={onCancel} sx={{ p: '3px', color: T.TEXT_SEC }}><CloseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
         )}
         {(state === 'done' || state === 'canceled' || state === 'error' || state === 'paused') && onDismiss && (
-          <Tooltip title="Remove"><IconButton size="small" onClick={onDismiss} sx={{ p: '3px', color: T.TEXT_TER }}><CloseIcon sx={{ fontSize: 14 }} /></IconButton></Tooltip>
+          <Tooltip title={t('files.removeTip')}><IconButton size="small" onClick={onDismiss} sx={{ p: '3px', color: T.TEXT_TER }}><CloseIcon sx={{ fontSize: 14 }} /></IconButton></Tooltip>
         )}
       </Box>
     </Box>
@@ -94,6 +101,7 @@ const TransferRow = ({ icon, name, sub, progress, state, T, onPause, onResume, o
 
 // ── Transfer center — Dropbox-style floating panel (File section only) ────────
 export default function TransferCenter() {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMob  = useMediaQuery(theme.breakpoints.down('sm'));
@@ -159,9 +167,9 @@ export default function TransferCenter() {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.75, py: 1.25, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
             <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-              Transfers {activeCount > 0 ? `(${activeCount})` : ''}
+              {activeCount > 0 ? t('files.transfersHeaderCount', { count: activeCount }) : t('files.transfersHeader')}
             </Typography>
-            <Tooltip title="Clear finished">
+            <Tooltip title={t('files.clearFinishedTip')}>
               <IconButton size="small" onClick={clearFinished} sx={{ color: T.TEXT_TER }}>
                 <CloseIcon sx={{ fontSize: 14 }} />
               </IconButton>
@@ -175,9 +183,9 @@ export default function TransferCenter() {
             {visibleUploads.map((e, i) => {
               const st = uploadState(e);
               return (
-                <TransferRow key={`up-${i}`} T={T}
+                <TransferRow key={`up-${i}`} T={T} t={t}
                   icon={<CloudUploadIcon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />}
-                  name={e.file?.name} sub={st === 'uploading' ? `${e.progress || 0}% · ${fmtBytes(e.file?.size)}` : st}
+                  name={e.file?.name} sub={st === 'uploading' ? `${e.progress || 0}% · ${fmtBytes(e.file?.size)}` : stateLabel(st, t)}
                   progress={e.progress} state={st}
                   onPause={() => dispatch(actions.pauseTheUploading({ index: i }))}
                   onResume={() => retryUpload(i)}
@@ -188,9 +196,9 @@ export default function TransferCenter() {
               );
             })}
             {downloadQueue.map((d) => (
-              <TransferRow key={d.id} T={T}
+              <TransferRow key={d.id} T={T} t={t}
                 icon={<CloudDownloadIcon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />}
-                name={d.label} sub={d.status === 'downloading' ? `${d.progress ?? '…'}${d.progress !== undefined ? '%' : ''} · ${fmtBytes(d.receivedBytes)}` : d.status}
+                name={d.label} sub={d.status === 'downloading' ? `${d.progress ?? '…'}${d.progress !== undefined ? '%' : ''} · ${fmtBytes(d.receivedBytes)}` : stateLabel(d.status, t)}
                 progress={d.progress} state={d.status === 'downloading' ? 'downloading' : d.status}
                 onPause={() => dispatch(actions.cancelDownload({ id: d.id, paused: false }))}
                 onResume={() => dispatch(startDownload({ authCtx, axiosGlobal, id: d.id, kind: d.kind, label: d.label }))}
@@ -218,7 +226,7 @@ export default function TransferCenter() {
             : <CheckCircleIcon sx={{ fontSize: 17, color: '#81c784' }} />}
         </Badge>
         <Typography sx={{ fontSize: '0.75rem', fontWeight: 600, color: T.TEXT_PRI }}>
-          {activeCount > 0 ? `${activeCount} transfer${activeCount !== 1 ? 's' : ''}` : 'Transfers complete'}
+          {activeCount > 0 ? t('files.transfersCountPill', { count: activeCount }) : t('files.transfersComplete')}
         </Typography>
         {open ? <KeyboardArrowDownIcon sx={{ fontSize: 16, color: T.TEXT_TER }} /> : <KeyboardArrowUpIcon sx={{ fontSize: 16, color: T.TEXT_TER }} />}
       </Box>

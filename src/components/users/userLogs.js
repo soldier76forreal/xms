@@ -25,6 +25,7 @@ import Inventory2Icon from '@mui/icons-material/Inventory2';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import HistoryIcon from '@mui/icons-material/History';
 import { useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -49,10 +50,10 @@ const useT = () => {
 
 // ── Section pills ─────────────────────────────────────────────────────────────
 const SECTIONS = [
-  { id: 'all',       label: 'All' },
-  { id: 'crm',       label: 'CRM' },
-  { id: 'inventory', label: 'Inventory' },
-  { id: 'mis',       label: 'Invoices' },
+  { id: 'all',       labelKey: 'users.logSectionAll' },
+  { id: 'crm',       labelKey: 'users.logSectionCrm' },
+  { id: 'inventory', labelKey: 'users.logSectionInventory' },
+  { id: 'mis',       labelKey: 'users.logSectionInvoices' },
 ];
 
 const Pill = ({ active, onClick, children, T }) => (
@@ -72,27 +73,27 @@ const Pill = ({ active, onClick, children, T }) => (
 // ── Change type config (shared across inventory/crm/mis — same visual language) ─
 const CHANGE_TYPE = {
   // inventory
-  quantity:          { icon: SwapVertIcon,             color: '#64B5F6', label: 'Quantity'   },
-  price:             { icon: AttachMoneyIcon,          color: '#FFB74D', label: 'Price'      },
-  media:             { icon: ImageIcon,                color: '#BA68C8', label: 'Media'      },
-  spec:              { icon: TuneIcon,                 color: '#90CAF9', label: 'Spec'       },
+  quantity:          { icon: SwapVertIcon,             color: '#64B5F6', labelKey: 'users.ctQuantity'  },
+  price:             { icon: AttachMoneyIcon,          color: '#FFB74D', labelKey: 'users.ctPrice'     },
+  media:             { icon: ImageIcon,                color: '#BA68C8', labelKey: 'users.ctMedia'     },
+  spec:              { icon: TuneIcon,                 color: '#90CAF9', labelKey: 'users.ctSpec'      },
   // shared
-  created:           { icon: AddCircleOutlineIcon,     color: '#81C784', label: 'Created'    },
-  status:            { icon: ToggleOffIcon,            color: '#F06292', label: 'Status'     },
-  updated:           { icon: EditNoteIcon,             color: '#90A4AE', label: 'Updated'    },
-  deleted:           { icon: DeleteOutlineIcon,         color: '#E57373', label: 'Deleted'    },
+  created:           { icon: AddCircleOutlineIcon,     color: '#81C784', labelKey: 'users.ctCreated'   },
+  status:            { icon: ToggleOffIcon,            color: '#F06292', labelKey: 'users.ctStatus'    },
+  updated:           { icon: EditNoteIcon,             color: '#90A4AE', labelKey: 'users.ctUpdated'   },
+  deleted:           { icon: DeleteOutlineIcon,         color: '#E57373', labelKey: 'users.ctDeleted'   },
   // crm
-  call_logged:       { icon: PhoneInTalkIcon,          color: '#4FC3F7', label: 'Call'       },
-  note:              { icon: EditNoteIcon,             color: '#90A4AE', label: 'Note'       },
-  assigned:          { icon: AssignmentIndOutlinedIcon,color: '#BA68C8', label: 'Assigned'   },
-  status_changed:    { icon: ToggleOffIcon,            color: '#F06292', label: 'Status'     },
-  interest:          { icon: FavoriteBorderIcon,       color: '#F48FB1', label: 'Interest'   },
-  follow_up_set:     { icon: EventAvailableIcon,       color: '#4DB6AC', label: 'Follow-up'  },
+  call_logged:       { icon: PhoneInTalkIcon,          color: '#4FC3F7', labelKey: 'users.ctCall'      },
+  note:              { icon: EditNoteIcon,             color: '#90A4AE', labelKey: 'users.ctNote'      },
+  assigned:          { icon: AssignmentIndOutlinedIcon,color: '#BA68C8', labelKey: 'users.ctAssigned'  },
+  status_changed:    { icon: ToggleOffIcon,            color: '#F06292', labelKey: 'users.ctStatus'    },
+  interest:          { icon: FavoriteBorderIcon,       color: '#F48FB1', labelKey: 'users.ctInterest'  },
+  follow_up_set:     { icon: EventAvailableIcon,       color: '#4DB6AC', labelKey: 'users.ctFollowUp'  },
   // mis
-  converted:         { icon: SwapHorizIcon,            color: '#BA68C8', label: 'Converted'  },
-  pdf_generated:     { icon: PictureAsPdfIcon,         color: '#90A4AE', label: 'PDF'        },
-  payment:           { icon: PaidIcon,                 color: '#81C784', label: 'Payment'    },
-  stock_decremented: { icon: Inventory2Icon,           color: '#64B5F6', label: 'Stock'      },
+  converted:         { icon: SwapHorizIcon,            color: '#BA68C8', labelKey: 'users.ctConverted' },
+  pdf_generated:     { icon: PictureAsPdfIcon,         color: '#90A4AE', labelKey: 'users.ctPdf'       },
+  payment:           { icon: PaidIcon,                 color: '#81C784', labelKey: 'users.ctPayment'   },
+  stock_decremented: { icon: Inventory2Icon,           color: '#64B5F6', labelKey: 'users.ctStock'     },
 };
 
 const SECTION_ICON = {
@@ -109,21 +110,21 @@ const formatDate = (d) => {
     ' · ' + date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 };
 
-const relTime = (d) => {
+const relTime = (d, t) => {
   if (!d) return '';
   const diff = Date.now() - new Date(d).getTime();
   const m  = Math.floor(diff / 60000);
   const h  = Math.floor(diff / 3600000);
   const dy = Math.floor(diff / 86400000);
-  if (m  < 1)  return 'Just now';
-  if (m  < 60) return `${m}m ago`;
-  if (h  < 24) return `${h}h ago`;
-  if (dy < 7)  return `${dy}d ago`;
+  if (m  < 1)  return t('users.justNow');
+  if (m  < 60) return t('users.minutesAgo', { count: m });
+  if (h  < 24) return t('users.hoursAgo', { count: h });
+  if (dy < 7)  return t('users.daysAgo', { count: dy });
   return formatDate(d);
 };
 
 // ── Single log entry ──────────────────────────────────────────────────────────
-const LogEntry = ({ entry, isLast, T }) => {
+const LogEntry = ({ entry, isLast, T, t }) => {
   const ct       = CHANGE_TYPE[entry.changeType] || CHANGE_TYPE.spec;
   const Icon     = ct.icon;
   const SectIcon = SECTION_ICON[entry.section] || InventoryIcon;
@@ -139,35 +140,35 @@ const LogEntry = ({ entry, isLast, T }) => {
   } else if (entry.changeType === 'media') {
     const action = entry.mediaRef?.action || '';
     const name   = entry.mediaRef?.name   || 'file';
-    description  = `${action === 'added' ? 'Added' : 'Removed'} "${name}"`;
+    description  = action === 'added' ? t('users.logMediaAdded', { name }) : t('users.logMediaRemoved', { name });
   } else if (entry.changeType === 'created') {
-    if (entry.section === 'crm') description = 'New customer created';
-    else if (entry.section === 'mis') description = `New ${entry.docType === 'invoice' ? 'invoice' : 'quote'} created`;
-    else description = entry.subjectType === 'product' ? 'New product created' : 'New variant added';
+    if (entry.section === 'crm') description = t('users.logNewCustomer');
+    else if (entry.section === 'mis') description = entry.docType === 'invoice' ? t('users.logNewInvoice') : t('users.logNewQuote');
+    else description = entry.subjectType === 'product' ? t('users.logNewProduct') : t('users.logNewVariant');
   } else if (entry.changeType === 'spec') {
-    description = entry.field ? `${entry.field}: ${entry.oldValue ?? '—'} → ${entry.newValue ?? '—'}` : 'Spec updated';
+    description = entry.field ? `${entry.field}: ${entry.oldValue ?? '—'} → ${entry.newValue ?? '—'}` : t('users.logSpecUpdated');
   } else if (entry.changeType === 'status' || entry.changeType === 'status_changed') {
-    description = `Status: ${entry.oldValue ?? '—'} → ${entry.newValue ?? '—'}`;
+    description = t('users.logStatusPrefix', { old: entry.oldValue ?? '—', new: entry.newValue ?? '—' });
   } else if (entry.changeType === 'updated') {
-    description = 'Details updated';
+    description = t('users.logDetailsUpdated');
   } else if (entry.changeType === 'deleted') {
-    description = 'Deleted';
+    description = t('users.logDeleted');
   } else if (entry.changeType === 'call_logged' || entry.changeType === 'note') {
-    description = entry.body || (entry.changeType === 'call_logged' ? 'Call logged' : 'Note added');
+    description = entry.body || (entry.changeType === 'call_logged' ? t('users.logCallLogged') : t('users.logNoteAdded'));
   } else if (entry.changeType === 'assigned') {
-    description = entry.body || 'Assigned';
+    description = entry.body || t('users.logAssigned');
   } else if (entry.changeType === 'interest') {
-    description = entry.body || 'Interested product added';
+    description = entry.body || t('users.logInterestAdded');
   } else if (entry.changeType === 'follow_up_set') {
-    description = entry.newValue ? `Follow-up set for ${formatDate(entry.newValue)}` : 'Follow-up set';
+    description = entry.newValue ? t('users.logFollowUpFor', { date: formatDate(entry.newValue) }) : t('users.logFollowUpSet');
   } else if (entry.changeType === 'converted') {
-    description = 'Converted to invoice';
+    description = t('users.logConvertedToInvoice');
   } else if (entry.changeType === 'pdf_generated') {
-    description = 'PDF generated';
+    description = t('users.logPdfGenerated');
   } else if (entry.changeType === 'payment') {
-    description = entry.body || 'Payment recorded';
+    description = entry.body || t('users.logPaymentRecorded');
   } else if (entry.changeType === 'stock_decremented') {
-    description = entry.body || 'Inventory stock decremented';
+    description = entry.body || t('users.logStockDecremented');
   }
 
   return (
@@ -203,7 +204,7 @@ const LogEntry = ({ entry, isLast, T }) => {
           </Box>
 
           {/* Type chip */}
-          <Chip label={ct.label} size="small" sx={{
+          <Chip label={t(ct.labelKey)} size="small" sx={{
             height: 18, fontSize: '0.63rem', fontWeight: 600, borderRadius: '4px',
             bgcolor: `${ct.color}18`, color: ct.color, border: `1px solid ${ct.color}35`,
             '& .MuiChip-label': { px: 0.75 },
@@ -236,7 +237,7 @@ const LogEntry = ({ entry, isLast, T }) => {
 
         {/* Timestamp */}
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.4 }}>
-          {relTime(entry.date)}
+          {relTime(entry.date, t)}
         </Typography>
       </Box>
     </Box>
@@ -249,6 +250,7 @@ const UserLogs = ({ userId }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const T           = useT();
+  const { t }       = useTranslation();
 
   const [section,  setSection]  = useState('all');
   const [entries,  setEntries]  = useState([]);
@@ -275,12 +277,12 @@ const UserLogs = ({ userId }) => {
       setHasMore(pg * LIMIT < (res.data.total || 0));
       setPage(pg);
     } catch {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load logs', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedLoadLogs'), type: 'error' }));
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [userId, section]);
+  }, [userId, section]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setEntries([]);
@@ -296,11 +298,11 @@ const UserLogs = ({ userId }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
         <HistoryIcon sx={{ fontSize: 16, color: T.TEXT_TER }} />
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, flexGrow: 1 }}>
-          Activity Log
+          {t('users.activityLog')}
         </Typography>
         {total > 0 && (
           <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>
-            {total} entries
+            {t('users.entriesCount', { count: total })}
           </Typography>
         )}
       </Box>
@@ -309,7 +311,7 @@ const UserLogs = ({ userId }) => {
       <Box sx={{ display: 'flex', gap: 0.5, mb: 2.5 }}>
         {SECTIONS.map(s => (
           <Pill key={s.id} active={section === s.id} onClick={() => setSection(s.id)} T={T}>
-            {s.label}
+            {t(s.labelKey)}
           </Pill>
         ))}
       </Box>
@@ -322,13 +324,13 @@ const UserLogs = ({ userId }) => {
       ) : entries.length === 0 ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8, gap: 1, opacity: 0.4 }}>
           <HistoryIcon sx={{ fontSize: 32, color: T.TEXT_TER }} />
-          <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_TER }}>No activity yet</Typography>
+          <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_TER }}>{t('users.noActivityYet')}</Typography>
         </Box>
       ) : (
         <>
           <Box sx={{ pl: 0.5 }}>
             {entries.map((entry, i) => (
-              <LogEntry key={entry._id} entry={entry} isLast={i === entries.length - 1} T={T} />
+              <LogEntry key={entry._id} entry={entry} isLast={i === entries.length - 1} T={T} t={t} />
             ))}
           </Box>
 
@@ -341,7 +343,7 @@ const UserLogs = ({ userId }) => {
                   border: `1px solid ${T.CARD_BD}`, px: 2.5, py: '5px',
                   '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', color: T.TEXT_PRI },
                 }}>
-                {loadingMore ? 'Loading…' : 'Load more'}
+                {loadingMore ? t('users.loadingMore') : t('users.loadMore')}
               </Button>
             </Box>
           )}

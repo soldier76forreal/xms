@@ -10,6 +10,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -17,21 +18,21 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { Can } from '../../contextApi/PermissionContext';
 
 const STATUS = {
-  open:    { label: 'Open',    color: '#64B5F6', bg: 'rgba(100,181,246,0.12)' },
-  claimed: { label: 'Claimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.12)'  },
-  done:    { label: 'Done',    color: '#81C784', bg: 'rgba(129,199,132,0.12)' },
+  open:    { labelKey: 'users.taskStatusOpen',    color: '#64B5F6', bg: 'rgba(100,181,246,0.12)' },
+  claimed: { labelKey: 'users.taskStatusClaimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.12)'  },
+  done:    { labelKey: 'users.taskStatusDone',    color: '#81C784', bg: 'rgba(129,199,132,0.12)' },
 };
 
-const relTime = (d) => {
+const relTime = (d, t) => {
   if (!d) return '';
   const diff = Date.now() - new Date(d).getTime();
   const m  = Math.floor(diff / 60000);
   const h  = Math.floor(diff / 3600000);
   const dy = Math.floor(diff / 86400000);
-  if (m < 1)   return 'Just now';
-  if (m < 60)  return `${m}m ago`;
-  if (h < 24)  return `${h}h ago`;
-  return `${dy}d ago`;
+  if (m < 1)   return t('users.justNow');
+  if (m < 60)  return t('users.minutesAgo', { count: m });
+  if (h < 24)  return t('users.hoursAgo', { count: h });
+  return t('users.daysAgo', { count: dy });
 };
 
 const useT = () => {
@@ -67,6 +68,7 @@ const TaskPanel = ({ task: initialTask, currentUserId, onUpdate }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const T           = useT();
+  const { t }       = useTranslation();
 
   const [task,    setTask]    = useState(initialTask);
   const [loading, setLoading] = useState(false);
@@ -89,10 +91,10 @@ const TaskPanel = ({ task: initialTask, currentUserId, onUpdate }) => {
       });
       const updated = { ...task, ...res.data?.data, assignedUserName: task.assignedUserName, assignedGroupName: task.assignedGroupName };
       setTask(updated);
-      dispatch(actions.setShowSnackBar({ status: true, msg: endpoint === 'claim' ? 'Task claimed' : 'Task marked done', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: endpoint === 'claim' ? t('users.taskClaimed') : t('users.taskMarkedDone'), type: 'success' }));
       if (onUpdate) onUpdate(updated);
     } catch (err) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Action failed', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || t('users.actionFailed'), type: 'error' }));
     } finally {
       setLoading(false);
     }
@@ -112,13 +114,13 @@ const TaskPanel = ({ task: initialTask, currentUserId, onUpdate }) => {
             {task.title}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-            <Chip label={st.label} size="small" sx={{
+            <Chip label={t(st.labelKey)} size="small" sx={{
               height: 20, fontSize: '0.68rem', fontWeight: 700, borderRadius: '4px',
               bgcolor: st.bg, color: st.color, border: `1px solid ${st.color}40`,
               '& .MuiChip-label': { px: 0.75 },
             }} />
             <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>
-              {relTime(task.insertDate)}
+              {relTime(task.insertDate, t)}
             </Typography>
           </Box>
         </Box>
@@ -135,7 +137,7 @@ const TaskPanel = ({ task: initialTask, currentUserId, onUpdate }) => {
 
       {/* Details */}
       <Box sx={{ mb: 3 }}>
-        <InfoRow label="Assigned" T={T}
+        <InfoRow label={t('users.taskAssigned')} T={T}
           value={
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {task.assigneeType === 'group'
@@ -146,11 +148,11 @@ const TaskPanel = ({ task: initialTask, currentUserId, onUpdate }) => {
             </Box>
           }
         />
-        <InfoRow label="Created by" T={T} value={task.createdByName || '—'} />
+        <InfoRow label={t('users.taskCreatedBy')} T={T} value={task.createdByName || '—'} />
         {task.claimedByName && task.status !== 'open' && (
-          <InfoRow label="Claimed by" T={T} value={task.claimedByName} />
+          <InfoRow label={t('users.taskClaimedBy')} T={T} value={task.claimedByName} />
         )}
-        <InfoRow label="Created" T={T} value={task.insertDate ? new Date(task.insertDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} />
+        <InfoRow label={t('users.taskCreated')} T={T} value={task.insertDate ? new Date(task.insertDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} />
       </Box>
 
       {/* Actions */}
@@ -165,7 +167,7 @@ const TaskPanel = ({ task: initialTask, currentUserId, onUpdate }) => {
                 sx={{ borderRadius: '8px', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600,
                   color: '#64B5F6', borderColor: 'rgba(100,181,246,0.4)',
                   '&:hover': { bgcolor: 'rgba(100,181,246,0.08)', borderColor: '#64B5F6' } }}>
-                Claim
+                {t('users.taskClaim')}
               </Button>
             )}
             {canDone && (
@@ -176,7 +178,7 @@ const TaskPanel = ({ task: initialTask, currentUserId, onUpdate }) => {
                 sx={{ borderRadius: '8px', textTransform: 'none', fontSize: '0.8rem', fontWeight: 600,
                   color: '#81C784', borderColor: 'rgba(129,199,132,0.4)',
                   '&:hover': { bgcolor: 'rgba(129,199,132,0.08)', borderColor: '#81C784' } }}>
-                Mark Done
+                {t('users.taskMarkDone')}
               </Button>
             )}
           </Box>

@@ -14,9 +14,12 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import { useTheme } from '@mui/material';
 import { useDispatch } from 'react-redux';
+import { useHistory } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import { notifPath } from '../../tools/pushNotifications';
 
 const useT = () => {
   const theme  = useTheme();
@@ -40,11 +43,9 @@ const useT = () => {
 };
 
 // ── Filters ────────────────────────────────────────────────────────────────────
-const FILTERS = [
-  { id: 'all',    label: 'All'    },
-  { id: 'unread', label: 'Unread' },
-  { id: 'tasks',  label: 'Tasks'  },
-];
+// Labels translated at render time via t(`notifications.${id}`) — kept as bare
+// ids here since this is module scope, outside any component/hook.
+const FILTERS = ['all', 'unread', 'tasks'];
 
 // ── Icon by notification type ──────────────────────────────────────────────────
 const typeIcon = (type, textSec) => {
@@ -73,13 +74,14 @@ const relativeTime = (d) => {
 };
 
 // ── Single notification row ────────────────────────────────────────────────────
-const NotifRow = ({ notif, onMarkRead }) => {
+const NotifRow = ({ notif, onOpen }) => {
   const T = useT();
+  const clickable = !notif.isRead || !!notifPath(notif.entityType, notif.entityId);
   return (
     <Box
-      onClick={() => !notif.isRead && onMarkRead(notif._id)}
+      onClick={() => onOpen(notif)}
       sx={{
-        display: 'flex', gap: 1.5, px: 2, py: 1.5, cursor: notif.isRead ? 'default' : 'pointer',
+        display: 'flex', gap: 1.5, px: 2, py: 1.5, cursor: clickable ? 'pointer' : 'default',
         bgcolor: notif.isRead ? 'transparent' : T.UNREAD_BG,
         borderBottom: `1px solid ${T.DIVIDER}`,
         '&:hover': { bgcolor: T.ROW_HVR },
@@ -130,9 +132,11 @@ const FilterPill = ({ active, onClick, children }) => {
 
 // ── Main notification center (Drawer) ──────────────────────────────────────────
 const NotificationCenter = ({ open, onClose, onUnreadCountChange }) => {
+  const { t }        = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
+  const history     = useHistory();
   const T           = useT();
 
   const [notifications, setNotifications] = useState([]);
@@ -190,6 +194,16 @@ const NotificationCenter = ({ open, onClose, onUnreadCountChange }) => {
     } catch {}
   };
 
+  // Click a notification → mark it read AND jump to the related record.
+  const openNotif = (notif) => {
+    if (!notif.isRead) markRead(notif._id);
+    const path = notifPath(notif.entityType, notif.entityId);
+    if (path) {
+      onClose();
+      history.push(path);
+    }
+  };
+
   const markAllRead = async () => {
     setMarkingAll(true);
     try {
@@ -223,7 +237,7 @@ const NotificationCenter = ({ open, onClose, onUnreadCountChange }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2.5, py: 2, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
         <NotificationsIcon sx={{ fontSize: 18, color: T.TEXT_SEC }} />
         <Typography sx={{ flexGrow: 1, fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          Notifications
+          {t('notifications.title')}
           {unreadCount > 0 && (
             <Box component="span" sx={{ ml: 1, fontSize: '0.72rem', fontWeight: 400,
               bgcolor: '#64B5F6', color: T.BADGE_BG, borderRadius: '10px', px: 0.75, py: '1px' }}>
@@ -235,7 +249,7 @@ const NotificationCenter = ({ open, onClose, onUnreadCountChange }) => {
           <Button size="small" onClick={markAllRead} disabled={markingAll}
             sx={{ fontSize: '0.72rem', color: T.TEXT_SEC, textTransform: 'none', px: 1,
               '&:hover': { color: T.TEXT_PRI, bgcolor: T.HVR_BG } }}>
-            {markingAll ? <CircularProgress size={12} sx={{ color: T.TEXT_SEC }} /> : 'Mark all read'}
+            {markingAll ? <CircularProgress size={12} sx={{ color: T.TEXT_SEC }} /> : t('notifications.markAllRead')}
           </Button>
         )}
         <Button onClick={onClose} aria-label="Close notifications" startIcon={<CloseIcon sx={{ fontSize: 16 }} />}
@@ -244,15 +258,15 @@ const NotificationCenter = ({ open, onClose, onUnreadCountChange }) => {
             minWidth: 0, px: { xs: 1, sm: 1.25 }, py: '4px',
             '& .MuiButton-startIcon': { mr: { xs: 0, sm: 0.5 } },
             '&:hover': { bgcolor: T.HVR_BG } }}>
-          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>Close</Box>
+          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('common.close')}</Box>
         </Button>
       </Box>
 
       {/* Filter pills */}
       <Box sx={{ display: 'flex', gap: 0.5, px: 2, py: 1.25, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
-        {FILTERS.map(f => (
-          <FilterPill key={f.id} active={filter === f.id} onClick={() => setFilter(f.id)}>
-            {f.label}
+        {FILTERS.map(id => (
+          <FilterPill key={id} active={filter === id} onClick={() => setFilter(id)}>
+            {t(`notifications.${id}`)}
           </FilterPill>
         ))}
       </Box>
@@ -270,12 +284,12 @@ const NotificationCenter = ({ open, onClose, onUnreadCountChange }) => {
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 10, gap: 1 }}>
             <NotificationsIcon sx={{ fontSize: 32, color: T.TEXT_TER }} />
             <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_TER }}>
-              {filter === 'unread' ? 'All caught up' : 'No notifications'}
+              {filter === 'unread' ? t('notifications.allCaughtUp') : t('notifications.noNotifications')}
             </Typography>
           </Box>
         ) : (
           notifications.map(n => (
-            <NotifRow key={String(n._id)} notif={n} onMarkRead={markRead} />
+            <NotifRow key={String(n._id)} notif={n} onOpen={openNotif} />
           ))
         )}
       </Box>

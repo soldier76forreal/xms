@@ -14,6 +14,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
 import LinkIcon from '@mui/icons-material/Link';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { newLink } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -45,17 +46,18 @@ const copyText = async (text) => {
 };
 
 const EXPIRY_OPTIONS = [
-  { minutes: 60,    label: '1 hour'  },
-  { minutes: 1440,  label: '1 day'   },
-  { minutes: 2880,  label: '2 days'  },
-  { minutes: 20160, label: '2 weeks' },
-  { minutes: 43200, label: '30 days' },
+  { minutes: 60,    labelKey: 'files.expiry1Hour'  },
+  { minutes: 1440,  labelKey: 'files.expiry1Day'   },
+  { minutes: 2880,  labelKey: 'files.expiry2Days'  },
+  { minutes: 20160, labelKey: 'files.expiry2Weeks' },
+  { minutes: 43200, labelKey: 'files.expiry30Days' },
 ];
 
 // ── Share-link dialog (Phase 9 redesign — same props as the legacy modal) ─────
 // Two stages: configure (expiry / message / show-name) → created (the link is
 // DISPLAYED with a copy button — never assumed to have reached the clipboard).
 export default function ShareTheLink(props) {
+  const { t }       = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -106,7 +108,7 @@ export default function ShareTheLink(props) {
       const ok = await copyText(link);
       if (ok) {
         setCopied(true);
-        props.setSuccessToast && props.setSuccessToast({ status: true, msg: 'Link copied to clipboard!' });
+        props.setSuccessToast && props.setSuccessToast({ status: true, msg: t('files.linkCopiedToast') });
       }
     } catch (_) { /* snackbar dispatched by the thunk */ }
   };
@@ -114,7 +116,7 @@ export default function ShareTheLink(props) {
   const handleCopy = async () => {
     const ok = await copyText(createdLink);
     setCopied(ok);
-    if (ok) props.setSuccessToast && props.setSuccessToast({ status: true, msg: 'Link copied to clipboard!' });
+    if (ok) props.setSuccessToast && props.setSuccessToast({ status: true, msg: t('files.linkCopiedToast') });
   };
 
   return (
@@ -129,7 +131,7 @@ export default function ShareTheLink(props) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
         <ShareIcon sx={{ fontSize: 17, color: T.TEXT_SEC }} />
         <Typography sx={{ flexGrow: 1, fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          {createdLink ? 'Link created' : 'Create share link'}
+          {createdLink ? t('files.linkCreated') : t('files.createShareLink')}
         </Typography>
         <IconButton size="small" onClick={handleClose} sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -140,7 +142,7 @@ export default function ShareTheLink(props) {
         /* ── Stage 2: link ready ── */
         <Box sx={{ px: 3, py: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC }}>
-            Anyone with this link can view the shared item{Array.isArray(props.filePickerCount.idAndType) && props.filePickerCount.idAndType.length !== 1 ? 's' : ''} until it expires.
+            {t('files.anyoneWithLinkCanView', { count: Array.isArray(props.filePickerCount.idAndType) ? props.filePickerCount.idAndType.length : 1 })}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1,
             bgcolor: T.CTRL_BG, border: `1px solid ${T.INPUT_BD}`, borderRadius: '10px' }}>
@@ -156,11 +158,15 @@ export default function ShareTheLink(props) {
                 color: copied ? '#81c784' : T.BTN_CLR,
                 border: copied ? '1px solid rgba(129,199,132,0.4)' : 'none',
                 '&:hover': { bgcolor: copied ? 'transparent' : (isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.8)') } }}>
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? t('files.copied') : t('common.copy')}
             </Button>
           </Box>
           <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>
-            Expires in {EXPIRY_OPTIONS.find((o) => o.minutes === timer)?.label || `${timer} minutes`} from now.
+            {t('files.expiresInFromNow', {
+              label: EXPIRY_OPTIONS.find((o) => o.minutes === timer)
+                ? t(EXPIRY_OPTIONS.find((o) => o.minutes === timer).labelKey)
+                : t('files.minutesFallback', { count: timer }),
+            })}
           </Typography>
         </Box>
       ) : (
@@ -169,7 +175,7 @@ export default function ShareTheLink(props) {
 
           <Box>
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-              Link expires after
+              {t('files.linkExpiresAfter')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
               {EXPIRY_OPTIONS.map((opt) => {
@@ -182,14 +188,14 @@ export default function ShareTheLink(props) {
                       bgcolor: sel ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.09)') : 'transparent',
                       border: `1px solid ${sel ? (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : T.INPUT_BD}`,
                       '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-                    {opt.label}
+                    {t(opt.labelKey)}
                   </Button>
                 );
               })}
             </Box>
           </Box>
 
-          <TextField fullWidth size="small" placeholder="Message for the recipient (optional)"
+          <TextField fullWidth size="small" placeholder={t('files.messagePlaceholderOptional')}
             value={msg} onChange={(e) => setMsg(e.target.value)}
             sx={{
               '& .MuiOutlinedInput-root': {
@@ -202,8 +208,8 @@ export default function ShareTheLink(props) {
 
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Box>
-              <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_PRI }}>Display my name</Typography>
-              <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>The recipient sees who shared this</Typography>
+              <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_PRI }}>{t('files.displayMyName')}</Typography>
+              <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>{t('files.recipientSeesWhoShared')}</Typography>
             </Box>
             <Switch size="small" checked={showMyName} onChange={() => setShowMyName((v) => !v)}
               sx={{
@@ -217,7 +223,7 @@ export default function ShareTheLink(props) {
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 0.5, gap: 1 }}>
         <Button onClick={handleClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          {createdLink ? 'Done' : 'Cancel'}
+          {createdLink ? t('files.done') : t('common.cancel')}
         </Button>
         {!createdLink && (
           <Button onClick={create} disabled={loading}
@@ -225,7 +231,7 @@ export default function ShareTheLink(props) {
             sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
               '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
               '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' } }}>
-            {loading ? 'Creating…' : 'Create link'}
+            {loading ? t('files.creatingEllipsis') : t('files.createLink')}
           </Button>
         )}
       </DialogActions>

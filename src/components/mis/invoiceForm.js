@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -51,6 +52,12 @@ const STATUS_BY_TYPE = {
   pre_invoice: ['draft', 'sent', 'accepted', 'expired'],
 };
 
+const STATUS_LABEL_KEYS = {
+  draft: 'mis.statusDraft', sent: 'mis.statusSent', accepted: 'mis.statusAccepted',
+  converted: 'mis.statusConverted', expired: 'mis.statusExpired', issued: 'mis.statusIssued',
+  paid: 'mis.statusPaid', partially_paid: 'mis.statusPartial', cancelled: 'mis.statusCancelled',
+};
+
 const round2 = (n) => Math.round(((Number(n) || 0) + Number.EPSILON) * 100) / 100;
 const fmtMoney = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -88,6 +95,7 @@ function useDebounce(value, delay) {
 const EMPTY_PACK_ROW = { pallet: '', productName: '', length: '', width: '', pcs: '', thickness: '', sqm: '', notes: '' };
 
 export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', doc = null, onClose, onSaved, preset = null }) {
+  const { t } = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -117,7 +125,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
     // customerId is NOT in this static schema — it's required for invoices only
     // (pre-invoices/quotes can be drafted with no customer), so it's validated
     // manually in handleSave alongside the doc-type-conditional address check.
-    { issueDate: [required('Required')] }
+    { issueDate: [required(t('mis.required'))] }
   );
   const { values, setField, setValues, fieldError, handleBlur, validate, isDirty } = form;
 
@@ -228,8 +236,8 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
         console.error('crm/customers search failed:', err?.response?.status, err?.response?.data || err.message);
         dispatch(actions.setShowSnackBar({ status: true,
           msg: err?.response?.status === 403
-            ? 'You do not have permission to search customers (crm:view)'
-            : `Could not search customers${err?.response?.status ? ` (${err.response.status})` : ''}`,
+            ? t('mis.noPermSearchCustomers')
+            : `${t('mis.couldNotSearchCustomers')}${err?.response?.status ? ` (${err.response.status})` : ''}`,
           type: 'error' }));
       }
       setCustLoading(false);
@@ -251,8 +259,8 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
         console.error('mis/products-lookup search failed:', err?.response?.status, err?.response?.data || err.message);
         dispatch(actions.setShowSnackBar({ status: true,
           msg: err?.response?.status === 403
-            ? 'You do not have permission to search products (mis:view)'
-            : `Could not search products${err?.response?.status ? ` (${err.response.status})` : ''}`,
+            ? t('mis.noPermSearchProducts')
+            : `${t('mis.couldNotSearchProducts')}${err?.response?.status ? ` (${err.response.status})` : ''}`,
           type: 'error' }));
       }
       setProdLoading(false);
@@ -363,15 +371,15 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   const handleSave = async () => {
     const scalarsOk = validate();
     let linesOk = true;
-    if (lines.length === 0) { setLinesError('Add at least one line item'); linesOk = false; }
-    else if (lines.some(l => !(Number(l.quantity) > 0))) { setLinesError('Every line needs a quantity above zero'); linesOk = false; }
-    else if (lines.some(l => Number(l.unitPrice) < 0)) { setLinesError('Unit price cannot be negative'); linesOk = false; }
-    else if (lines.some(lineExceedsStock)) { setLinesError('One or more lines exceed the available stock — reduce the quantity or restock first'); linesOk = false; }
+    if (lines.length === 0) { setLinesError(t('mis.errAddLineItem')); linesOk = false; }
+    else if (lines.some(l => !(Number(l.quantity) > 0))) { setLinesError(t('mis.errQuantityAboveZero')); linesOk = false; }
+    else if (lines.some(l => Number(l.unitPrice) < 0)) { setLinesError(t('mis.errUnitPriceNegative')); linesOk = false; }
+    else if (lines.some(lineExceedsStock)) { setLinesError(t('mis.errStockExceeded')); linesOk = false; }
 
     // Customer: required for invoices (goods need a destination), optional for quotes
     let custOk = true;
     if (isInvoice && !values.customerId) {
-      setCustError('Select a customer');
+      setCustError(t('mis.selectCustomerError'));
       custOk = false;
     } else {
       setCustError('');
@@ -380,7 +388,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
     // Shipping address: required for invoices (the loads go somewhere), optional for quotes
     let addrOk = true;
     if (isInvoice && !values.customerAddress?.trim()) {
-      setAddrError('This customer has no address on file — add one before issuing an invoice');
+      setAddrError(t('mis.noAddressError'));
       addrOk = false;
     } else {
       setAddrError('');
@@ -391,6 +399,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
     setSaving(true);
     const payload = {
       docType: activeType,
+      branchId: activeBranchId,
       issueDate: values.issueDate,
       status: values.status,
       customerId: values.customerId,
@@ -429,18 +438,18 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
       if (isEdit && doc) {
         await authCtx.jwtInst({ method: 'put',
           url: `${axiosGlobal.defaultTargetApi}/mis/invoices/${doc._id}`, data: payload });
-        dispatch(actions.setShowSnackBar({ status: true, msg: `${isInvoice ? 'Invoice' : 'Quote'} #${doc.docNumber} updated`, type: 'success' }));
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('mis.docUpdatedMsg', { type: isInvoice ? t('mis.invoiceType') : t('mis.quoteType'), number: doc.docNumber }), type: 'success' }));
       } else {
         const res = await authCtx.jwtInst({ method: 'post',
           url: `${axiosGlobal.defaultTargetApi}/mis/invoices`, data: payload });
-        dispatch(actions.setShowSnackBar({ status: true, msg: `${isInvoice ? 'Invoice' : 'Quote'} #${res.data.docNumber} created`, type: 'success' }));
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('mis.docCreatedMsg', { type: isInvoice ? t('mis.invoiceType') : t('mis.quoteType'), number: res.data.docNumber }), type: 'success' }));
       }
       dispatch(actions.misInvBumpRefresh());
       onSaved && onSaved();
       onClose();
     } catch (err) {
       dispatch(actions.setShowSnackBar({ status: true,
-        msg: err?.response?.data?.message || 'Failed to save document', type: 'error' }));
+        msg: err?.response?.data?.message || t('mis.failedToSaveDoc'), type: 'error' }));
     }
     setSaving(false);
   };
@@ -474,8 +483,8 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
           borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
           <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
             {isEdit
-              ? `Edit ${isInvoice ? 'invoice' : 'quote'} #${doc?.docNumber}`
-              : `New ${isInvoice ? 'invoice' : 'quote'}`}
+              ? t(isInvoice ? 'mis.editInvoiceTitle' : 'mis.editQuoteTitle', { number: doc?.docNumber })
+              : t(isInvoice ? 'mis.newInvoice' : 'mis.newQuote')}
           </Typography>
           <IconButton size="small" onClick={handleClose} sx={{ color: T.TEXT_TER }}>
             <CloseIcon sx={{ fontSize: 16 }} />
@@ -488,9 +497,9 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
           {/* ── Document ── */}
           <Box>
-            <SectionLabel>Document</SectionLabel>
+            <SectionLabel>{t('mis.sectionDocument')}</SectionLabel>
             <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <TextField size="small" label="Issue date" type="date" fullWidth
+              <TextField size="small" label={t('mis.fieldIssueDate')} type="date" fullWidth
                 value={values.issueDate}
                 onChange={(e) => setField('issueDate', e.target.value)}
                 onBlur={() => handleBlur('issueDate')}
@@ -498,26 +507,26 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                 helperText={fieldError('issueDate')}
                 InputLabelProps={{ shrink: true, ...tfLabel }} inputProps={tfInput} sx={tfSx} />
               <FormControl size="small" fullWidth>
-                <InputLabel sx={{ fontSize: '0.75rem' }}>Status</InputLabel>
-                <Select value={values.status} label="Status"
+                <InputLabel sx={{ fontSize: '0.75rem' }}>{t('common.status')}</InputLabel>
+                <Select value={values.status} label={t('common.status')}
                   onChange={(e) => setField('status', e.target.value)}
                   sx={{ fontSize: '0.8rem', ...tfSx }}>
                   {STATUS_BY_TYPE[activeType].map(s => (
-                    <MenuItem key={s} value={s} sx={{ fontSize: '0.8rem' }}>{s.replace('_', ' ')}</MenuItem>
+                    <MenuItem key={s} value={s} sx={{ fontSize: '0.8rem' }}>{t(STATUS_LABEL_KEYS[s] || s)}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Box>
             {isInvoice && values.status === 'paid' && (
               <Typography sx={{ fontSize: '0.68rem', color: '#ffb74d', mt: 0.75 }}>
-                Marking as paid decrements inventory stock for variant lines (once). Requires the stock permission.
+                {t('mis.paidWarningNote')}
               </Typography>
             )}
           </Box>
 
           {/* ── Customer (CRM picker) ── */}
           <Box>
-            <SectionLabel>Customer{!isInvoice ? ' (optional)' : ''}</SectionLabel>
+            <SectionLabel>{t('mis.sectionCustomer')}{!isInvoice ? t('mis.optionalSuffix') : ''}</SectionLabel>
 
             {values.customerId ? (
               <Box sx={{ mb: 1.5, border: `1px solid ${T.BD}`, borderRadius: '10px', bgcolor: T.CTRL_BG, overflow: 'hidden' }}>
@@ -530,7 +539,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                     setField('customerId', ''); setField('customerName', ''); setField('customerAddress', '');
                     setCustAddress(null); setAddrError('');
                   }} sx={{ fontSize: '0.68rem', textTransform: 'none', color: T.TEXT_TER, minWidth: 0 }}>
-                    Change
+                    {t('crm.change')}
                   </Button>
                 </Box>
 
@@ -543,17 +552,17 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                       </Typography>
                       <Button size="small" onClick={() => setAddrDialogOpen(true)}
                         sx={{ fontSize: '0.64rem', textTransform: 'none', color: T.TEXT_TER, minWidth: 0, flexShrink: 0 }}>
-                        Edit
+                        {t('common.edit')}
                       </Button>
                     </Box>
                   ) : (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 1 }}>
                       <Typography sx={{ fontSize: '0.7rem', color: addrError ? '#EA005A' : T.TEXT_TER, flexGrow: 1 }}>
-                        No address on file{isInvoice ? ' — required for invoices' : ' (optional for quotes)'}
+                        {t('mis.noAddressOnFile')}{isInvoice ? t('mis.addressRequiredSuffix') : t('mis.addressOptionalSuffix')}
                       </Typography>
                       <Button size="small" onClick={() => setAddrDialogOpen(true)}
                         sx={{ fontSize: '0.64rem', textTransform: 'none', color: T.TEXT_PRI, minWidth: 0, flexShrink: 0 }}>
-                        + Add address
+                        {t('mis.addAddressButton')}
                       </Button>
                     </Box>
                   )}
@@ -562,7 +571,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
             ) : (
               <Box sx={{ mb: 1.5 }}>
                 <TextField size="small" fullWidth
-                  placeholder={isInvoice ? 'Search CRM customers…' : 'Search CRM customers (optional)…'}
+                  placeholder={isInvoice ? t('mis.searchCrmCustomers') : t('mis.searchCrmCustomersOptional')}
                   value={custSearch} onChange={(e) => setCustSearch(e.target.value)}
                   error={Boolean(custError)}
                   helperText={custError}
@@ -598,28 +607,28 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                 {debCustSearch.trim() && !custLoading && custResults.length === 0 && (
                   <Box sx={{ mt: 0.5, px: 1.5, py: 1, border: `1px dashed ${T.BD}`, borderRadius: '10px' }}>
                     <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 0.5 }}>
-                      No customer matches "{debCustSearch.trim()}"
+                      {t('mis.noCustomerMatches', { term: debCustSearch.trim() })}
                     </Typography>
                     <Button size="small" onClick={() => setNewCustomerOpen(true)}
                       sx={{ fontSize: '0.7rem', textTransform: 'none', color: T.TEXT_PRI, minWidth: 0, p: 0 }}>
-                      + Create new customer
+                      {t('mis.createNewCustomer')}
                     </Button>
                   </Box>
                 )}
                 {!debCustSearch.trim() && (
                   <Button size="small" onClick={() => setNewCustomerOpen(true)}
                     sx={{ mt: 0.5, fontSize: '0.7rem', textTransform: 'none', color: T.TEXT_TER, minWidth: 0, p: 0 }}>
-                    + New customer not in CRM yet
+                    {t('mis.newCustomerNotInCrm')}
                   </Button>
                 )}
               </Box>
             )}
 
             <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <TextField size="small" label="TRN (VAT no.)" fullWidth value={values.customerTrn}
+              <TextField size="small" label={t('mis.fieldCustomerTrn')} fullWidth value={values.customerTrn}
                 onChange={(e) => setField('customerTrn', e.target.value)}
                 InputLabelProps={tfLabel} inputProps={tfInput} sx={tfSx} />
-              <TextField size="small" label="Country" fullWidth value={values.customerCountry}
+              <TextField size="small" label={t('common.country')} fullWidth value={values.customerCountry}
                 onChange={(e) => setField('customerCountry', e.target.value)}
                 InputLabelProps={tfLabel} inputProps={tfInput} sx={tfSx} />
             </Box>
@@ -627,9 +636,9 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
           {/* ── Line items (Inventory picker) ── */}
           <Box>
-            <SectionLabel>Line items</SectionLabel>
+            <SectionLabel>{t('mis.sectionLineItems')}</SectionLabel>
 
-            <TextField size="small" fullWidth placeholder="Search inventory (code or name)… add as many variants as you need"
+            <TextField size="small" fullWidth placeholder={t('mis.searchInventoryPlaceholder')}
               value={prodSearch} onChange={(e) => setProdSearch(e.target.value)}
               InputProps={{
                 startAdornment: (
@@ -666,7 +675,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                           productAdded ? <CheckIcon sx={{ fontSize: 13 }} /> : null
                         } sx={{ fontSize: '0.64rem', textTransform: 'none',
                           color: productAdded ? 'success.main' : T.TEXT_TER, minWidth: 0 }}>
-                          {productAdded ? 'added — + again' : '+ product'}
+                          {productAdded ? t('mis.productAdded') : t('mis.addProductButton')}
                         </Button>
                       </Box>
                       {(p.variants || []).map(v => {
@@ -699,7 +708,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
               <Typography sx={{ fontSize: '0.72rem', color: linesError ? '#EA005A' : T.TEXT_TER,
                 py: 1, textAlign: 'center', border: `1px dashed ${linesError ? '#EA005A' : T.BD}`,
                 borderRadius: '10px' }}>
-                {linesError || 'No line items yet — search inventory above'}
+                {linesError || t('mis.noLineItemsYet')}
               </Typography>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -721,17 +730,17 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                       </IconButton>
                     </Box>
                     <Box sx={{ display: 'flex', gap: 1 }}>
-                      <TextField size="small" label={`Qty (${l.unit})`} type="number" value={l.quantity}
+                      <TextField size="small" label={t('mis.qtyLabel', { unit: l.unit })} type="number" value={l.quantity}
                         onChange={(e) => setLine(i, 'quantity', e.target.value)}
                         error={lineExceedsStock(l)}
-                        helperText={lineExceedsStock(l) ? `Only ${l.availableQty} in stock` : undefined}
+                        helperText={lineExceedsStock(l) ? t('mis.onlyInStock', { qty: l.availableQty }) : undefined}
                         inputProps={{ ...tfInput.style ? { style: tfInput.style } : {}, min: 0, step: 'any', style: { fontSize: '0.78rem' } }}
                         InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
-                      <TextField size="small" label="Unit price" type="number" value={l.unitPrice}
+                      <TextField size="small" label={t('mis.fieldUnitPrice')} type="number" value={l.unitPrice}
                         onChange={(e) => setLine(i, 'unitPrice', e.target.value)}
                         inputProps={{ min: 0, step: 'any', style: { fontSize: '0.78rem' } }}
                         InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
-                      <TextField size="small" label="Disc." type="number" value={l.discount}
+                      <TextField size="small" label={t('mis.fieldDiscountShort')} type="number" value={l.discount}
                         onChange={(e) => setLine(i, 'discount', e.target.value)}
                         inputProps={{ min: 0, step: 'any', style: { fontSize: '0.78rem' } }}
                         InputLabelProps={tfLabel} sx={{ ...tfSx, width: 76 }} />
@@ -750,20 +759,20 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
           {/* ── Totals & VAT ── */}
           <Box>
-            <SectionLabel>Totals &amp; VAT</SectionLabel>
+            <SectionLabel>{t('mis.sectionTotalsVat')}</SectionLabel>
             <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
-              <TextField size="small" label="VAT rate (%)" type="number" value={values.vatRate}
+              <TextField size="small" label={t('mis.fieldVatRate')} type="number" value={values.vatRate}
                 onChange={(e) => handleVatChange(e.target.value)}
                 inputProps={{ min: 0, step: 'any', style: { fontSize: '0.8rem' } }}
                 InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
               {isInvoice && (
-                <TextField size="small" label="Shipping (AED)" type="number" value={values.shipping}
+                <TextField size="small" label={t('mis.fieldShipping')} type="number" value={values.shipping}
                   onChange={(e) => setField('shipping', e.target.value)}
                   inputProps={{ min: 0, step: 'any', style: { fontSize: '0.8rem' } }}
                   InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
               )}
               {!isInvoice && (
-                <TextField size="small" label="Validity (days)" type="number" value={values.validityDays}
+                <TextField size="small" label={t('mis.fieldValidityDays')} type="number" value={values.validityDays}
                   onChange={(e) => setField('validityDays', e.target.value)}
                   inputProps={{ min: 0, style: { fontSize: '0.8rem' } }}
                   InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
@@ -772,10 +781,10 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
             <Box sx={{ border: `1px solid ${T.BD}`, borderRadius: '10px', p: 1.5 }}>
               {[
-                ['Subtotal', totals.subtotal],
-                ...(totals.discountTotal ? [['Discount', totals.discountTotal]] : []),
-                ['VAT', totals.vatTotal],
-                ...(isInvoice && Number(values.shipping) ? [['Shipping', Number(values.shipping)]] : []),
+                [t('mis.subtotalLabel'), totals.subtotal],
+                ...(totals.discountTotal ? [[t('mis.discountLabel'), totals.discountTotal]] : []),
+                [t('mis.vatLabel'), totals.vatTotal],
+                ...(isInvoice && Number(values.shipping) ? [[t('mis.shippingLabel'), Number(values.shipping)]] : []),
               ].map(([label, val]) => (
                 <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.2 }}>
                   <Typography sx={{ fontSize: '0.74rem', color: T.TEXT_SEC }}>{label}</Typography>
@@ -784,7 +793,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
               ))}
               <Divider sx={{ my: 0.5, borderColor: T.BD }} />
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI }}>Total (AED)</Typography>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI }}>{t('mis.grandTotalLabel')}</Typography>
                 <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI }}>
                   {fmtMoney(totals.grandTotal)}
                 </Typography>
@@ -796,12 +805,12 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
           {isInvoice && (
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.25 }}>
-                <SectionLabel>Packing list</SectionLabel>
+                <SectionLabel>{t('mis.sectionPackingList')}</SectionLabel>
                 <Box sx={{ flexGrow: 1 }} />
                 <Button size="small" startIcon={<AddIcon sx={{ fontSize: 13 }} />}
                   onClick={() => setPackRows(rs => [...rs, { ...EMPTY_PACK_ROW }])}
                   sx={{ fontSize: '0.68rem', textTransform: 'none', color: T.TEXT_TER, mb: 1.25 }}>
-                  Add row
+                  {t('mis.addRowButton')}
                 </Button>
               </Box>
 
@@ -810,7 +819,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                   {packRows.map((r, i) => (
                     <Box key={i} sx={{ border: `1px solid ${T.BD}`, borderRadius: '10px', p: 1.25 }}>
                       <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                        <TextField size="small" label="Pallet" value={r.pallet}
+                        <TextField size="small" label={t('mis.fieldPallet')} value={r.pallet}
                           onChange={(e) => setPackRow(i, 'pallet', e.target.value)}
                           inputProps={{ style: { fontSize: '0.76rem' } }}
                           InputLabelProps={tfLabel} sx={{ ...tfSx, width: 90 }} />
@@ -823,7 +832,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                           onChange={(_, val) => { if (val && typeof val === 'object') applyLineToPackRow(i, val); }}
                           sx={{ flex: 1 }}
                           renderInput={(params) => (
-                            <TextField {...params} size="small" label="Product (pick from line items or type)"
+                            <TextField {...params} size="small" label={t('mis.fieldProductPick')}
                               inputProps={{ ...params.inputProps, style: { fontSize: '0.76rem' } }}
                               InputLabelProps={tfLabel} sx={tfSx} />
                           )}
@@ -835,7 +844,8 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                       </Box>
                       <Box sx={{ display: 'flex', gap: 1 }}>
                         {[
-                          ['length', 'L'], ['width', 'W'], ['pcs', 'Pcs'], ['thickness', 'T'], ['sqm', 'm²'],
+                          ['length', t('mis.colLength')], ['width', t('mis.colWidth')], ['pcs', t('mis.colPcs')],
+                          ['thickness', t('mis.colThickness')], ['sqm', t('mis.colSqm')],
                         ].map(([key, label]) => (
                           <TextField key={key} size="small" label={label} type="number" value={r[key]}
                             onChange={(e) => setPackRow(i, key, e.target.value)}
@@ -846,21 +856,21 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                     </Box>
                   ))}
                   <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC, textAlign: 'right' }}>
-                    Totals: {packTotals.pcs} pcs · {fmtMoney(packTotals.sqm)} m²
+                    {t('mis.packTotalsLine', { pcs: packTotals.pcs, sqm: fmtMoney(packTotals.sqm) })}
                   </Typography>
                 </Box>
               )}
 
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField size="small" label="Truck no." value={packMeta.truckNumber}
+                <TextField size="small" label={t('mis.fieldTruckNo')} value={packMeta.truckNumber}
                   onChange={(e) => setPackMeta(m => ({ ...m, truckNumber: e.target.value }))}
                   inputProps={{ style: { fontSize: '0.78rem' } }}
                   InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
-                <TextField size="small" label="Driver" value={packMeta.driverName}
+                <TextField size="small" label={t('mis.fieldDriver')} value={packMeta.driverName}
                   onChange={(e) => setPackMeta(m => ({ ...m, driverName: e.target.value }))}
                   inputProps={{ style: { fontSize: '0.78rem' } }}
                   InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
-                <TextField size="small" label="Driver mobile" value={packMeta.driverMobile}
+                <TextField size="small" label={t('mis.fieldDriverMobile')} value={packMeta.driverMobile}
                   onChange={(e) => setPackMeta(m => ({ ...m, driverMobile: e.target.value }))}
                   inputProps={{ style: { fontSize: '0.78rem' } }}
                   InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
@@ -870,10 +880,10 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
           {/* ── Notes ── */}
           <Box>
-            <SectionLabel>Notes</SectionLabel>
+            <SectionLabel>{t('mis.sectionNotes')}</SectionLabel>
             <TextField size="small" fullWidth multiline minRows={2} value={values.notes}
               onChange={(e) => setField('notes', e.target.value)}
-              placeholder="Internal notes…"
+              placeholder={t('mis.internalNotesPlaceholder')}
               inputProps={{ style: { fontSize: '0.8rem' } }} sx={tfSx} />
           </Box>
         </Box>
@@ -883,7 +893,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
           <Button fullWidth variant="contained" size="small" disabled={saving} onClick={handleSave}
             sx={{ fontSize: '0.78rem', textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}>
             {saving ? <CircularProgress size={14} sx={{ mr: 0.75 }} /> : null}
-            {isEdit ? 'Save changes' : `Create ${isInvoice ? 'invoice' : 'quote'}`}
+            {isEdit ? t('mis.saveChanges') : t(isInvoice ? 'mis.createInvoiceButton' : 'mis.createQuoteButton')}
           </Button>
         </Box>
       </Drawer>
@@ -893,9 +903,9 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
         open={confirmDiscard}
         onClose={() => setConfirmDiscard(false)}
         onConfirm={() => { setConfirmDiscard(false); onClose(); }}
-        title="Discard changes?"
-        message="You have unsaved changes. Closing the form will discard them."
-        confirmLabel="Discard"
+        title={t('mis.discardChangesTitle')}
+        message={t('mis.discardChangesMessage')}
+        confirmLabel={t('crm.discard')}
         destructive
       />
 
@@ -925,6 +935,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 // crm:customer:edit) — this is the address invoices/pre-invoices pull from, and
 // where the loads for this customer are sent.
 function AddressDialog({ open, onClose, customerId, initial, onSaved }) {
+  const { t } = useTranslation();
   const theme      = useTheme();
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
@@ -969,13 +980,13 @@ function AddressDialog({ open, onClose, customerId, initial, onSaved }) {
       await authCtx.jwtInst({ method: 'put',
         url: `${axiosGlobal.defaultTargetApi}/crm/customers/${customerId}`,
         data: { address } });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Address saved', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('mis.addressSavedMsg'), type: 'success' }));
       onSaved(address[0]);
     } catch (err) {
       dispatch(actions.setShowSnackBar({ status: true,
         msg: err?.response?.status === 403
-          ? 'You do not have permission to edit this customer (crm:customer:edit)'
-          : 'Could not save address', type: 'error' }));
+          ? t('mis.noPermEditCustomer')
+          : t('mis.couldNotSaveAddress'), type: 'error' }));
     }
     setSaving(false);
   };
@@ -986,7 +997,7 @@ function AddressDialog({ open, onClose, customerId, initial, onSaved }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth
       PaperProps={{ sx: { borderRadius: '14px' } }}>
-      <DialogTitle sx={{ fontSize: '0.95rem', fontWeight: 700 }}>Shipping address</DialogTitle>
+      <DialogTitle sx={{ fontSize: '0.95rem', fontWeight: 700 }}>{t('mis.shippingAddressTitle')}</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: '8px !important' }}>
         <Autocomplete
           value={vals.country}
@@ -1001,7 +1012,7 @@ function AddressDialog({ open, onClose, customerId, initial, onSaved }) {
             </Box>
           )}
           renderInput={(params) => (
-            <TextField {...params} size="small" label="Country" sx={fSx}
+            <TextField {...params} size="small" label={t('common.country')} sx={fSx}
               inputProps={{ ...params.inputProps, style: { fontSize: '0.85rem' } }} />
           )}
         />
@@ -1014,29 +1025,29 @@ function AddressDialog({ open, onClose, customerId, initial, onSaved }) {
               freeSolo
               sx={{ flex: 1 }}
               renderInput={(params) => (
-                <TextField {...params} size="small" label="City" sx={fSx}
+                <TextField {...params} size="small" label={t('crm.fieldCity')} sx={fSx}
                   inputProps={{ ...params.inputProps, style: { fontSize: '0.85rem' } }}
                   onChange={(e) => set('city', e.target.value)} />
               )}
             />
           ) : (
-            <TextField size="small" label="City" fullWidth value={vals.city}
+            <TextField size="small" label={t('crm.fieldCity')} fullWidth value={vals.city}
               onChange={(e) => set('city', e.target.value)} sx={fSx} />
           )}
-          <TextField size="small" label="State / Province" fullWidth value={vals.province}
+          <TextField size="small" label={t('crm.fieldStateProvince')} fullWidth value={vals.province}
             onChange={(e) => set('province', e.target.value)} sx={fSx} />
         </Box>
-        <TextField size="small" label="Postal code" fullWidth value={vals.postalCode}
+        <TextField size="small" label={t('crm.fieldPostalCode')} fullWidth value={vals.postalCode}
           onChange={(e) => set('postalCode', e.target.value)} sx={fSx} />
-        <TextField size="small" label="Address" fullWidth multiline minRows={2} value={vals.street}
+        <TextField size="small" label={t('crm.fieldAddress')} fullWidth multiline minRows={2} value={vals.street}
           onChange={(e) => set('street', e.target.value)} sx={fSx} />
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button size="small" onClick={onClose} sx={{ textTransform: 'none' }}>Cancel</Button>
+        <Button size="small" onClick={onClose} sx={{ textTransform: 'none' }}>{t('common.cancel')}</Button>
         <Button size="small" variant="contained" disabled={saving} onClick={handleSave}
           sx={{ textTransform: 'none' }}>
           {saving ? <CircularProgress size={14} sx={{ mr: 0.75 }} /> : null}
-          Save address
+          {t('mis.saveAddressButton')}
         </Button>
       </DialogActions>
     </Dialog>

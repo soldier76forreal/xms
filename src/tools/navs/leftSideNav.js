@@ -14,11 +14,14 @@ import CloseIcon from '@mui/icons-material/Close';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import StoreIcon from '@mui/icons-material/Store';
+import TranslateIcon from '@mui/icons-material/Translate';
 import CheckIcon from '@mui/icons-material/Check';
 
 import { useHistory } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import PageSection from '../../contextApi/pageSection';
 import ThemeCtx from '../../contextApi/themeContext';
+import LanguageCtx from '../../contextApi/languageContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
 import { NAV_ITEMS } from './navConfig';
@@ -30,8 +33,10 @@ import { NAV_ITEMS } from './navConfig';
 export default function LeftSideNav(props) {
   const pageSection = useContext(PageSection);
   const history     = useHistory();
+  const { t }       = useTranslation();
   const { can }     = usePermissions();
   const { themeMode, toggleTheme } = useContext(ThemeCtx);
+  const { language, setLanguage, languages } = useContext(LanguageCtx);
   const { branches, activeBranchId, setActiveBranchId } = useBranch();
 
   const visibleItems = NAV_ITEMS.filter(item => !item.permission || can(item.permission));
@@ -83,7 +88,7 @@ export default function LeftSideNav(props) {
                 {item.icon}
               </ListItemIcon>
               <ListItemText
-                primary={item.label}
+                primary={t(`nav.${item.navKey}`)}
                 primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
               />
             </ListItemButton>
@@ -96,7 +101,7 @@ export default function LeftSideNav(props) {
             <Divider sx={{ my: 1 }} />
             <ListItem sx={{ pt: 0, pb: 0.25 }}>
               <Typography sx={{ fontSize: '0.62rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'text.disabled' }}>
-                Branch
+                {t('profile.branch')}
               </Typography>
             </ListItem>
             {branches.map((b) => {
@@ -120,6 +125,32 @@ export default function LeftSideNav(props) {
           </>
         )}
 
+        {/* Language picker */}
+        <Divider sx={{ my: 1 }} />
+        <ListItem sx={{ pt: 0, pb: 0.25 }}>
+          <Typography sx={{ fontSize: '0.62rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'text.disabled' }}>
+            {t('profile.language')}
+          </Typography>
+        </ListItem>
+        {languages.map((l) => {
+          const active = l.code === language;
+          return (
+            <ListItem key={l.code} disablePadding>
+              <ListItemButton
+                onClick={() => { setLanguage(l.code); props.setLeftSideNav({ left: false }); }}
+                sx={{ borderRadius: 2, mx: 1, minHeight: 40 }}
+              >
+                <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>
+                  <TranslateIcon sx={{ fontSize: 19 }} />
+                </ListItemIcon>
+                <ListItemText primary={l.nativeLabel}
+                  primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: active ? 700 : 400 }} />
+                {active && <CheckIcon sx={{ fontSize: 17 }} />}
+              </ListItemButton>
+            </ListItem>
+          );
+        })}
+
         {/* Theme toggle — moved here from the top bar (Phase 7) */}
         <Divider sx={{ my: 1 }} />
         <ListItem disablePadding>
@@ -127,7 +158,7 @@ export default function LeftSideNav(props) {
             <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>
               {themeMode === 'light' ? <DarkModeIcon sx={{ fontSize: 19 }} /> : <LightModeIcon sx={{ fontSize: 19 }} />}
             </ListItemIcon>
-            <ListItemText primary={themeMode === 'light' ? 'Dark mode' : 'Light mode'}
+            <ListItemText primary={themeMode === 'light' ? t('profile.darkMode') : t('profile.lightMode')}
               primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
           </ListItemButton>
         </ListItem>

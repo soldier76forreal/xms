@@ -3,6 +3,7 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import LockIcon from '@mui/icons-material/Lock';
 import { useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { COUNTRIES } from './countryData';
 
 const getInitials = (user) => {
@@ -11,16 +12,16 @@ const getInitials = (user) => {
   return f + l || '?';
 };
 
-const formatLastSeen = (dateStr) => {
+const formatLastSeen = (dateStr, t) => {
   if (!dateStr) return null;
   const diff    = Date.now() - new Date(dateStr).getTime();
   const minutes = Math.floor(diff / 60000);
   const hours   = Math.floor(diff / 3600000);
   const days    = Math.floor(diff / 86400000);
-  if (minutes < 1)  return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours   < 24) return `${hours}h ago`;
-  if (days    < 30) return `${days}d ago`;
+  if (minutes < 1)  return t('users.justNow');
+  if (minutes < 60) return t('users.minutesAgo', { count: minutes });
+  if (hours   < 24) return t('users.hoursAgo', { count: hours });
+  if (days    < 30) return t('users.daysAgo', { count: days });
   return new Date(dateStr).toLocaleDateString('en-GB');
 };
 
@@ -29,6 +30,7 @@ const isLocked = (user) =>
 
 const UserCard = ({ user, onClick, selected = false, apiBase = '' }) => {
   const theme      = useTheme();
+  const { t }      = useTranslation();
   const isDark     = theme.palette.mode === 'dark';
 
   const CARD_BG  = isDark ? '#111111' : theme.palette.background.paper;
@@ -41,7 +43,7 @@ const UserCard = ({ user, onClick, selected = false, apiBase = '' }) => {
   const HVR_BD   = isDark ? 'rgba(255,255,255,0.15)'  : 'rgba(0,0,0,0.18)';
 
   const initials   = getInitials(user);
-  const lastSeenTx = formatLastSeen(user.lastSeen);
+  const lastSeenTx = formatLastSeen(user.lastSeen, t);
   const locked     = isLocked(user);
 
   // Country flag from stored dial code

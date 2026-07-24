@@ -1,5 +1,6 @@
 import { useState, useContext } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useTheme, useMediaQuery } from '@mui/material';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -18,16 +19,28 @@ import LinearProgress from '@mui/material/LinearProgress';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { submitReadyToUpload } from '../../store/store';
+import { submitReadyToUpload, createReadyToUpload } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 
+// Freeform suggestions — the field is freeSolo (extensible), so these stay literal
+// English strings; translating them would split the stored `platform` value by UI language.
 const PLACE_OPTIONS = ['Post', 'Reels', 'Story', 'YouTube Short', 'TikTok post', 'Carousel', 'Live'];
-const LANGUAGES = ['English', 'Arabic', 'Farsi'];
+// value stays the literal English word (stored on the record); only the displayed label translates.
+const LANGUAGES = [
+  { value: 'English', labelKey: 'dm.langEnglish' },
+  { value: 'Arabic',  labelKey: 'dm.langArabic' },
+  { value: 'Farsi',   labelKey: 'dm.langFarsi' },
+];
 
-// Opened from a raw content record's "Mark ready to upload" action — the ONLY
-// place this form is ever launched from. Submitting atomically creates the
-// readyToUpload record AND flips the source raw content's status server-side.
+// Two launch modes, both handled here:
+//  - rawContentId set  — opened from a raw content record's "Mark ready to
+//    upload" action; submitting atomically creates the readyToUpload record
+//    AND flips the source raw content's status server-side.
+//  - rawContentId absent — opened standalone (Ready to Upload list "New"
+//    button); submitting creates a readyToUpload record with no back-reference.
 export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
+  const isStandalone = !rawContentId;
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isXs   = useMediaQuery(theme.breakpoints.down('sm'));
@@ -45,6 +58,7 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
     ERR_CLR:   '#FF4D8D',
   };
 
+  const [title, setTitle]       = useState('');
   const [files, setFiles]       = useState([]);
   const [language, setLanguage] = useState('');
   const [platform, setPlatform] = useState('');
@@ -54,7 +68,7 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
   const [error, setError]       = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  const resetForm = () => { setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setError(''); };
+  const resetForm = () => { setTitle(''); setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setError(''); };
   const handleClose = () => {
     if (files.length) { setConfirmDiscard(true); return; }
     resetForm();
@@ -66,23 +80,26 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
   const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSave = async () => {
-    if (!files.length) { setError('Add at least one edited file'); return; }
+    if (!files.length) { setError(t('dm.addAtLeastOneFile')); return; }
     setSaving(true); setError('');
     try {
       const fd = new FormData();
       files.forEach((f) => fd.append('files', f));
+      fd.append('title', title);
       fd.append('language', language);
       fd.append('platform', platform);
       fd.append('caption', caption);
       setUploadProgress(0);
-      await dispatch(submitReadyToUpload({
-        authCtx, axiosGlobal, id: rawContentId, formData: fd,
-        onProgress: (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
-      })).unwrap();
+      const onProgress = (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null);
+      if (isStandalone) {
+        await dispatch(createReadyToUpload({ authCtx, axiosGlobal, formData: fd, onProgress })).unwrap();
+      } else {
+        await dispatch(submitReadyToUpload({ authCtx, axiosGlobal, id: rawContentId, formData: fd, onProgress })).unwrap();
+      }
       resetForm();
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to submit');
+      setError(err?.response?.data?.message || t('dm.failedToSubmit'));
     } finally {
       setSaving(false);
       setUploadProgress(null);
@@ -96,7 +113,7 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          Mark ready to upload
+          {isStandalone ? t('dm.newReadyToUploadContent') : t('dm.markReadyToUpload')}
         </Typography>
         <IconButton onClick={handleClose} size="small" sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -104,11 +121,16 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
       </Box>
 
       <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 3, py: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField label={t('dm.titleLabel')} size="small" fullWidth value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={t('dm.titlePlaceholderExample')}
+          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
+
         <Button component="label" fullWidth startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 16 }} />}
           sx={{ borderRadius: '10px', border: `1.5px dashed ${T.INPUT_BD}`, py: 1.5,
             color: T.TEXT_SEC, textTransform: 'none', fontSize: '0.8rem',
             '&:hover': { borderColor: T.TEXT_PRI, color: T.TEXT_PRI } }}>
-          Select edited/final content files
+          {t('dm.selectEditedFinalFiles')}
           <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
         </Button>
 
@@ -122,22 +144,22 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
           </Box>
         )}
 
-        <TextField select label="Content language" size="small" fullWidth value={language}
+        <TextField select label={t('dm.contentLanguageLabel')} size="small" fullWidth value={language}
           onChange={(e) => setLanguage(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
           SelectProps={{ native: true }}>
-          <option value="">Select language…</option>
-          {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+          <option value="">{t('dm.selectLanguageEllipsis')}</option>
+          {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{t(l.labelKey)}</option>)}
         </TextField>
 
         <Autocomplete freeSolo options={PLACE_OPTIONS} value={platform}
           onInputChange={(e, v) => setPlatform(v)}
           renderInput={(params) => (
-            <TextField {...params} label="Suggested place to upload" size="small"
+            <TextField {...params} label={t('dm.suggestedPlaceToUpload')} size="small"
               sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
           )} />
 
-        <TextField label="Caption" size="small" fullWidth multiline minRows={3} value={caption}
+        <TextField label={t('dm.captionLabel')} size="small" fullWidth multiline minRows={3} value={caption}
           onChange={(e) => setCaption(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
 
@@ -149,17 +171,17 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
           <Box sx={{ mb: 1.25 }}>
             <LinearProgress variant="determinate" value={uploadProgress} sx={{ borderRadius: 2, height: 6 }} />
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_SEC, mt: 0.5 }}>
-              Uploading… {uploadProgress}%
+              {t('dm.uploadingPercent', { percent: uploadProgress })}
             </Typography>
           </Box>
         )}
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>Cancel</Button>
+          <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>{t('common.cancel')}</Button>
           <Box sx={{ flexGrow: 1 }} />
           <Button onClick={handleSave} disabled={saving} variant="contained" color="success"
             startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
             sx={{ borderRadius: '8px', px: 3, textTransform: 'none', fontWeight: 700 }}>
-            {saving ? 'Submitting…' : 'Submit'}
+            {saving ? t('dm.submitting') : t('dm.submit')}
           </Button>
         </Box>
       </Box>
@@ -168,9 +190,9 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
         open={confirmDiscard}
         onClose={() => setConfirmDiscard(false)}
         onConfirm={discardAndClose}
-        title="Discard submission"
-        message="Discard this ready-to-upload submission? Selected files will be lost."
-        confirmLabel="Discard"
+        title={t('dm.discardSubmissionTitle')}
+        message={t('dm.discardSubmissionMessage')}
+        confirmLabel={t('common.discard')}
         destructive
       />
     </Drawer>

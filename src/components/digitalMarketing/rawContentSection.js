@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -10,8 +11,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MovieIcon from '@mui/icons-material/Movie';
-import MicIcon from '@mui/icons-material/Mic';
-import ImageIcon from '@mui/icons-material/Image';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -23,10 +22,10 @@ import RawContentForm from './rawContentForm';
 import RawContentDetail from './rawContentDetail';
 
 const STATUS_META = {
-  working_on_it:   { label: 'Working on it', color: '#64b5f6' },
-  rejected:        { label: 'Rejected',      color: '#e57373' },
-  canceled:        { label: 'Canceled',      color: '#9e9e9e' },
-  ready_to_upload: { label: 'Ready',         color: '#81c784' },
+  working_on_it:   { labelKey: 'dm.statusWorkingOnIt', color: '#64b5f6' },
+  rejected:        { labelKey: 'dm.statusRejected',    color: '#e57373' },
+  canceled:        { labelKey: 'dm.statusCanceled',    color: '#9e9e9e' },
+  ready_to_upload: { labelKey: 'dm.statusReady',       color: '#81c784' },
 };
 const STATUS_TABS = ['all', 'working_on_it', 'rejected', 'canceled', 'ready_to_upload'];
 
@@ -36,7 +35,8 @@ const fmtDate = (d) => {
   return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 };
 
-export default function RawContentSection() {
+export default function RawContentSection({ openId = null, onOpenHandled = () => {} }) {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMob  = useMediaQuery(theme.breakpoints.down('md'));
@@ -82,6 +82,16 @@ export default function RawContentSection() {
   useEffect(() => { load(1); }, [status, pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setHasMore(items.length < total); }, [items, total]);
 
+  // Deep link from a notification (dm chat) — open that batch's detail directly.
+  // The detail component re-fetches by id, so a stub {_id} is enough.
+  useEffect(() => {
+    if (!openId) return;
+    setSelected({ _id: openId });
+    if (isMob) setMobileDetail(true);
+    onOpenHandled();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId]);
+
   const loadMore = () => load(page + 1);
 
   const handleSelect = (item) => {
@@ -109,21 +119,21 @@ export default function RawContentSection() {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25, flexWrap: 'wrap' }}>
             <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-              {total} raw content{total !== 1 ? 's' : ''}
+              {t('dm.rawContentCount', { count: total })}
             </Typography>
             <PageSizeSelect value={pageSize} onChange={(v) => { setPageSize(v); }} />
             {can('digitalMarketing:rawContent:create') && (
               <Button size="small" variant="contained" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
                 onClick={() => setFormOpen(true)}
                 sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px' }}>
-                New batch
+                {t('dm.newBatch')}
               </Button>
             )}
           </Box>
 
           <Box sx={{ display: 'flex', gap: 0.5, px: 2, pb: 1, flexWrap: 'wrap' }}>
             {STATUS_TABS.map((s) => {
-              const meta = s === 'all' ? { label: 'All', color: T.TEXT_TER } : STATUS_META[s];
+              const meta = s === 'all' ? { labelKey: 'common.all', color: T.TEXT_TER } : STATUS_META[s];
               const active = status === s;
               return (
                 <Button key={s} size="small" onClick={() => setStatus(s)}
@@ -132,7 +142,7 @@ export default function RawContentSection() {
                     color: active ? T.TEXT_PRI : T.TEXT_TER,
                     bgcolor: active ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
                     border: `1px solid ${active ? T.BD2 : 'transparent'}` }}>
-                  {meta.label}
+                  {t(meta.labelKey)}
                 </Button>
               );
             })}
@@ -146,7 +156,7 @@ export default function RawContentSection() {
               </Box>
             ) : items.length === 0 ? (
               <Typography sx={{ textAlign: 'center', color: T.TEXT_TER, py: 6, fontSize: '0.82rem' }}>
-                No raw content yet
+                {t('dm.noRawContentYet')}
               </Typography>
             ) : (
               <Box sx={{ position: 'relative' }}>
@@ -171,13 +181,17 @@ export default function RawContentSection() {
                         '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' } }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.4 }}>
                           <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: T.TEXT_PRI, flexGrow: 1 }} noWrap>
-                            {item.files?.length || 0} file{item.files?.length !== 1 ? 's' : ''} · {item.language || '—'}
+                            {item.title?.trim()
+                              ? item.title
+                              : `${t('dm.fileCount', { count: item.files?.length || 0 })} · ${item.language || '—'}`}
                           </Typography>
-                          <Chip label={st.label} size="small" sx={{ height: 17, fontSize: '0.6rem', fontWeight: 700,
+                          <Chip label={t(st.labelKey)} size="small" sx={{ height: 17, fontSize: '0.6rem', fontWeight: 700,
                             bgcolor: `${st.color}22`, color: st.color, '& .MuiChip-label': { px: 0.6 } }} />
                         </Box>
                         <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC }}>
-                          {item.useCase} · {item.platform}
+                          {item.title?.trim()
+                            ? `${t('dm.fileCount', { count: item.files?.length || 0 })} · ${item.language || '—'} · `
+                            : ''}{item.useCase} · {item.platform}
                         </Typography>
                         <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER, mt: 0.3 }}>
                           {item.createdByName ? `${item.createdByName} · ` : ''}{fmtDate(item.insertDate)}
@@ -212,7 +226,7 @@ export default function RawContentSection() {
           <Box sx={{ textAlign: 'center' }}>
             <MovieIcon sx={{ fontSize: 40, color: T.TEXT_TER, mb: 1 }} />
             <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>
-              Select a raw content batch to view details
+              {t('dm.selectBatchToViewDetails')}
             </Typography>
           </Box>
         </Box>

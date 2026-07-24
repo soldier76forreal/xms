@@ -16,6 +16,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Autocomplete from '@mui/material/Autocomplete';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 import CloseIcon      from '@mui/icons-material/Close';
 import AddIcon        from '@mui/icons-material/Add';
@@ -36,13 +37,16 @@ import { actions } from '../../store/store';
 import useForm, { required } from '../../tools/hooks/useForm';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import COUNTRIES from './util/countryData';
+import { useBranch } from '../../contextApi/BranchContext';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
+// WhatsApp/Telegram/Instagram are brand names — stay untranslated. labelKey
+// resolves the two generic ones (Phone/Email) at render time.
 const COMM_CHANNELS = [
   { key: 'whatsApp',  label: 'WhatsApp',  icon: <WhatsAppIcon  sx={{ fontSize: 15 }} /> },
-  { key: 'phone',     label: 'Phone',     icon: <CallIcon      sx={{ fontSize: 15 }} /> },
-  { key: 'email',     label: 'Email',     icon: <EmailIcon     sx={{ fontSize: 15 }} /> },
+  { key: 'phone',     labelKey: 'channelPhone', icon: <CallIcon      sx={{ fontSize: 15 }} /> },
+  { key: 'email',     labelKey: 'channelEmail', icon: <EmailIcon     sx={{ fontSize: 15 }} /> },
   { key: 'telegram',  label: 'Telegram',  icon: <TelegramIcon  sx={{ fontSize: 15 }} /> },
   { key: 'instagram', label: 'Instagram', icon: <InstagramIcon sx={{ fontSize: 15 }} /> },
 ];
@@ -56,14 +60,24 @@ const CHANNEL_PLACEHOLDER = {
 };
 
 const STATUS_OPTIONS = [
-  { value: 'new',       label: 'New' },
-  { value: 'active',    label: 'Active' },
-  { value: 'follow_up', label: 'Follow-up' },
-  { value: 'won',       label: 'Won' },
-  { value: 'lost',      label: 'Lost' },
+  { value: 'new',       labelKey: 'statusNew' },
+  { value: 'active',    labelKey: 'statusActive' },
+  { value: 'follow_up', labelKey: 'statusFollowUp' },
+  { value: 'won',       labelKey: 'statusWon' },
+  { value: 'lost',      labelKey: 'statusLost' },
 ];
 
-const ATTRACTED_BY_OPTIONS = ['Exhibition', 'Referral', 'Social media', 'Website', 'Cold call', 'Other'];
+// `value` is the literal string stored on the customer record (unchanged across
+// languages, for data continuity with existing records) — `labelKey` only
+// controls what the dropdown displays.
+const ATTRACTED_BY_OPTIONS = [
+  { value: 'Exhibition',   labelKey: 'attractedExhibition' },
+  { value: 'Referral',     labelKey: 'attractedReferral' },
+  { value: 'Social media', labelKey: 'attractedSocialMedia' },
+  { value: 'Website',      labelKey: 'attractedWebsite' },
+  { value: 'Cold call',    labelKey: 'attractedColdCall' },
+  { value: 'Other',        labelKey: 'attractedOther' },
+];
 
 // initial form values — mirrors the customer model fields we care about
 const buildInitial = (customer) => {
@@ -130,11 +144,13 @@ const buildInitial = (customer) => {
 // ── CustomerForm ──────────────────────────────────────────────────────────────
 
 const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
+  const { t }   = useTranslation();
   const theme   = useTheme();
   const isDark  = theme.palette.mode === 'dark';
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
+  const { activeBranchId } = useBranch();
 
   const T = {
     BG:       isDark ? '#0d0d0d' : theme.palette.background.paper,
@@ -149,14 +165,14 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
     CHIP_BG:  isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
   };
 
-  const buildSchema = (type) => ({
-    ...(type === 'company'
-      ? { companyName: [required('Company name is required')] }
-      : { firstName:   [required('First name is required')] }),
-    phoneNumber: [required('Phone number is required')],
+  // Only the phone number is required — name/company are optional across the
+  // whole form (a lead can be captured with just a phone number and filled in
+  // later during the actual conversation).
+  const buildSchema = () => ({
+    phoneNumber: [required(t('crm.errPhoneNumberRequired'))],
   });
 
-  const form = useForm(buildInitial(customer), buildSchema('individual'));
+  const form = useForm(buildInitial(customer), buildSchema());
 
   const [saving,       setSaving]       = useState(false);
   const [dupError,     setDupError]     = useState(null);
@@ -178,23 +194,25 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer?._id]);
 
-  // Product search (debounced)
+  // Product search (debounced) — scoped to the currently active branch, since
+  // Inventory is fully branch-isolated (interested products must come from the
+  // branch the user is actually working in, not every branch's catalog).
   useEffect(() => {
-    if (!prodSearch.trim()) { setProdResults([]); return; }
+    if (!prodSearch.trim() || !activeBranchId) { setProdResults([]); return; }
     const timer = setTimeout(async () => {
       setProdLoading(true);
       try {
         const res = await authCtx.jwtInst({
           method: 'get',
           url: `${axiosGlobal.defaultTargetApi}/crm/products-lookup`,
-          params: { search: prodSearch },
+          params: { search: prodSearch, branchId: activeBranchId },
         });
         setProdResults(Array.isArray(res.data) ? res.data : []);
       } catch (_) {}
       setProdLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [prodSearch, authCtx, axiosGlobal]);
+  }, [prodSearch, activeBranchId, authCtx, axiosGlobal]);
 
   // Cities for the selected country
   const cityOptions = useMemo(() => {
@@ -278,7 +296,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   // ── submit ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
-    const schema = buildSchema(values.customerType);
+    const schema = buildSchema();
     let hasErr = false;
     const errs = {};
     for (const [field, validators] of Object.entries(schema)) {
@@ -342,7 +360,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         });
         saved = res.data;
         dispatch(actions.crmUpsertCustomer(saved));
-        dispatch(actions.setShowSnackBar({ status: true, msg: 'Customer updated', type: 'success' }));
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('crm.customerUpdated'), type: 'success' }));
       } else {
         const res = await authCtx.jwtInst({
           method: 'post',
@@ -351,15 +369,15 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         });
         saved = res.data;
         dispatch(actions.crmUpsertCustomer(saved));
-        dispatch(actions.setShowSnackBar({ status: true, msg: 'Customer created', type: 'success' }));
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('crm.customerCreated'), type: 'success' }));
       }
       onSave && onSave(saved);
       onClose();
     } catch (err) {
       if (err?.response?.status === 409) {
-        setDupError('A customer with this phone number already exists.');
+        setDupError(t('crm.duplicatePhoneError'));
       } else {
-        dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to save customer', type: 'error' }));
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('crm.failedSaveCustomer'), type: 'error' }));
       }
     }
     setSaving(false);
@@ -402,7 +420,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', px: 2.5, py: 1.75,
           borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
           <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-            {isEdit ? 'Edit customer' : 'New customer'}
+            {isEdit ? t('crm.editCustomer') : t('crm.newCustomer')}
           </Typography>
           <IconButton size="small" onClick={handleClose}
             sx={{ color: T.TEXT_TER, '&:hover': { color: T.TEXT_PRI } }}>
@@ -414,13 +432,13 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 2.5, py: 2 }}>
 
           {/* ── 1. Identity ── */}
-          <SectionHeader label="Identity" T={T} />
+          <SectionHeader label={t('crm.sectionIdentity')} T={T} />
 
           {/* Type toggle */}
           <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
             {[
-              { value: 'individual', label: 'Individual', icon: <PersonIcon   sx={{ fontSize: 16 }} /> },
-              { value: 'company',    label: 'Company',    icon: <BusinessIcon sx={{ fontSize: 16 }} /> },
+              { value: 'individual', label: t('crm.individual'), icon: <PersonIcon   sx={{ fontSize: 16 }} /> },
+              { value: 'company',    label: t('crm.company'),    icon: <BusinessIcon sx={{ fontSize: 16 }} /> },
             ].map(opt => (
               <Button key={opt.value} size="small" startIcon={opt.icon}
                 onClick={() => handleChange('customerType', opt.value)}
@@ -440,42 +458,40 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
 
           {values.customerType === 'individual' ? (
             <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
-              <TextField label="First name *" size="small" fullWidth
+              <TextField label={t('crm.fieldFirstName')} size="small" fullWidth
                 value={values.firstName}
                 onChange={e => handleChange('firstName', e.target.value)}
-                onBlur={() => handleBlur('firstName')}
-                error={!!fieldError('firstName')} helperText={fieldError('firstName')}
                 sx={fieldSx} />
-              <TextField label="Last name" size="small" fullWidth
+              <TextField label={t('crm.fieldLastName')} size="small" fullWidth
                 value={values.lastName}
                 onChange={e => handleChange('lastName', e.target.value)}
                 sx={fieldSx} />
             </Box>
           ) : (
             <>
-              <TextField label="Company name *" size="small" fullWidth
+              <TextField label={t('crm.fieldCompanyName')} size="small" fullWidth
                 value={values.companyName}
                 onChange={e => handleChange('companyName', e.target.value)}
-                onBlur={() => handleBlur('companyName')}
-                error={!!fieldError('companyName')} helperText={fieldError('companyName')}
                 sx={{ ...fieldSx, mb: 1.5 }} />
-              <TextField label="Contact person" size="small" fullWidth
+              <TextField label={t('crm.fieldContactPerson')} size="small" fullWidth
                 value={values.contactPerson}
                 onChange={e => handleChange('contactPerson', e.target.value)}
                 sx={{ ...fieldSx, mb: 1.5 }} />
             </>
           )}
 
-          <TextField label="Attracted by" size="small" fullWidth select
+          <TextField label={t('crm.fieldAttractedBy')} size="small" fullWidth select
             value={values.attractedBy}
             onChange={e => handleChange('attractedBy', e.target.value)}
             sx={{ ...fieldSx, mb: 1.5 }}>
-            <MenuItem value=""><em>— not set —</em></MenuItem>
-            {ATTRACTED_BY_OPTIONS.map(o => <MenuItem key={o} value={o} sx={{ fontSize: '0.85rem' }}>{o}</MenuItem>)}
+            <MenuItem value=""><em>{t('crm.notSetPlaceholder')}</em></MenuItem>
+            {ATTRACTED_BY_OPTIONS.map(o => (
+              <MenuItem key={o.value} value={o.value} sx={{ fontSize: '0.85rem' }}>{t(`crm.${o.labelKey}`)}</MenuItem>
+            ))}
           </TextField>
 
           {/* ── 2. Contact & channels ── */}
-          <SectionHeader label="Contact" T={T} />
+          <SectionHeader label={t('crm.sectionContact')} T={T} />
 
           {/* Phone number with country code selector */}
           <Box sx={{ display: 'flex', gap: 0.75, mb: 1.5, alignItems: 'flex-start' }}>
@@ -496,13 +512,13 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
                 </Box>
               )}
               renderInput={params => (
-                <TextField {...params} size="small" label="Code"
+                <TextField {...params} size="small" label={t('crm.fieldCode')}
                   sx={autocompleteSx}
                   inputProps={{ ...params.inputProps, style: { fontSize: '0.8rem' } }} />
               )}
             />
             {/* Phone number field */}
-            <TextField label="Phone number *" size="small" sx={{ ...fieldSx, flexGrow: 1 }}
+            <TextField label={`${t('auth.phoneNumber')} *`} size="small" sx={{ ...fieldSx, flexGrow: 1 }}
               value={values.phoneNumber}
               onChange={e => { handleChange('phoneNumber', e.target.value); setDupError(null); }}
               onBlur={() => handleBlur('phoneNumber')}
@@ -514,15 +530,16 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
           {/* Channel chips */}
           <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, mb: 0.75,
             textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Communication channels
+            {t('crm.commChannelsLabel')}
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
             {COMM_CHANNELS.map(ch => {
               const active = values.commChannels.includes(ch.key);
+              const chLabel = ch.labelKey ? t(`crm.${ch.labelKey}`) : ch.label;
               return (
                 <Chip key={ch.key} size="small" clickable
                   icon={<Box sx={{ color: active ? T.TEXT_PRI : T.TEXT_TER, display: 'flex' }}>{ch.icon}</Box>}
-                  label={ch.label}
+                  label={chLabel}
                   onClick={() => toggleChannel(ch.key)}
                   sx={{ height: 26, fontSize: '0.75rem', borderRadius: '7px',
                     bgcolor: active
@@ -542,8 +559,9 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
               {values.commChannels.map(ch => {
                 const cfg = COMM_CHANNELS.find(c => c.key === ch);
+                const cfgLabel = cfg ? (cfg.labelKey ? t(`crm.${cfg.labelKey}`) : cfg.label) : ch;
                 return (
-                  <TextField key={ch} label={cfg?.label || ch} size="small" fullWidth
+                  <TextField key={ch} label={cfgLabel} size="small" fullWidth
                     value={values.commHandles[ch] || ''}
                     onChange={e => setHandle(ch, e.target.value)}
                     placeholder={CHANNEL_PLACEHOLDER[ch] || ''}
@@ -563,7 +581,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
           )}
 
           {/* ── 3. Location ── */}
-          <SectionHeader label="Location" T={T} />
+          <SectionHeader label={t('crm.sectionLocation')} T={T} />
 
           {/* Country dropdown */}
           <Autocomplete
@@ -584,7 +602,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
               </Box>
             )}
             renderInput={params => (
-              <TextField {...params} size="small" label="Country"
+              <TextField {...params} size="small" label={t('common.country')}
                 sx={autocompleteSx}
                 inputProps={{ ...params.inputProps, style: { fontSize: '0.85rem' } }} />
             )}
@@ -600,38 +618,38 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
                 freeSolo
                 sx={{ flex: 1, ...autocompleteSx }}
                 renderInput={params => (
-                  <TextField {...params} size="small" label="City"
+                  <TextField {...params} size="small" label={t('crm.fieldCity')}
                     sx={autocompleteSx}
                     inputProps={{ ...params.inputProps, style: { fontSize: '0.85rem' } }}
                     onChange={e => handleChange('city', e.target.value)} />
                 )}
               />
             ) : (
-              <TextField label="City" size="small" fullWidth
+              <TextField label={t('crm.fieldCity')} size="small" fullWidth
                 value={values.city}
                 onChange={e => handleChange('city', e.target.value)}
                 sx={fieldSx} />
             )}
-            <TextField label="State / Province" size="small" fullWidth
+            <TextField label={t('crm.fieldStateProvince')} size="small" fullWidth
               value={values.State}
               onChange={e => handleChange('State', e.target.value)}
               sx={fieldSx} />
           </Box>
 
           <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
-            <TextField label="Postal code" size="small" fullWidth
+            <TextField label={t('crm.fieldPostalCode')} size="small" fullWidth
               value={values.postalCode}
               onChange={e => handleChange('postalCode', e.target.value)}
               sx={fieldSx} />
           </Box>
 
-          <TextField label="Address" size="small" fullWidth multiline minRows={2}
+          <TextField label={t('crm.fieldAddress')} size="small" fullWidth multiline minRows={2}
             value={values.address}
             onChange={e => handleChange('address', e.target.value)}
             sx={{ ...fieldSx, mb: 1.5 }} />
 
           {/* ── 4. Interested products ── */}
-          <SectionHeader label="Interested products" T={T} />
+          <SectionHeader label={t('crm.sectionInterestedProducts')} T={T} />
 
           {values.interestedProducts.length > 0 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
@@ -649,10 +667,10 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
                   </Box>
                   {ip.productName && ip.productCode !== ip.productName && (
                     <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 0.5 }}>
-                      {ip.productName}{ip.variantId ? ' (specific variety)' : ' (any variety)'}
+                      {ip.productName}{ip.variantId ? t('crm.specificVarietySuffix') : t('crm.anyVarietySuffix')}
                     </Typography>
                   )}
-                  <TextField size="small" fullWidth placeholder="Note (optional)"
+                  <TextField size="small" fullWidth placeholder={t('crm.notePlaceholderOptional')}
                     value={ip.note || ''}
                     onChange={e => updateProductNote(ip, e.target.value)}
                     inputProps={{ style: { fontSize: '0.78rem', padding: '4px 8px' } }}
@@ -669,7 +687,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
               border: `1px solid ${T.BD}`, mb: 0.75 }}>
               <SearchIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />
               <InputBase value={prodSearch} onChange={e => setProdSearch(e.target.value)}
-                placeholder="Search inventory products…"
+                placeholder={t('crm.searchInventoryPlaceholder')}
                 sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, flex: 1,
                   '& input::placeholder': { color: T.TEXT_TER } }} />
               {prodLoading && <CircularProgress size={12} sx={{ color: T.TEXT_TER }} />}
@@ -698,7 +716,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
                         </Box>
                         {hasVariants
                           ? (expanded ? <ExpandLessIcon sx={{ fontSize: 16, color: T.TEXT_TER }} /> : <ExpandMoreIcon sx={{ fontSize: 16, color: T.TEXT_TER }} />)
-                          : (wholeAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>Added</Typography>)}
+                          : (wholeAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>{t('crm.added')}</Typography>)}
                       </Box>
 
                       {expanded && hasVariants && (
@@ -708,9 +726,9 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
                               cursor: wholeAdded ? 'default' : 'pointer',
                               '&:hover': { bgcolor: wholeAdded ? undefined : T.CTRL_BG } }}>
                             <Typography sx={{ fontSize: '0.74rem', color: wholeAdded ? T.TEXT_TER : T.TEXT_PRI, fontStyle: 'italic' }}>
-                              Any variety
+                              {t('crm.anyVariety')}
                             </Typography>
-                            {wholeAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>Added</Typography>}
+                            {wholeAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>{t('crm.added')}</Typography>}
                           </Box>
                           {prod.variants.map((v) => {
                             const variantAdded = values.interestedProducts.some(ip => String(ip.variantId) === String(v._id));
@@ -727,7 +745,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
                                   <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
                                     {v.quantity != null ? `${v.quantity} ${v.unit}` : ''}{v.price != null ? ` · ${v.price} AED` : ''}
                                   </Typography>
-                                  {variantAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>Added</Typography>}
+                                  {variantAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>{t('crm.added')}</Typography>}
                                 </Box>
                               </Box>
                             );
@@ -742,16 +760,16 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
           </Box>
 
           {/* ── 5. Status & tags ── */}
-          <SectionHeader label="Status & tags" T={T} />
+          <SectionHeader label={t('crm.sectionStatusTags')} T={T} />
 
           <FormControl size="small" fullWidth sx={{ mb: 1.5 }}>
-            <InputLabel sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>Status</InputLabel>
-            <Select value={values.status} label="Status"
+            <InputLabel sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>{t('common.status')}</InputLabel>
+            <Select value={values.status} label={t('common.status')}
               onChange={e => handleChange('status', e.target.value)}
               sx={{ borderRadius: '9px', bgcolor: T.CTRL_BG, fontSize: '0.85rem', color: T.TEXT_PRI,
                 '& fieldset': { borderColor: T.BD }, '& .MuiSvgIcon-root': { color: T.TEXT_TER } }}>
               {STATUS_OPTIONS.map(o => (
-                <MenuItem key={o.value} value={o.value} sx={{ fontSize: '0.85rem' }}>{o.label}</MenuItem>
+                <MenuItem key={o.value} value={o.value} sx={{ fontSize: '0.85rem' }}>{t(`crm.${o.labelKey}`)}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -775,7 +793,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
               <InputBase value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-                placeholder="Add tag and press Enter…"
+                placeholder={t('crm.addTagPlaceholder')}
                 sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, flex: 1,
                   '& input::placeholder': { color: T.TEXT_TER } }} />
             </Box>
@@ -788,8 +806,8 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
           </Box>
 
           {/* ── 6. Notes ── */}
-          <SectionHeader label="Notes" T={T} />
-          <TextField label="Explanations / notes" size="small" fullWidth multiline minRows={3}
+          <SectionHeader label={t('crm.sectionNotes')} T={T} />
+          <TextField label={t('crm.fieldExplanationsNotes')} size="small" fullWidth multiline minRows={3}
             value={values.explanations}
             onChange={e => handleChange('explanations', e.target.value)}
             sx={{ ...fieldSx, mb: 2 }} />
@@ -802,11 +820,11 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
             sx={{ borderRadius: '9px', textTransform: 'none', fontSize: '0.85rem',
               color: T.TEXT_SEC, borderColor: T.BD,
               '&:hover': { borderColor: T.BD2, bgcolor: T.CTRL_BG } }}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button fullWidth variant="contained" onClick={handleSubmit} disabled={saving}
             sx={{ borderRadius: '9px', textTransform: 'none', fontSize: '0.85rem', fontWeight: 700 }}>
-            {saving ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : (isEdit ? 'Save changes' : 'Add customer')}
+            {saving ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : (isEdit ? t('crm.saveChanges') : t('crm.addCustomer'))}
           </Button>
         </Box>
       </Drawer>
@@ -816,9 +834,9 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         open={discardOpen}
         onClose={() => setDiscardOpen(false)}
         onConfirm={handleDiscardConfirm}
-        title="Discard changes"
-        message="You have unsaved changes. Discard them?"
-        confirmLabel="Discard"
+        title={t('crm.discardChangesTitle')}
+        message={t('crm.discardChangesMessage')}
+        confirmLabel={t('crm.discard')}
         destructive
       />
     </>

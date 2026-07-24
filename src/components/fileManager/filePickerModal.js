@@ -13,6 +13,7 @@ import DriveFileMoveIcon from '@mui/icons-material/DriveFileMove';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory, useLocation } from 'react-router-dom';
 import { actions } from '../../store/store';
@@ -26,6 +27,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 // currentDisplayFilePicker from window.location.pathname; the URL is restored
 // on close via lastUrl. Only the presentation is new.
 export default function FilePickerModal(props) {
+  const { t }       = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -56,8 +58,8 @@ export default function FilePickerModal(props) {
   };
 
   const getLastPart = (url) => url.split('/').at(-1);
-  const count = props.filePickerCount.count === 'single' ? 1 : selectedItemsSelect.length;
-  const verb  = props.copyMoveType === 'copy' ? 'Copy' : 'Move';
+  const count  = props.filePickerCount.count === 'single' ? 1 : selectedItemsSelect.length;
+  const isCopy = props.copyMoveType === 'copy';
 
   useEffect(() => {
     if (props.openFilePicker === true) setLastUrl(location.pathname);
@@ -81,14 +83,15 @@ export default function FilePickerModal(props) {
       });
       dispatch(actions.refresh());
       dispatch(actions.unselectAll());
-      dispatch(actions.setShowSnackBar({ status: true, msg: `${verb === 'Copy' ? 'Copied' : 'Moved'} to “${currentDisplaySelect.name === 'XFILE' ? 'Home' : currentDisplaySelect.name}”`, type: 'success' }));
+      const dest = currentDisplaySelect.name === 'XFILE' ? t('files.homeBreadcrumb') : currentDisplaySelect.name;
+      dispatch(actions.setShowSnackBar({ status: true, msg: isCopy ? t('files.copiedToDestination', { dest }) : t('files.movedToDestination', { dest }), type: 'success' }));
       setLoading(false);
       handleClose();
     } catch (err) {
       setLoading(false);
       const msg = err?.response?.data?.message
         || (typeof err?.response?.data === 'string' ? '' : '')
-        || `Failed to ${verb.toLowerCase()} — the item may already exist there`;
+        || (isCopy ? t('files.failedToCopy') : t('files.failedToMove'));
       dispatch(actions.setShowSnackBar({ status: true, msg, type: 'error' }));
     }
   };
@@ -109,7 +112,7 @@ export default function FilePickerModal(props) {
           ? <ContentCopyIcon sx={{ fontSize: 17, color: T.TEXT_SEC }} />
           : <DriveFileMoveIcon sx={{ fontSize: 18, color: T.TEXT_SEC }} />}
         <Typography sx={{ flexGrow: 1, fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          {verb} {count} item{count !== 1 ? 's' : ''} to…
+          {isCopy ? t('files.copyItemsToHeader', { count }) : t('files.moveItemsToHeader', { count })}
         </Typography>
         <IconButton size="small" onClick={handleClose} sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -122,7 +125,7 @@ export default function FilePickerModal(props) {
         <Typography onClick={() => history.push('/files')}
           sx={{ fontSize: '0.75rem', fontWeight: 600, color: T.TEXT_SEC, cursor: 'pointer',
             '&:hover': { color: T.TEXT_PRI } }}>
-          Home
+          {t('files.homeBreadcrumb')}
         </Typography>
         {routeLinkSelect.map((p) => (
           <Box key={p} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -140,7 +143,7 @@ export default function FilePickerModal(props) {
       <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 2, py: 1.5 }}>
         {props.openFilePicker && folders.length === 0 && (
           <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER, textAlign: 'center', py: 5 }}>
-            No sub-folders here — the items will land in this folder.
+            {t('files.noSubfoldersHint')}
           </Typography>
         )}
         {props.openFilePicker && folders.map((e, i) => (
@@ -164,30 +167,30 @@ export default function FilePickerModal(props) {
       <Box sx={{ px: 3, py: 1.25, borderTop: `1px solid ${T.DIVIDER}`, flexShrink: 0,
         display: 'flex', alignItems: 'center', gap: 1 }}>
         <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>
-          Destination:
+          {t('files.destinationLabel')}
         </Typography>
         <Typography noWrap sx={{ fontSize: '0.78rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-          {currentDisplaySelect?.name === 'XFILE' ? 'Home' : currentDisplaySelect?.name}
+          {currentDisplaySelect?.name === 'XFILE' ? t('files.homeBreadcrumb') : currentDisplaySelect?.name}
         </Typography>
         <Button size="small" startIcon={<CreateNewFolderIcon sx={{ fontSize: 15 }} />}
           onClick={() => { props.setNewFileModal(true); props.setNewFolderType('inFilePicker'); }}
           sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC,
             '&:hover': { color: T.TEXT_PRI, bgcolor: T.HVR_BG } }}>
-          New folder
+          {t('common.newFolder')}
         </Button>
       </Box>
 
       <DialogActions sx={{ px: 3, pb: 2, pt: 1, gap: 1, flexShrink: 0 }}>
         <Button onClick={handleClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={submit} disabled={loading}
           startIcon={loading ? <CircularProgress size={13} color="inherit" /> : null}
           sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
             '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' } }}>
-          {loading ? `${verb === 'Copy' ? 'Copying' : 'Moving'}…` : `${verb} here`}
+          {loading ? (isCopy ? t('files.copyingEllipsis') : t('files.movingEllipsis')) : (isCopy ? t('files.copyHere') : t('files.moveHere'))}
         </Button>
       </DialogActions>
     </Dialog>

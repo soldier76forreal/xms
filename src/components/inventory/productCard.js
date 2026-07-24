@@ -1,4 +1,5 @@
 import { useState, useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -31,6 +32,12 @@ const GRADE_COLOR  = { Q: '#c49a6c', QS: '#c49a6c', W: '#90afc5', E: '#6fa46f', 
 function formatQty(num) {
   if (num == null) return '0';
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(num);
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
 }
 
 // Mini variant row shown inside the accordion
@@ -68,6 +75,7 @@ function MiniVariantRow({ variant }) {
 }
 
 const ProductCard = ({ product, onClick, apiBase, selected }) => {
+  const { t } = useTranslation();
   const theme    = useTheme();
   const isDark   = theme.palette.mode === 'dark';
   const dispatch = useDispatch();
@@ -174,7 +182,7 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
                     size="small" variant="outlined"
                     sx={{ height: 22, fontSize: '0.72rem', fontWeight: 500 }} />
                 ))
-              : <Typography variant="caption" sx={{ color: 'text.disabled' }}>No stock</Typography>
+              : <Typography variant="caption" sx={{ color: 'text.disabled' }}>{t('inventory.noStock')}</Typography>
             }
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1 }}>
               {product.priceRange?.min != null && (
@@ -185,10 +193,18 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
                 </Typography>
               )}
               <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                {product.variantCount ?? 0} variant{product.variantCount !== 1 ? 's' : ''}
+                {t('inventory.variantCount', { count: product.variantCount ?? 0 })}
               </Typography>
             </Box>
           </Box>
+          {(product.updateDate || product.insertDate) && (
+            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+              {product.updateDate ? t('inventory.lastUpdatedPrefix') : t('inventory.addedPrefix')}
+              <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                {formatDate(product.updateDate || product.insertDate)}
+              </Box>
+            </Typography>
+          )}
         </Box>
 
         {/* Right actions */}
@@ -196,7 +212,7 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
           justifyContent: 'center', pr: 0.5, gap: 0.25 }}
           onClick={(e) => e.stopPropagation()}>
           {/* Expand toggle */}
-          <IconButton size="small" onClick={handleExpandToggle} title="Show variants">
+          <IconButton size="small" onClick={handleExpandToggle} title={t('inventory.showVariants')}>
             {variantsLoading
               ? <CircularProgress size={14} />
               : expanded ? <ExpandLessIcon sx={{ fontSize: 16 }} /> : <ExpandMoreIcon sx={{ fontSize: 16 }} />
@@ -207,7 +223,7 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
             <MoreVertIcon sx={{ fontSize: 16 }} />
           </IconButton>
           {/* Arrow to detail */}
-          <IconButton size="small" onClick={onClick} title="Open detail">
+          <IconButton size="small" onClick={onClick} title={t('inventory.openDetail')}>
             <ArrowForwardIosIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
           </IconButton>
         </Box>
@@ -218,7 +234,7 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
         <Divider />
         {variantList.length === 0 && !variantsLoading ? (
           <Box sx={{ px: 2, py: 1 }}>
-            <Typography variant="caption" sx={{ color: 'text.disabled' }}>No variants</Typography>
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>{t('inventory.noVariants')}</Typography>
           </Box>
         ) : (
           variantList.map((v, i) => (
@@ -235,11 +251,11 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
         PaperProps={{ sx: { minWidth: 160 } }}>
         <MenuItem onClick={handleEdit} dense>
           <EditIcon sx={{ fontSize: 15, mr: 1.5, color: 'text.secondary' }} />
-          Edit product
+          {t('inventory.editProduct')}
         </MenuItem>
         <MenuItem onClick={(e) => { e.stopPropagation(); handleMenuClose(); onClick(); }} dense>
           <ArrowForwardIosIcon sx={{ fontSize: 13, mr: 1.5, color: 'text.secondary' }} />
-          Open detail
+          {t('inventory.openDetail')}
         </MenuItem>
       </Menu>
     </Box>

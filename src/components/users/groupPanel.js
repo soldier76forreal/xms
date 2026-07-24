@@ -5,6 +5,7 @@ import Chip from '@mui/material/Chip';
 import GroupsIcon from '@mui/icons-material/Groups';
 import StarIcon from '@mui/icons-material/Star';
 import { useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 
 const useT = () => {
@@ -27,7 +28,7 @@ const useT = () => {
 const getInitials = (u) =>
   ((u.firstName || '').charAt(0) + (u.lastName || '').charAt(0)).toUpperCase() || '?';
 
-const MemberRow = ({ member, isAdmin, T, apiBase }) => (
+const MemberRow = ({ member, isAdmin, T, apiBase, t }) => (
   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5,
     px: 1.5, py: 1, bgcolor: T.CARD_BG, borderRadius: '8px',
     border: `1px solid ${T.CARD_BD}` }}>
@@ -63,7 +64,7 @@ const MemberRow = ({ member, isAdmin, T, apiBase }) => (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, flexShrink: 0 }}>
         <StarIcon sx={{ fontSize: 13, color: '#FFB74D' }} />
         <Typography sx={{ fontSize: '0.65rem', color: '#FFB74D', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          Admin
+          {t('users.adminBadge')}
         </Typography>
       </Box>
     )}
@@ -72,6 +73,7 @@ const MemberRow = ({ member, isAdmin, T, apiBase }) => (
 
 const GroupPanel = ({ group }) => {
   const T           = useT();
+  const { t }       = useTranslation();
   const axiosGlobal = useContext(AxiosGlobal);
   const apiBase     = axiosGlobal?.defaultTargetApi || '';
   if (!group) return null;
@@ -109,7 +111,7 @@ const GroupPanel = ({ group }) => {
             {members.length}
           </Typography>
           <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.8, mt: 0.25 }}>
-            Members
+            {t('users.membersStat')}
           </Typography>
         </Box>
         {adminCount > 0 && (
@@ -120,7 +122,7 @@ const GroupPanel = ({ group }) => {
                 {adminCount}
               </Typography>
               <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.8, mt: 0.25 }}>
-                Admin{adminCount !== 1 ? 's' : ''}
+                {t('users.adminsStat', { count: adminCount })}
               </Typography>
             </Box>
           </>
@@ -133,7 +135,7 @@ const GroupPanel = ({ group }) => {
                 {permissions.length}
               </Typography>
               <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.8, mt: 0.25 }}>
-                Perms
+                {t('users.permsStat')}
               </Typography>
             </Box>
           </>
@@ -144,7 +146,7 @@ const GroupPanel = ({ group }) => {
       {permissions.length > 0 && (
         <Box sx={{ mb: 2.5 }}>
           <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-            Extra Permissions
+            {t('users.extraPermissions')}
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             {permissions.map(key => (
@@ -160,11 +162,11 @@ const GroupPanel = ({ group }) => {
 
       {/* Members list */}
       <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-        Members
+        {t('users.membersHeader')}
       </Typography>
       {members.length === 0 ? (
         <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_TER, textAlign: 'center', py: 3 }}>
-          No members yet
+          {t('users.noMembersYet')}
         </Typography>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
@@ -182,6 +184,7 @@ const GroupPanel = ({ group }) => {
                 isAdmin={adminIds.includes(String(m._id))}
                 T={T}
                 apiBase={apiBase}
+                t={t}
               />
             ))
           }

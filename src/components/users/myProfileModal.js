@@ -8,13 +8,27 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
+import Switch from '@mui/material/Switch';
 import CloseIcon from '@mui/icons-material/Close';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import { pushSupported, enablePushNotifications } from '../../tools/pushNotifications';
+
+// Per-type push categories (must match the backend notificationPrefs keys).
+const NOTIF_TYPES = [
+  { key: 'tasks',         labelKey: 'users.notifTypeTasks' },
+  { key: 'assignments',   labelKey: 'users.notifTypeAssignments' },
+  { key: 'invoices',      labelKey: 'users.notifTypeInvoices' },
+  { key: 'dmChat',        labelKey: 'users.notifTypeDmChat' },
+  { key: 'readyToUpload', labelKey: 'users.notifTypeReadyToUpload' },
+];
+const DEFAULT_NOTIF_PREFS = { tasks: true, assignments: true, invoices: true, dmChat: true, readyToUpload: true };
 
 // ── My Profile modal ──────────────────────────────────────────────────────────
 // Self-service: any user edits their OWN name + profile picture (backend:
@@ -25,6 +39,7 @@ const MyProfileModal = ({ open, onClose }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const theme       = useTheme();
+  const { t }       = useTranslation();
   const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
   const isDark      = theme.palette.mode === 'dark';
 
@@ -61,6 +76,11 @@ const MyProfileModal = ({ open, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState('');
+  const [notifPrefs, setNotifPrefs] = useState(DEFAULT_NOTIF_PREFS);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushState, setPushState] = useState(
+    (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported'
+  );
   const fileInputRef = useRef(null);
 
   // Fresh copy of the user's own record — the JWT payload can be stale.
@@ -81,17 +101,35 @@ const MyProfileModal = ({ open, onClose }) => {
         const thumb = u.profileImage?.thumbnail || u.profileImage?.url;
         setAvatarPreview(thumb ? `${axiosGlobal.defaultTargetApi}${thumb}` : null);
       } catch {
-        setError('Failed to load profile');
+        setError(t('users.failedLoadProfile'));
       }
+      try {
+        const prefRes = await authCtx.jwtInst({
+          method: 'get', url: `${axiosGlobal.defaultTargetApi}/users/me/notification-prefs`,
+        });
+        setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...(prefRes.data || {}) });
+      } catch { /* keep defaults */ }
+      setPushState((typeof Notification !== 'undefined') ? Notification.permission : 'unsupported');
       setLoading(false);
     })();
   }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleNotif = (key) => setNotifPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const enableOnThisDevice = async () => {
+    setPushBusy(true);
+    const res = await enablePushNotifications(authCtx, axiosGlobal);
+    setPushState(res === 'granted' ? 'granted' : (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'));
+    setPushBusy(false);
+    if (res === 'granted') dispatch(actions.setShowSnackBar({ status: true, msg: t('users.notifsEnabledDevice'), type: 'success' }));
+    else if (res === 'denied') dispatch(actions.setShowSnackBar({ status: true, msg: t('users.notifsBlockedBrowser'), type: 'error' }));
+  };
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
+    if (!file.type.startsWith('image/')) { setError(t('users.selectImageFile')); return; }
     setAvatarFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setAvatarPreview(reader.result);
@@ -99,14 +137,19 @@ const MyProfileModal = ({ open, onClose }) => {
   };
 
   const handleSave = async () => {
-    if (!firstName.trim()) { setError('First name is required'); return; }
-    if (!lastName.trim())  { setError('Last name is required');  return; }
+    if (!firstName.trim()) { setError(t('users.firstNameRequired')); return; }
+    if (!lastName.trim())  { setError(t('users.lastNameRequired'));  return; }
     setSaving(true); setError('');
     try {
       await authCtx.jwtInst({
         method: 'put',
         url: `${axiosGlobal.defaultTargetApi}/users/me/profile`,
         data: { firstName: firstName.trim(), lastName: lastName.trim() },
+      });
+      await authCtx.jwtInst({
+        method: 'put',
+        url: `${axiosGlobal.defaultTargetApi}/users/me/notification-prefs`,
+        data: notifPrefs,
       });
       if (avatarFile) {
         const fd = new FormData();
@@ -117,11 +160,11 @@ const MyProfileModal = ({ open, onClose }) => {
           data: fd,
         });
       }
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Profile updated', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.profileUpdated'), type: 'success' }));
       dispatch(actions.setUserProfileRefresh());
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to save profile');
+      setError(err?.response?.data?.message || t('users.failedSaveProfile'));
     } finally {
       setSaving(false);
     }
@@ -139,7 +182,7 @@ const MyProfileModal = ({ open, onClose }) => {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          My Profile
+          {t('users.myProfile')}
         </Typography>
         <IconButton onClick={onClose} size="small" sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -182,27 +225,60 @@ const MyProfileModal = ({ open, onClose }) => {
             </Box>
             <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleAvatarChange} />
             <Box>
-              <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_PRI, fontWeight: 500 }}>Profile photo</Typography>
-              <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mt: 0.3 }}>Click the avatar to change it</Typography>
+              <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_PRI, fontWeight: 500 }}>{t('users.profilePhoto')}</Typography>
+              <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mt: 0.3 }}>{t('users.clickAvatarToChange')}</Typography>
             </Box>
           </Box>
 
           <Divider sx={{ borderColor: T.DIVIDER }} />
 
           <Box sx={{ display: 'flex', gap: 2, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-            <TextField label="First name" size="small" fullWidth value={firstName}
+            <TextField label={t('users.firstNameLabel')} size="small" fullWidth value={firstName}
               onChange={(e) => { setFirstName(e.target.value); setError(''); }} sx={inputSx} />
-            <TextField label="Last name" size="small" fullWidth value={lastName}
+            <TextField label={t('users.lastNameLabel')} size="small" fullWidth value={lastName}
               onChange={(e) => { setLastName(e.target.value); setError(''); }} sx={inputSx} />
           </Box>
 
           {/* Phone is the login identity — read-only here */}
-          <TextField label="Phone number" size="small" fullWidth value={phone} disabled
+          <TextField label={t('users.phoneNumberLabel')} size="small" fullWidth value={phone} disabled
             inputProps={{ dir: 'ltr' }}
-            helperText="Your phone number is your sign-in identity — an admin can change it."
+            helperText={t('users.phoneIdentityHelper')}
             sx={{ ...inputSx,
               '& .MuiFormHelperText-root': { color: T.TEXT_TER, fontSize: '0.66rem' },
               '& .Mui-disabled': { WebkitTextFillColor: 'unset', color: T.TEXT_SEC } }} />
+
+          <Divider sx={{ borderColor: T.DIVIDER }} />
+
+          {/* ── Notifications ── */}
+          <Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+              <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, fontWeight: 600 }}>
+                {t('users.notificationsHeader')}
+              </Typography>
+              {pushSupported() && pushState !== 'granted' && (
+                <Button size="small" onClick={enableOnThisDevice} disabled={pushBusy}
+                  startIcon={pushBusy ? <CircularProgress size={12} color="inherit" /> : <NotificationsActiveIcon sx={{ fontSize: 15 }} />}
+                  sx={{ textTransform: 'none', fontSize: '0.72rem', color: T.TEXT_PRI,
+                    border: `1px solid ${T.INPUT_BD}`, borderRadius: '8px', px: 1.25, py: '2px' }}>
+                  {pushState === 'denied' ? t('users.blockedInBrowser') : t('users.enableOnThisDevice')}
+                </Button>
+              )}
+              {pushState === 'granted' && (
+                <Typography sx={{ fontSize: '0.68rem', color: '#81C784', fontWeight: 600 }}>
+                  {t('users.enabledOnThisDevice')}
+                </Typography>
+              )}
+            </Box>
+            <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, mb: 1 }}>
+              {t('users.choosePushNote')}
+            </Typography>
+            {NOTIF_TYPES.map(({ key, labelKey }) => (
+              <Box key={key} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 0.25 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_SEC }}>{t(labelKey)}</Typography>
+                <Switch size="small" checked={notifPrefs[key] !== false} onChange={() => toggleNotif(key)} />
+              </Box>
+            ))}
+          </Box>
 
           {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
         </Box>
@@ -212,7 +288,7 @@ const MyProfileModal = ({ open, onClose }) => {
         <Button onClick={onClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none',
             '&:hover': { color: T.TEXT_PRI, bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={saving || loading}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
@@ -220,7 +296,7 @@ const MyProfileModal = ({ open, onClose }) => {
             textTransform: 'none',
             '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' } }}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? t('users.saving') : t('common.save')}
         </Button>
       </DialogActions>
     </Dialog>

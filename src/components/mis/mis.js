@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import { useLocation, useHistory } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import InputBase from '@mui/material/InputBase';
@@ -57,13 +59,19 @@ const STATUS_BY_TAB = {
 };
 
 const SORT_OPTIONS = [
-  { value: 'issueDate',   label: 'Newest first' },
-  { value: '-issueDate',  label: 'Oldest first' },
-  { value: 'docNumber',   label: 'Number (high→low)' },
-  { value: '-docNumber',  label: 'Number (low→high)' },
-  { value: 'grandTotal',  label: 'Total (high→low)' },
-  { value: '-grandTotal', label: 'Total (low→high)' },
+  { value: 'issueDate',   labelKey: 'mis.sortNewestFirst' },
+  { value: '-issueDate',  labelKey: 'mis.sortOldestFirst' },
+  { value: 'docNumber',   labelKey: 'mis.sortNumberHighLow' },
+  { value: '-docNumber',  labelKey: 'mis.sortNumberLowHigh' },
+  { value: 'grandTotal',  labelKey: 'mis.sortTotalHighLow' },
+  { value: '-grandTotal', labelKey: 'mis.sortTotalLowHigh' },
 ];
+
+const STATUS_LABEL_KEYS = {
+  draft: 'mis.statusDraft', sent: 'mis.statusSent', accepted: 'mis.statusAccepted',
+  converted: 'mis.statusConverted', expired: 'mis.statusExpired', issued: 'mis.statusIssued',
+  paid: 'mis.statusPaid', partially_paid: 'mis.statusPartial', cancelled: 'mis.statusCancelled',
+};
 
 const DEFAULT_FILTER = { search: '', status: '', dateFrom: '', dateTo: '', sort: 'issueDate', createdBy: '' };
 
@@ -77,12 +85,15 @@ function useDebounce(value, delay) {
 }
 
 export default function Mis() {
+  const { t } = useTranslation();
   const theme   = useTheme();
   const isDark  = theme.palette.mode === 'dark';
   const isMob   = useMediaQuery(theme.breakpoints.down('md'));
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const location    = useLocation();
+  const history     = useHistory();
   const { can, scopeFor } = usePermissions();
   const { activeBranchId } = useBranch();
   const misScope = scopeFor('mis');
@@ -169,6 +180,18 @@ export default function Mis() {
     setHasMore(invoices.length < total);
   }, [invoices, total]);
 
+  // Deep link from a notification click: /mis?open=<invoiceId> opens that doc's
+  // detail (invoiceDetail re-fetches by id). The param is cleared afterwards so
+  // it doesn't re-trigger on later re-renders.
+  useEffect(() => {
+    const openId = new URLSearchParams(location.search).get('open');
+    if (!openId) return;
+    setSelectedDoc({ _id: openId });
+    if (isMob) setMobileDetail(true);
+    history.replace('/mis');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
   const setF = (key, value) => setFilter(f => ({ ...f, [key]: value }));
   const clearFilters = () => setFilter(DEFAULT_FILTER);
 
@@ -219,18 +242,18 @@ export default function Mis() {
         borderBottom: `1px solid ${T.BD}`, flexShrink: 0, flexWrap: 'wrap' }}>
 
         <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
-          Invoices
+          {t('mis.pageTitle')}
         </Typography>
 
         {/* The three tabs — Invoice | Pre-invoice | All (just a docType filter) */}
         <Box sx={{ display: 'flex', gap: 0.5, bgcolor: T.CTRL_BG, borderRadius: '9px',
           p: '3px', border: `1px solid ${T.BD}`, flexShrink: 0 }}>
           {[
-            { id: 'invoice',     Icon: ReceiptLongIcon,  label: 'Invoice' },
-            { id: 'pre_invoice', Icon: RequestQuoteIcon, label: 'Pre-invoice' },
-            { id: 'all',         Icon: null,             label: 'All' },
-          ].map(({ id, Icon, label }) => (
-            <Tooltip key={id} title={isMob ? label : ''}>
+            { id: 'invoice',     Icon: ReceiptLongIcon,  labelKey: 'mis.invoiceType' },
+            { id: 'pre_invoice', Icon: RequestQuoteIcon, labelKey: 'mis.preInvoiceTab' },
+            { id: 'all',         Icon: null,             labelKey: 'mis.allTab' },
+          ].map(({ id, Icon, labelKey }) => (
+            <Tooltip key={id} title={isMob ? t(labelKey) : ''}>
               <Button size="small" onClick={() => setTab(id)}
                 sx={{ minWidth: 0, height: 24, px: isMob ? '6px' : 1, py: 0, borderRadius: '7px',
                   fontSize: '0.7rem', fontWeight: tab === id ? 700 : 400, textTransform: 'none',
@@ -240,7 +263,7 @@ export default function Mis() {
                   gap: isMob ? 0 : 0.5,
                 }}>
                 {Icon && <Icon sx={{ fontSize: 14 }} />}
-                {(!isMob || !Icon) && label}
+                {(!isMob || !Icon) && t(labelKey)}
               </Button>
             </Tooltip>
           ))}
@@ -251,7 +274,7 @@ export default function Mis() {
           border: `1px solid ${T.BD}` }}>
           <SearchIcon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />
           <InputBase value={filter.search} onChange={(e) => setF('search', e.target.value)}
-            placeholder="Search number, customer, code…"
+            placeholder={t('mis.searchPlaceholder')}
             sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, flex: 1,
               '& input::placeholder': { color: T.TEXT_TER } }} />
           {filter.search && (
@@ -261,7 +284,7 @@ export default function Mis() {
           )}
         </Box>
 
-        <Tooltip title="Filters">
+        <Tooltip title={t('common.filters')}>
           <IconButton size="small" onClick={() => setFilterOpen(!filterOpen)}
             sx={{ color: activeFilterCount > 0 ? T.TEXT_PRI : T.TEXT_TER,
               bgcolor: filterOpen ? T.CTRL_BG : 'transparent',
@@ -285,20 +308,20 @@ export default function Mis() {
         <Box sx={{ flexGrow: 1 }} />
 
         {can('mis:invoice:create') && (
-          <Tooltip title={isMob ? 'New invoice' : ''}>
+          <Tooltip title={isMob ? t('mis.newInvoice') : ''}>
             <Button variant="contained" size="small"
               onClick={() => openNewForm('invoice')}
               sx={{ fontSize: '0.75rem', height: 30, borderRadius: '8px',
                 textTransform: 'none', fontWeight: 600, flexShrink: 0,
                 minWidth: isMob ? 30 : 'auto', px: isMob ? '5px' : undefined }}>
               <AddIcon sx={{ fontSize: 17 }} />
-              {!isMob && <Box component="span" sx={{ ml: 0.5 }}>New invoice</Box>}
+              {!isMob && <Box component="span" sx={{ ml: 0.5 }}>{t('mis.newInvoice')}</Box>}
             </Button>
           </Tooltip>
         )}
 
         {can('mis:preinvoice:create') && (
-          <Tooltip title={isMob ? 'New quote' : ''}>
+          <Tooltip title={isMob ? t('mis.newQuote') : ''}>
             <Button variant="outlined" size="small"
               onClick={() => openNewForm('pre_invoice')}
               sx={{ fontSize: '0.75rem', height: 30, borderRadius: '8px',
@@ -306,13 +329,13 @@ export default function Mis() {
                 color: T.TEXT_SEC, borderColor: T.BD2,
                 minWidth: isMob ? 30 : 'auto', px: isMob ? '5px' : undefined }}>
               <AddIcon sx={{ fontSize: 17 }} />
-              {!isMob && <Box component="span" sx={{ ml: 0.5 }}>New quote</Box>}
+              {!isMob && <Box component="span" sx={{ ml: 0.5 }}>{t('mis.newQuote')}</Box>}
             </Button>
           </Tooltip>
         )}
 
         {can('mis:settings:edit') && (
-          <Tooltip title="Invoice template settings">
+          <Tooltip title={t('mis.templateSettingsTitle')}>
             <IconButton size="small" onClick={() => setSettingsOpen(true)}
               sx={{ color: T.TEXT_TER, border: `1px solid ${T.BD}`,
                 borderRadius: '8px', width: 30, height: 30, flexShrink: 0 }}>
@@ -343,7 +366,7 @@ export default function Mis() {
             <Box sx={{ px: 2, py: 0.75, display: 'flex', alignItems: 'center', gap: 1,
               borderBottom: `1px solid ${T.BD}` }}>
               <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>
-                {total > 0 ? `${total} document${total !== 1 ? 's' : ''}` : 'No documents'}
+                {total > 0 ? t('mis.documentsCount', { count: total }) : t('mis.noDocuments')}
               </Typography>
               <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
                 <PageSizeSelect value={pageSize} onChange={setPageSize}
@@ -356,7 +379,7 @@ export default function Mis() {
                     '& .MuiSvgIcon-root': { color: T.TEXT_TER } }}>
                   {SORT_OPTIONS.map(o => (
                     <MenuItem key={o.value} value={o.value} sx={{ fontSize: '0.75rem' }}>
-                      {o.label}
+                      {t(o.labelKey)}
                     </MenuItem>
                   ))}
                 </Select>
@@ -383,13 +406,13 @@ export default function Mis() {
                   <ReceiptLongIcon sx={{ fontSize: 48, color: T.TEXT_TER, mb: 1.5 }} />
                   <Typography sx={{ fontSize: '0.875rem', color: T.TEXT_SEC, fontWeight: 600, mb: 0.5 }}>
                     {activeFilterCount > 0 || filter.search
-                      ? 'No documents match these filters'
-                      : 'No invoices yet'}
+                      ? t('mis.noDocumentsMatchFilters')
+                      : t('mis.noInvoicesYet')}
                   </Typography>
                   {(activeFilterCount > 0 || filter.search) && (
                     <Button size="small" onClick={clearFilters}
                       sx={{ mt: 1.5, fontSize: '0.75rem', textTransform: 'none', color: T.TEXT_TER }}>
-                      Clear filters
+                      {t('mis.clearFilters')}
                     </Button>
                   )}
                 </Box>
@@ -442,7 +465,7 @@ export default function Mis() {
             <Box sx={{ textAlign: 'center' }}>
               <ReceiptLongIcon sx={{ fontSize: 40, color: T.TEXT_TER, mb: 1 }} />
               <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>
-                Select a document to view details
+                {t('mis.selectDocumentPrompt')}
               </Typography>
             </Box>
           </Box>
@@ -457,7 +480,7 @@ export default function Mis() {
         <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5,
           borderBottom: `1px solid ${T.BD}` }}>
           <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-            Filters
+            {t('common.filters')}
           </Typography>
           <IconButton size="small" onClick={() => setFilterOpen(false)} sx={{ color: T.TEXT_TER }}>
             <CloseIcon sx={{ fontSize: 16 }} />
@@ -467,35 +490,35 @@ export default function Mis() {
         <Box sx={{ px: 2, py: 2, display: 'flex', flexDirection: 'column', gap: 2.5, overflowY: 'auto' }}>
 
           <FormControl size="small" fullWidth>
-            <InputLabel sx={{ fontSize: '0.78rem' }}>Status</InputLabel>
-            <Select value={filter.status} onChange={(e) => setF('status', e.target.value)} label="Status"
+            <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.status')}</InputLabel>
+            <Select value={filter.status} onChange={(e) => setF('status', e.target.value)} label={t('common.status')}
               sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
-              <MenuItem value=""><em>All</em></MenuItem>
+              <MenuItem value=""><em>{t('common.all')}</em></MenuItem>
               {STATUS_BY_TAB[tab].map(s => (
                 <MenuItem key={s} value={s} sx={{ fontSize: '0.8rem' }}>
-                  {s.replace('_', ' ')}
+                  {t(STATUS_LABEL_KEYS[s] || s)}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          <TextField size="small" label="From date" type="date" value={filter.dateFrom}
+          <TextField size="small" label={t('mis.fromDateLabel')} type="date" value={filter.dateFrom}
             onChange={(e) => setF('dateFrom', e.target.value)}
             InputLabelProps={{ shrink: true, style: { fontSize: '0.78rem' } }}
             inputProps={{ style: { fontSize: '0.8rem' } }}
             sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }} />
 
-          <TextField size="small" label="To date" type="date" value={filter.dateTo}
+          <TextField size="small" label={t('mis.toDateLabel')} type="date" value={filter.dateTo}
             onChange={(e) => setF('dateTo', e.target.value)}
             InputLabelProps={{ shrink: true, style: { fontSize: '0.78rem' } }}
             inputProps={{ style: { fontSize: '0.8rem' } }}
             sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }} />
 
           <FormControl size="small" fullWidth disabled={createdByDisabled}>
-            <InputLabel sx={{ fontSize: '0.78rem' }}>Created by</InputLabel>
-            <Select value={createdByDisabled ? '' : filter.createdBy} onChange={(e) => setF('createdBy', e.target.value)} label="Created by"
+            <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.createdBy')}</InputLabel>
+            <Select value={createdByDisabled ? '' : filter.createdBy} onChange={(e) => setF('createdBy', e.target.value)} label={t('common.createdBy')}
               sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
-              <MenuItem value=""><em>Anyone</em></MenuItem>
+              <MenuItem value=""><em>{t('common.anyone')}</em></MenuItem>
               {creators.map(c => (
                 <MenuItem key={c._id} value={c._id} sx={{ fontSize: '0.8rem' }}>{c.name}</MenuItem>
               ))}
@@ -503,14 +526,14 @@ export default function Mis() {
           </FormControl>
           {createdByDisabled && (
             <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
-              Disabled — your Invoices access is scoped to your own records
+              {t('mis.scopeDisabledNote')}
             </Typography>
           )}
 
           {activeFilterCount > 0 && (
             <Button size="small" onClick={clearFilters}
               sx={{ fontSize: '0.75rem', textTransform: 'none', color: T.TEXT_TER, alignSelf: 'flex-start' }}>
-              Clear all
+              {t('mis.clearAll')}
             </Button>
           )}
         </Box>
@@ -528,9 +551,9 @@ export default function Mis() {
         open={Boolean(confirmConvert)}
         onClose={() => setConfirmConvert(null)}
         onConfirm={handleConvert}
-        title={confirmConvert ? `Convert quotation #${confirmConvert.docNumber} to an invoice?` : ''}
-        message="A new invoice will be created with a new number, copying the customer and line items. The quotation will be marked as converted."
-        confirmLabel="Convert"
+        title={confirmConvert ? t('mis.convertConfirmTitle', { number: confirmConvert.docNumber }) : ''}
+        message={t('mis.convertConfirmMessage')}
+        confirmLabel={t('mis.convert')}
       />
 
       {/* ── Send to — assign a document to one or more users (card menu) ── */}

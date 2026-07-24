@@ -10,6 +10,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -17,6 +18,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 
 // ── Rename dialog (Phase 9 redesign — same props as the legacy modal) ─────────
 export default function RenameModal(props) {
+  const { t }       = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -43,7 +45,7 @@ export default function RenameModal(props) {
   const handleClose = () => props.setOpenRenameModal(false);
 
   const renameFolder = async () => {
-    if (!String(props.renameFolder || '').trim()) { setError('Enter a name'); return; }
+    if (!String(props.renameFolder || '').trim()) { setError(t('files.enterAName')); return; }
     setLoading(true); setError('');
     try {
       await authCtx.jwtInst({
@@ -52,12 +54,12 @@ export default function RenameModal(props) {
         data: { typeId: props.fileFolderIdType, newName: String(props.renameFolder).trim() },
       });
       dispatch(actions.refresh());
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Renamed', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('files.renamed'), type: 'success' }));
       setLoading(false);
       handleClose();
     } catch (err) {
       setLoading(false);
-      setError(err?.response?.data?.message || 'Failed to rename');
+      setError(err?.response?.data?.message || t('files.failedToRename'));
     }
   };
 
@@ -72,7 +74,7 @@ export default function RenameModal(props) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
         <DriveFileRenameOutlineIcon sx={{ fontSize: 18, color: T.TEXT_SEC }} />
         <Typography sx={{ flexGrow: 1, fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          Rename
+          {t('files.renameHeader')}
         </Typography>
         <IconButton size="small" onClick={handleClose} sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -80,7 +82,7 @@ export default function RenameModal(props) {
       </Box>
 
       <Box sx={{ px: 3, pt: 2.5, pb: 1 }}>
-        <TextField autoFocus fullWidth size="small" placeholder="New name"
+        <TextField autoFocus fullWidth size="small" placeholder={t('files.newNamePlaceholder')}
           value={props.renameFolder}
           onChange={(e) => { props.setRenameFolder(e.target.value); setError(''); }}
           onKeyDown={(e) => e.key === 'Enter' && renameFolder()}
@@ -98,14 +100,14 @@ export default function RenameModal(props) {
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 1.5, gap: 1 }}>
         <Button onClick={handleClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={renameFolder} disabled={loading}
           startIcon={loading ? <CircularProgress size={13} color="inherit" /> : null}
           sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
             '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' } }}>
-          {loading ? 'Saving…' : 'Rename'}
+          {loading ? t('users.saving') : t('files.renameHeader')}
         </Button>
       </DialogActions>
     </Dialog>

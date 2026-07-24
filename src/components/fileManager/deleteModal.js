@@ -9,6 +9,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -17,6 +18,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 // ── Delete confirmation (Phase 9 redesign — same props as the legacy modal:
 // deleteCount 'single' uses fileFolderIdType, 'multi' uses selectedItems) ─────
 export default function DeleteModal(props) {
+  const { t }       = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -52,12 +54,12 @@ export default function DeleteModal(props) {
       });
       dispatch(actions.refresh());
       dispatch(actions.unselectAll());
-      dispatch(actions.setShowSnackBar({ status: true, msg: count === 1 ? 'Item deleted' : `${count} items deleted`, type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('files.itemsDeleted', { count }), type: 'success' }));
       setLoading(false);
       handleClose();
     } catch (err) {
       setLoading(false);
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to delete', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedDelete'), type: 'error' }));
     }
   };
 
@@ -73,7 +75,7 @@ export default function DeleteModal(props) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
         <DeleteOutlineIcon sx={{ fontSize: 18, color: '#EA005A' }} />
         <Typography sx={{ flexGrow: 1, fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          Delete {count === 1 ? 'item' : `${count} items`}
+          {count === 1 ? t('files.deleteItemSingle') : t('files.deleteItemsMulti', { count })}
         </Typography>
         <IconButton size="small" onClick={handleClose} sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -82,22 +84,21 @@ export default function DeleteModal(props) {
 
       <Box sx={{ px: 3, py: 2.5 }}>
         <Typography sx={{ fontSize: '0.85rem', color: T.TEXT_SEC, lineHeight: 1.6 }}>
-          {count === 1 ? 'This item' : `These ${count} items`} will be deleted
-          {count === 1 ? '' : ' along with everything inside any selected folders'}. This cannot be undone.
+          {count === 1 ? t('files.deleteBodySingle') : t('files.deleteBodyMulti', { count })}
         </Typography>
       </Box>
 
       <DialogActions sx={{ px: 3, pb: 2.5, pt: 0, gap: 1 }}>
         <Button onClick={handleClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: T.HVR_BG, color: T.TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={deleteFileFolder} disabled={loading}
           startIcon={loading ? <CircularProgress size={13} color="inherit" /> : <DeleteOutlineIcon sx={{ fontSize: 15 }} />}
           sx={{ bgcolor: '#EA005A', color: '#fff', fontWeight: 700, borderRadius: '8px', px: 3, textTransform: 'none',
             '&:hover': { bgcolor: '#c00048' },
             '&.Mui-disabled': { bgcolor: 'rgba(234,0,90,0.35)', color: 'rgba(255,255,255,0.5)' } }}>
-          {loading ? 'Deleting…' : 'Delete'}
+          {loading ? t('common.deleting') : t('common.delete')}
         </Button>
       </DialogActions>
     </Dialog>

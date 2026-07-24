@@ -16,6 +16,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import IconButton from '@mui/material/IconButton';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -76,21 +77,22 @@ const EMPTY_ICONS = {
   branches: StoreIcon,
   tasks:    AssignmentIcon,
 };
-const EMPTY_LABELS = {
-  users:    'Select a user to view details',
-  roles:    'Select a role to view its permissions',
-  groups:   'Select a group to view its members',
-  branches: 'Create and manage isolated Inventory / Invoice branches',
-  tasks:    'Select a task to view details',
+const EMPTY_LABEL_KEYS = {
+  users:    'users.selectUserToViewDetails',
+  roles:    'users.selectRoleToViewPerms',
+  groups:   'users.selectGroupToViewMembers',
+  branches: 'users.branchesEmptyHint',
+  tasks:    'users.selectTaskToViewDetails',
 };
 const EmptyPanel = ({ tab, T }) => {
+  const { t } = useTranslation();
   const Icon = EMPTY_ICONS[tab] || PeopleAltIcon;
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       height: '100%', gap: 1.5, opacity: 0.35, p: 4 }}>
       <Icon sx={{ fontSize: 42, color: T.TEXT_TER }} />
       <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_SEC, textAlign: 'center' }}>
-        {EMPTY_LABELS[tab]}
+        {t(EMPTY_LABEL_KEYS[tab])}
       </Typography>
     </Box>
   );
@@ -98,6 +100,7 @@ const EmptyPanel = ({ tab, T }) => {
 
 // ── My Profile card ───────────────────────────────────────────────────────────
 const MyProfileCard = ({ user, apiBase, selected, onClick, T }) => {
+  const { t } = useTranslation();
   const isDark = T.isDark;
   const initials = ((user.firstName || '')[0] || '') + ((user.lastName || '')[0] || '') || '?';
   return (
@@ -134,7 +137,7 @@ const MyProfileCard = ({ user, apiBase, selected, onClick, T }) => {
       </Box>
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: T.TEXT_PRI, lineHeight: 1.3 }}>
-          My Profile
+          {t('users.myProfileLabel')}
         </Typography>
         <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC }} noWrap>
           {user.firstName} {user.lastName}
@@ -152,6 +155,7 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
   const dispatch    = useDispatch();
   const apiBase     = axiosGlobal.defaultTargetApi;
   const T           = useT();
+  const { t }       = useTranslation();
   const currentUserId = String(authCtx.decode?.id || authCtx.decode?._id || '');
 
   const [users,           setUsers]           = useState([]);
@@ -163,8 +167,8 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
   const [formOpen,        setFormOpen]        = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 350);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(timer);
   }, [search]);
 
   const fetchUsers = useCallback(async () => {
@@ -181,7 +185,7 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
       setUsers(all.filter(u => String(u._id) !== currentUserId));
       setTotal(res.data.total || 0);
     } catch {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load users', type: 'error' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedLoadUsers'), type: 'error' }));
     } finally {
       setLoading(false);
     }
@@ -211,7 +215,7 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexWrap: 'wrap' }}>
         <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI, flexGrow: 1 }}>
-          Users
+          {t('users.usersHeader')}
           {total > 0 && (
             <Box component="span" sx={{ ml: 1.5, fontSize: '0.75rem', fontWeight: 400, color: T.TEXT_SEC }}>
               {total}
@@ -224,12 +228,12 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
             sx={{ bgcolor: T.BTN_BG, color: T.BTN_CLR, fontWeight: 600,
               borderRadius: '8px', px: 1.75, py: '5px', fontSize: '0.78rem', textTransform: 'none',
               '&:hover': { bgcolor: T.isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' } }}>
-            New
+            {t('users.newShort')}
           </Button>
         </Can>
       </Box>
 
-      <TextField fullWidth size="small" placeholder="Search name or phone…"
+      <TextField fullWidth size="small" placeholder={t('users.searchNameOrPhone')}
         value={search} onChange={e => setSearch(e.target.value)}
         InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ fontSize: 16, color: T.TEXT_SEC }} /></InputAdornment> }}
         sx={{
@@ -259,7 +263,7 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
             <Box sx={{ flexGrow: 1, height: '1px', bgcolor: T.DIVIDER }} />
             <Typography sx={{ fontSize: '0.62rem', color: T.TEXT_TER, textTransform: 'uppercase',
               letterSpacing: '0.08em', flexShrink: 0 }}>
-              Team
+              {t('users.teamDivider')}
             </Typography>
             <Box sx={{ flexGrow: 1, height: '1px', bgcolor: T.DIVIDER }} />
           </Box>
@@ -272,7 +276,7 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
         </Box>
       ) : users.length === 0 ? (
         <Typography sx={{ textAlign: 'center', color: T.TEXT_SEC, py: 6, fontSize: '0.875rem' }}>
-          {debouncedSearch ? 'No users match your search' : 'No other users yet'}
+          {debouncedSearch ? t('users.noUsersMatchSearch') : t('users.noOtherUsersYet')}
         </Typography>
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
@@ -291,22 +295,26 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
 };
 
 // ── Mobile detail header with back arrow ─────────────────────────────────────
-const MobileDetailHeader = ({ onBack, T }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 1,
-    borderBottom: `1px solid ${T.DIVIDER}`, bgcolor: T.BG, flexShrink: 0 }}>
-    <IconButton onClick={onBack} size="small"
-      sx={{ color: T.TEXT_SEC, '&:hover': { color: T.TEXT_PRI, bgcolor: T.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' } }}>
-      <ArrowBackIcon sx={{ fontSize: 20 }} />
-    </IconButton>
-    <Typography sx={{ fontSize: '0.875rem', color: T.TEXT_SEC, ml: 1 }}>Back</Typography>
-  </Box>
-);
+const MobileDetailHeader = ({ onBack, T }) => {
+  const { t } = useTranslation();
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 1,
+      borderBottom: `1px solid ${T.DIVIDER}`, bgcolor: T.BG, flexShrink: 0 }}>
+      <IconButton onClick={onBack} size="small"
+        sx={{ color: T.TEXT_SEC, '&:hover': { color: T.TEXT_PRI, bgcolor: T.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' } }}>
+        <ArrowBackIcon sx={{ fontSize: 20 }} />
+      </IconButton>
+      <Typography sx={{ fontSize: '0.875rem', color: T.TEXT_SEC, ml: 1 }}>{t('users.backButton')}</Typography>
+    </Box>
+  );
+};
 
 // ── Root Users component ──────────────────────────────────────────────────────
 const Users = () => {
   const authCtx           = useContext(AuthContext);
   const { can, isSuperAdmin } = usePermissions();
   const T                 = useT();
+  const { t }              = useTranslation();
   const theme           = useTheme();
   const isMd            = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -345,11 +353,11 @@ const Users = () => {
   // Roles / Groups / Branches are superAdmin-only (backend gates them with
   // requireSuperAdmin — never a permission key). Tasks stays permission-gated.
   const tabs = [
-    { id: 'users',  label: 'Users'  },
-    ...(isSuperAdmin ? [{ id: 'roles',    label: 'Roles'    }] : []),
-    ...(isSuperAdmin ? [{ id: 'groups',   label: 'Groups'   }] : []),
-    ...(isSuperAdmin ? [{ id: 'branches', label: 'Branches' }] : []),
-    ...(can('tasks:view') ? [{ id: 'tasks', label: 'Tasks' }] : []),
+    { id: 'users',  labelKey: 'users.tabUsers'  },
+    ...(isSuperAdmin ? [{ id: 'roles',    labelKey: 'users.tabRoles'    }] : []),
+    ...(isSuperAdmin ? [{ id: 'groups',   labelKey: 'users.tabGroups'   }] : []),
+    ...(isSuperAdmin ? [{ id: 'branches', labelKey: 'users.tabBranches' }] : []),
+    ...(can('tasks:view') ? [{ id: 'tasks', labelKey: 'users.tabTasks' }] : []),
   ];
 
   // ── Right panel content ─────────────────────────────────────────────────────
@@ -416,9 +424,9 @@ const Users = () => {
                 bgcolor: T.BG,
                 borderBottom: desktopSplit ? `1px solid ${T.DIVIDER}` : 'none',
               }}>
-                {tabs.map(t => (
-                  <TabBtn key={t.id} active={tab === t.id} onClick={() => handleTabChange(t.id)} T={T}>
-                    {t.label}
+                {tabs.map(tabItem => (
+                  <TabBtn key={tabItem.id} active={tab === tabItem.id} onClick={() => handleTabChange(tabItem.id)} T={T}>
+                    {t(tabItem.labelKey)}
                   </TabBtn>
                 ))}
               </Box>

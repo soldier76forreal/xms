@@ -2,6 +2,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
+import { useTranslation } from 'react-i18next';
 
 const UNIT_LABELS = { M2: 'm²', ML: 'ml', PCS: 'pcs', SQFT: 'ft²', LNFT: 'lnft' };
 const GRADE_COLOR = { Q: '#c49a6c', QS: '#c49a6c', W: '#90afc5', E: '#6fa46f', R: '#aaaaaa', T: '#888888' };
@@ -27,6 +28,7 @@ function SpecRow({ label, children }) {
 }
 
 const SpecPanel = ({ product, variants }) => {
+  const { t } = useTranslation();
   if (!product) return null;
 
   const activeVariants = (variants || []).filter((v) => !v.deleteDate && v.status !== 'archived');
@@ -70,26 +72,26 @@ const SpecPanel = ({ product, variants }) => {
         variant="caption"
         sx={{ fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'text.disabled', display: 'block', mb: 1.5 }}
       >
-        Specification
+        {t('inventory.specification')}
       </Typography>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
 
         {/* Identity */}
-        <SpecRow label="Product code">
+        <SpecRow label={t('inventory.productCodeLabel')}>
           <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: 0.5 }}>
             {product.code}
           </Typography>
         </SpecRow>
 
         {product.name && (
-          <SpecRow label="Name">
+          <SpecRow label={t('inventory.nameLabel')}>
             <Typography variant="body2" sx={{ fontWeight: 500 }}>{product.name}</Typography>
           </SpecRow>
         )}
 
         {product.nameAr && (
-          <SpecRow label="Arabic name">
+          <SpecRow label={t('inventory.arabicNameLabel')}>
             <Typography variant="body2" sx={{ fontWeight: 500, direction: 'rtl' }}>
               {product.nameAr}
             </Typography>
@@ -99,7 +101,7 @@ const SpecPanel = ({ product, variants }) => {
         <Divider sx={{ my: 1 }} />
 
         {/* Stock */}
-        <SpecRow label="Overall qty">
+        <SpecRow label={t('inventory.overallQtyLabel')}>
           {unitEntries.length > 0 ? (
             <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
               {unitEntries.map(([unit, qty]) => (
@@ -113,13 +115,13 @@ const SpecPanel = ({ product, variants }) => {
               ))}
             </Box>
           ) : (
-            <Typography variant="body2" sx={{ color: 'text.disabled' }}>No stock</Typography>
+            <Typography variant="body2" sx={{ color: 'text.disabled' }}>{t('inventory.noStock')}</Typography>
           )}
         </SpecRow>
 
         {/* Dimensions */}
         {dims.length > 0 && (
-          <SpecRow label="Dimensions">
+          <SpecRow label={t('inventory.dimensionsLabel')}>
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
               {dims.map((d, i) => (
                 <Chip
@@ -127,7 +129,7 @@ const SpecPanel = ({ product, variants }) => {
                   size="small"
                   label={
                     d.unsized
-                      ? `Slab ${d.thicknessMm} mm`
+                      ? t('inventory.slabThickness', { mm: d.thicknessMm })
                       : `${d.lengthCm} × ${d.widthCm} cm · ${d.thicknessMm} mm`
                   }
                   sx={{ height: 22, fontSize: '0.7rem' }}
@@ -139,7 +141,7 @@ const SpecPanel = ({ product, variants }) => {
 
         {/* Qualities */}
         {grades.length > 0 && (
-          <SpecRow label="Qualities">
+          <SpecRow label={t('inventory.qualitiesLabel')}>
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
               {grades.map(([grade, gradeName]) => {
                 const color = GRADE_COLOR[grade] || '#888';
@@ -158,7 +160,7 @@ const SpecPanel = ({ product, variants }) => {
 
         {/* Category */}
         {product.category && (
-          <SpecRow label="Category">
+          <SpecRow label={t('inventory.categoryLabel')}>
             <Chip
               size="small"
               label={product.category}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -30,21 +31,22 @@ const UNIT_LABELS = { M2: 'm² (square metre)', ML: 'ml (linear metre)', PCS: 'p
 const FINISH_LABEL = { V:'Veincut', C:'Crosscut', F:'Filled', U:'Unfilled', P:'Polished', H:'Honed' };
 
 function ParsePreview({ parsed }) {
+  const { t } = useTranslation();
   if (!parsed) return null;
 
   if (!parsed.valid) {
     return (
       <Box sx={{ p: 1.5, bgcolor: 'error.main', borderRadius: 2, opacity: 0.85 }}>
         <Typography variant="caption" sx={{ color: '#fff', fontWeight: 600 }}>
-          {parsed.parseWarnings?.[0] || 'Invalid code'}
+          {parsed.parseWarnings?.[0] || t('inventory.invalidCode')}
         </Typography>
       </Box>
     );
   }
 
   const dims = parsed.unsized
-    ? `Unsized — ${parsed.thicknessMm} mm`
-    : `${parsed.lengthCm} × ${parsed.widthCm} cm · ${parsed.thicknessMm} mm`;
+    ? t('inventory.unsizedThick', { mm: parsed.thicknessMm })
+    : t('inventory.dimsThickShort', { l: parsed.lengthCm, w: parsed.widthCm, t: parsed.thicknessMm });
 
   const finishParts = [
     parsed.cutName, parsed.fillName, parsed.finishName
@@ -64,7 +66,7 @@ function ParsePreview({ parsed }) {
       }}
     >
       <Chip label={parsed.stoneTypeName} size="small" sx={{ fontSize: '0.7rem' }} />
-      <Typography variant="caption" sx={{ color: 'text.secondary' }}>quarry {parsed.quarryCode}</Typography>
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t('inventory.quarryPrefix', { code: parsed.quarryCode })}</Typography>
       <Chip label={`${parsed.grade} — ${parsed.gradeName}`} size="small" sx={{ fontSize: '0.7rem' }} />
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>{dims}</Typography>
       {finishParts.map((f) => (
@@ -80,6 +82,7 @@ function ParsePreview({ parsed }) {
 }
 
 const VariantForm = ({ productId }) => {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -131,10 +134,10 @@ const VariantForm = ({ productId }) => {
   // Live parse on code change (debounced 350ms)
   useEffect(() => {
     if (!code) { setParsed(null); return; }
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       setParsed(parseStoneCode(code));
     }, 350);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [code]);
 
   const handleClose = useCallback(() => {
@@ -202,9 +205,9 @@ const VariantForm = ({ productId }) => {
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem',
         display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box component="span" sx={{ flexGrow: 1 }}>
-          {isEdit ? `Edit variant — ${editVariant?.code}` : 'Add variant'}
+          {isEdit ? t('inventory.editVariantTitle', { code: editVariant?.code }) : t('inventory.addVariant')}
         </Box>
-        <IconButton size="small" onClick={handleClose} aria-label="Close"
+        <IconButton size="small" onClick={handleClose} aria-label={t('common.close')}
           sx={{ color: 'text.secondary' }}>
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
@@ -215,13 +218,13 @@ const VariantForm = ({ productId }) => {
         {/* Code */}
         <Box>
           <TextField
-            label="Stone code"
+            label={t('inventory.stoneCodeLabel')}
             fullWidth size="small"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="e.g. TR45Q10004018VFP"
+            placeholder={t('inventory.stoneCodePlaceholder')}
             inputProps={{ style: { fontFamily: 'monospace', letterSpacing: 1 } }}
-            helperText="Format: XX##G LLLL WW TT [V|C][F|U][P|H]"
+            helperText={t('inventory.stoneCodeFormat')}
           />
           {/* Live parse preview */}
           {code.length > 0 && (
@@ -231,7 +234,7 @@ const VariantForm = ({ productId }) => {
           )}
           {isDuplicateVariant && (
             <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 600, display: 'block', mt: 0.5 }}>
-              ⚠ Variant {code.trim().toUpperCase()} already exists in this product.
+              {t('inventory.duplicateVariantWarning', { code: code.trim().toUpperCase() })}
             </Typography>
           )}
         </Box>
@@ -239,7 +242,7 @@ const VariantForm = ({ productId }) => {
         {/* Unit */}
         <TextField
           select
-          label="Unit"
+          label={t('inventory.unitLabel')}
           fullWidth size="small"
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
@@ -262,24 +265,24 @@ const VariantForm = ({ productId }) => {
             <Divider />
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
-                label="Initial quantity"
+                label={t('inventory.initialQuantity')}
                 type="number"
                 size="small"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
                 inputProps={{ min: 0, step: 0.1 }}
                 sx={{ flex: 1 }}
-                helperText="Can be 0 and added later"
+                helperText={t('inventory.canBeZero')}
               />
               <TextField
-                label="Price (AED)"
+                label={t('inventory.priceAedLabel')}
                 type="number"
                 size="small"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 inputProps={{ min: 0, step: 1 }}
                 sx={{ flex: 1 }}
-                helperText="Per unit"
+                helperText={t('inventory.perUnit')}
               />
             </Box>
           </>
@@ -289,25 +292,25 @@ const VariantForm = ({ productId }) => {
         {isEdit && (
           <TextField
             select
-            label="Status"
+            label={t('inventory.statusLabel')}
             fullWidth size="small"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
-            <MenuItem value="active">Active</MenuItem>
-            <MenuItem value="archived">Archived</MenuItem>
+            <MenuItem value="active">{t('inventory.statusActive')}</MenuItem>
+            <MenuItem value="archived">{t('inventory.statusArchivedOption')}</MenuItem>
           </TextField>
         )}
 
         {/* Category multi-select */}
         {categories.length > 0 && (
           <FormControl size="small" fullWidth>
-            <InputLabel>Categories</InputLabel>
+            <InputLabel>{t('inventory.categoriesSelectLabel')}</InputLabel>
             <Select
               multiple
               value={selectedCats}
               onChange={(e) => setSelectedCats(e.target.value)}
-              input={<OutlinedInput label="Categories" />}
+              input={<OutlinedInput label={t('inventory.categoriesSelectLabel')} />}
               renderValue={(selected) => (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                   {selected.map((id) => {
@@ -327,14 +330,14 @@ const VariantForm = ({ productId }) => {
         {/* Inline new category creator */}
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
           <TextField
-            label="Add new category"
+            label={t('inventory.addNewCategory')}
             size="small"
             value={newCatName}
             onChange={(e) => setNewCatName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCategory(); }}
             sx={{ flex: 1 }}
             error={catNameExists}
-            helperText={catNameExists ? 'Already exists — select it above' : ''}
+            helperText={catNameExists ? t('inventory.categoryExists') : ''}
           />
           <Button
             size="small"
@@ -344,19 +347,19 @@ const VariantForm = ({ productId }) => {
             startIcon={catBusy ? <CircularProgress size={12} color="inherit" /> : <AddIcon sx={{ fontSize: 14 }} />}
             sx={{ minWidth: 80, height: 40, flexShrink: 0 }}
           >
-            Add
+            {t('common.add')}
           </Button>
         </Box>
 
         {isEdit && (
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            To adjust quantity or price, use the stock-adjust / price buttons on the variants table.
+            {t('inventory.adjustQtyPriceNote')}
           </Typography>
         )}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={handleClose} size="small" disabled={busy}>Cancel</Button>
+        <Button onClick={handleClose} size="small" disabled={busy}>{t('common.cancel')}</Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
@@ -364,7 +367,7 @@ const VariantForm = ({ productId }) => {
           disabled={busy || !code.trim() || (parsed && !parsed.valid) || Boolean(isDuplicateVariant)}
           startIcon={busy ? <CircularProgress size={12} color="inherit" /> : null}
         >
-          {isEdit ? 'Save changes' : 'Add variant'}
+          {isEdit ? t('inventory.saveChanges') : t('inventory.addVariant')}
         </Button>
       </DialogActions>
     </Dialog>

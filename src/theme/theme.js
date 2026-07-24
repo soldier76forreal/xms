@@ -1,8 +1,16 @@
 import { createTheme } from '@mui/material/styles';
 
 // ─── Shared tokens ────────────────────────────────────────────────────────────
-const typography = {
-  fontFamily: '"Inter", "Roboto", sans-serif',
+// "YekanRegular" (already bundled — index.css @font-face, dana-*.woff) covers
+// Persian AND Arabic glyphs properly; Inter falls back to tofu/missing glyphs
+// for both scripts. Prepended only for fa/ar so Latin text still prefers Inter.
+const fontStack = (lang) =>
+  lang === 'fa' || lang === 'ar'
+    ? '"YekanRegular", "Inter", "Roboto", sans-serif'
+    : '"Inter", "Roboto", sans-serif';
+
+const buildTypography = (lang) => ({
+  fontFamily: fontStack(lang),
   fontSize: 14,
   h1: { fontSize: '1.5rem', fontWeight: 700 },
   h2: { fontSize: '1.25rem', fontWeight: 700 },
@@ -16,7 +24,7 @@ const typography = {
   body2: { fontSize: '0.8125rem' },
   caption: { fontSize: '0.75rem' },
   button: { fontSize: '0.875rem', fontWeight: 600, textTransform: 'none' },
-};
+});
 
 const shape = { borderRadius: 10 };
 
@@ -302,7 +310,10 @@ const componentOverrides = (mode) => {
 };
 
 // ─── Light theme ──────────────────────────────────────────────────────────────
-export const lightTheme = createTheme({
+// `direction` ('ltr' | 'rtl') is threaded through for Farsi/Arabic — MUI flips
+// component defaults (Drawer anchor, icon margins, etc.) off this flag.
+export const createLightTheme = (direction = 'ltr', lang = 'en') => createTheme({
+  direction,
   palette: {
     mode: 'light',
     primary: { main: '#000000', contrastText: '#FFFFFF' },
@@ -318,13 +329,14 @@ export const lightTheme = createTheme({
       disabledBackground: 'rgba(0,0,0,0.06)',
     },
   },
-  typography,
+  typography: buildTypography(lang),
   shape,
   components: componentOverrides('light'),
 });
 
 // ─── Dark theme ───────────────────────────────────────────────────────────────
-export const darkTheme = createTheme({
+export const createDarkTheme = (direction = 'ltr', lang = 'en') => createTheme({
+  direction,
   palette: {
     mode: 'dark',
     primary: { main: '#FFFFFF', contrastText: '#000000' },
@@ -344,7 +356,7 @@ export const darkTheme = createTheme({
       disabledBackground: 'rgba(255,255,255,0.06)',
     },
   },
-  typography,
+  typography: buildTypography(lang),
   shape,
   components: componentOverrides('dark'),
 });

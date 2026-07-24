@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
@@ -30,6 +31,7 @@ const fmtTime = (d) => {
 // Telegram-style. One Socket.io room per rawContentId; the frontend joins on
 // mount and leaves on unmount (dm:joinRawContent / dm:leaveRawContent).
 export default function RawContentChat({ rawContentId, T, isDark }) {
+  const { t }       = useTranslation();
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
@@ -119,7 +121,7 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
       chunksRef.current = [];
       recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recorder.onstop = () => {
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((track) => track.stop());
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const file = new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
         const fd = new FormData();
@@ -130,7 +132,7 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
       mediaRecorderRef.current = recorder;
       setRecording(true);
     } catch (_) {
-      setRecordError('Microphone access denied or unavailable');
+      setRecordError(t('dm.micAccessDenied'));
     }
   };
   const stopRecording = () => {
@@ -152,7 +154,7 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
     <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${T.BD}` }}>
       <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
         color: T.TEXT_TER, mb: 1 }}>
-        Chat with creator {total > 0 ? `· ${total}` : ''}
+        {total > 0 ? t('dm.chatWithCreatorCount', { count: total }) : t('dm.chatWithCreator')}
       </Typography>
 
       <Box ref={scrollRef} sx={{ maxHeight: 320, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
@@ -162,7 +164,7 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
           </Box>
         ) : messages.length === 0 ? (
           <Typography sx={{ fontSize: '0.76rem', color: T.TEXT_TER, textAlign: 'center', py: 2 }}>
-            No messages yet
+            {t('dm.noMessagesYet')}
           </Typography>
         ) : messages.map((m) => {
           const mine = String(m.senderId) === myId;
@@ -227,24 +229,24 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
             <Box sx={{ mb: 0.75 }}>
               <LinearProgress variant="determinate" value={sendProgress} sx={{ borderRadius: 2, height: 5 }} />
               <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, mt: 0.25 }}>
-                Uploading… {sendProgress}%
+                {t('dm.uploadingPercent', { percent: sendProgress })}
               </Typography>
             </Box>
           )}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Tooltip title={recording ? 'Stop recording' : 'Record a voice message'}>
+            <Tooltip title={recording ? t('dm.stopRecordingTip') : t('dm.recordVoiceMessageTip')}>
               <IconButton size="small" onClick={recording ? stopRecording : startRecording}
                 sx={{ color: recording ? '#EA005A' : T.TEXT_TER }}>
                 {recording ? <StopCircleIcon sx={{ fontSize: 18 }} /> : <MicIcon sx={{ fontSize: 18 }} />}
               </IconButton>
             </Tooltip>
-            <Tooltip title="Attach a file">
+            <Tooltip title={t('dm.attachFileTip')}>
               <IconButton size="small" component="label" sx={{ color: T.TEXT_TER }}>
                 <AttachFileIcon sx={{ fontSize: 17 }} />
                 <input type="file" hidden onChange={handleAttach} />
               </IconButton>
             </Tooltip>
-            <TextField size="small" fullWidth placeholder="Message…" value={body}
+            <TextField size="small" fullWidth placeholder={t('dm.messagePlaceholder')} value={body}
               onChange={(e) => setBody(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSendText(); }}
               sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.CTRL_BG, borderRadius: '10px', fontSize: '0.8rem' } }} />

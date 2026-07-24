@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -31,15 +32,15 @@ import InvoiceForm from '../../mis/invoiceForm';
 // holds mis:view (the backend gates with inventory:view + mis:view anyway).
 
 const STATUS_META = {
-  draft:          { label: 'Draft',     color: '#9e9e9e' },
-  sent:           { label: 'Sent',      color: '#64b5f6' },
-  accepted:       { label: 'Accepted',  color: '#81c784' },
-  converted:      { label: 'Converted', color: '#ba68c8' },
-  expired:        { label: 'Expired',   color: '#ffb74d' },
-  issued:         { label: 'Issued',    color: '#64b5f6' },
-  paid:           { label: 'Paid',      color: '#81c784' },
-  partially_paid: { label: 'Partial',   color: '#ffb74d' },
-  cancelled:      { label: 'Cancelled', color: '#e57373' },
+  draft:          { labelKey: 'mis.statusDraft',     color: '#9e9e9e' },
+  sent:           { labelKey: 'mis.statusSent',      color: '#64b5f6' },
+  accepted:       { labelKey: 'mis.statusAccepted',  color: '#81c784' },
+  converted:      { labelKey: 'mis.statusConverted', color: '#ba68c8' },
+  expired:        { labelKey: 'mis.statusExpired',   color: '#ffb74d' },
+  issued:         { labelKey: 'mis.statusIssued',    color: '#64b5f6' },
+  paid:           { labelKey: 'mis.statusPaid',      color: '#81c784' },
+  partially_paid: { labelKey: 'mis.statusPartial',   color: '#ffb74d' },
+  cancelled:      { labelKey: 'mis.statusCancelled', color: '#e57373' },
 };
 
 const fmtMoney = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -51,12 +52,13 @@ const fmtDate  = (d) => {
 
 const PREVIEW_COUNT = 5;
 const TYPE_TABS = [
-  { id: 'all',         label: 'All' },
-  { id: 'invoice',     label: 'Invoice' },
-  { id: 'pre_invoice', label: 'Quote' },
+  { id: 'all',         labelKey: 'inventory.typeAll' },
+  { id: 'invoice',     labelKey: 'mis.invoiceType' },
+  { id: 'pre_invoice', labelKey: 'mis.quoteType' },
 ];
 
 export default function ProductInvoices({ productId, productCode }) {
+  const { t } = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -105,21 +107,23 @@ export default function ProductInvoices({ productId, productCode }) {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase',
           letterSpacing: 1, color: 'text.disabled' }}>
-          Invoices containing this product{docs.length > 0 ? ` (${docs.length})` : ''}
+          {docs.length > 0
+            ? t('inventory.invoicesContainingCount', { count: docs.length })
+            : t('inventory.invoicesContaining')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 0.75 }}>
           {can('mis:invoice:create') && (
             <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
               onClick={() => openNewForm('invoice')}
               sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
-              New invoice
+              {t('inventory.newInvoice')}
             </Button>
           )}
           {can('mis:preinvoice:create') && (
             <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
               onClick={() => openNewForm('pre_invoice')}
               sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
-              New quote
+              {t('inventory.newQuote')}
             </Button>
           )}
         </Box>
@@ -128,19 +132,19 @@ export default function ProductInvoices({ productId, productCode }) {
       {/* Filter row — doc type tabs + inserted-date sort */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          {TYPE_TABS.map((t) => (
-            <Button key={t.id} size="small" onClick={() => setTypeFilter(t.id)}
-              variant={typeFilter === t.id ? 'contained' : 'outlined'}
+          {TYPE_TABS.map((tab) => (
+            <Button key={tab.id} size="small" onClick={() => setTypeFilter(tab.id)}
+              variant={typeFilter === tab.id ? 'contained' : 'outlined'}
               sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px', minWidth: 0, px: 1.25 }}>
-              {t.label}
+              {t(tab.labelKey)}
             </Button>
           ))}
         </Box>
-        <Tooltip title={order === 'desc' ? 'Newest first' : 'Oldest first'}>
+        <Tooltip title={order === 'desc' ? t('inventory.sortNewestTip') : t('inventory.sortOldestTip')}>
           <Button size="small" onClick={() => setOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
             startIcon={order === 'desc' ? <ArrowDownwardIcon sx={{ fontSize: 13 }} /> : <ArrowUpwardIcon sx={{ fontSize: 13 }} />}
             sx={{ fontSize: '0.68rem', textTransform: 'none', color: 'text.secondary' }}>
-            {order === 'desc' ? 'Newest' : 'Oldest'}
+            {order === 'desc' ? t('inventory.sortNewestShort') : t('inventory.sortOldestShort')}
           </Button>
         </Tooltip>
       </Box>
@@ -153,7 +157,7 @@ export default function ProductInvoices({ productId, productCode }) {
         </Box>
       ) : docs.length === 0 ? (
         <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: '0.78rem', py: 1 }}>
-          This product hasn't appeared on any invoice or quote yet.
+          {t('inventory.noInvoicesForProduct')}
         </Typography>
       ) : (
         <>
@@ -177,12 +181,12 @@ export default function ProductInvoices({ productId, productCode }) {
                     <Box sx={{ px: 0.6, py: '1px', borderRadius: '5px', border: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
                       <Typography sx={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: 0.5,
                         textTransform: 'uppercase', color: 'text.secondary' }}>
-                        {isInvoice ? 'Invoice' : 'Quote'}
+                        {isInvoice ? t('mis.invoiceType') : t('mis.quoteType')}
                       </Typography>
                     </Box>
                     <Box sx={{ px: 0.6, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22`, flexShrink: 0 }}>
                       <Typography sx={{ fontSize: '0.58rem', fontWeight: 700, color: status.color }}>
-                        {status.label}
+                        {t(status.labelKey)}
                       </Typography>
                     </Box>
                     <Typography noWrap sx={{ fontSize: '0.72rem', color: 'text.secondary', flexGrow: 1, minWidth: 0 }}>
@@ -196,7 +200,7 @@ export default function ProductInvoices({ productId, productCode }) {
                       <Box component="span" sx={{ fontSize: '0.6rem', color: 'text.disabled' }}> AED</Box>
                     </Typography>
                     {can(pdfKey) && (
-                      <Tooltip title="Download PDF">
+                      <Tooltip title={t('mis.savePdf')}>
                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); handlePdf(doc); }}
                           sx={{ width: 24, height: 24, color: 'text.disabled' }}>
                           <PictureAsPdfIcon sx={{ fontSize: 14 }} />
@@ -224,7 +228,7 @@ export default function ProductInvoices({ productId, productCode }) {
             <Button size="small" onClick={() => setExpanded(e => !e)}
               startIcon={expanded ? <ExpandLessIcon sx={{ fontSize: 14 }} /> : <ExpandMoreIcon sx={{ fontSize: 14 }} />}
               sx={{ mt: 1, fontSize: '0.7rem', textTransform: 'none', color: 'text.disabled' }}>
-              {expanded ? 'Show less' : `Show all ${docs.length}`}
+              {expanded ? t('inventory.showLess') : t('inventory.showAllCount', { count: docs.length })}
             </Button>
           )}
         </>

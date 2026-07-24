@@ -1,4 +1,5 @@
 import { useRef, useState, useContext } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -21,6 +22,7 @@ import { uploadInventoryMedia, deleteInventoryMedia, updateProduct } from '../..
 
 // ── single media tile ─────────────────────────────────────────────────────────
 function MediaTile({ file, isCover, apiBase, onDelete, onSetCover, deleting }) {
+  const { t } = useTranslation();
   const theme    = useTheme();
   const isDark   = theme.palette.mode === 'dark';
   const [preview, setPreview] = useState(false);
@@ -89,7 +91,7 @@ function MediaTile({ file, isCover, apiBase, onDelete, onSetCover, deleting }) {
             }}
           >
             <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem', fontWeight: 700 }}>
-              COVER
+              {t('inventory.coverBadge')}
             </Typography>
           </Box>
         )}
@@ -106,13 +108,13 @@ function MediaTile({ file, isCover, apiBase, onDelete, onSetCover, deleting }) {
           onClick={(e) => e.stopPropagation()}
         >
           {isImage && (
-            <Tooltip title={isCover ? 'Current cover' : 'Set as cover'}>
+            <Tooltip title={isCover ? t('inventory.currentCover') : t('inventory.setAsCover')}>
               <IconButton size="small" sx={{ color: '#fff', p: 0.5 }} onClick={onSetCover}>
                 {isCover ? <StarIcon sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
               </IconButton>
             </Tooltip>
           )}
-          <Tooltip title="Delete">
+          <Tooltip title={t('common.delete')}>
             <IconButton size="small" sx={{ color: '#ff4d4d', p: 0.5 }} onClick={onDelete} disabled={deleting}>
               {deleting ? <CircularProgress size={14} color="inherit" /> : <DeleteIcon sx={{ fontSize: 18 }} />}
             </IconButton>
@@ -139,6 +141,7 @@ function MediaTile({ file, isCover, apiBase, onDelete, onSetCover, deleting }) {
 
 // ── MediaGallery ──────────────────────────────────────────────────────────────
 const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) => {
+  const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -213,7 +216,7 @@ const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) =>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'text.disabled' }}>
-          Media ({media.length})
+          {t('inventory.mediaCount', { count: media.length })}
         </Typography>
         <Button
           size="small"
@@ -223,7 +226,7 @@ const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) =>
           disabled={uploading}
           sx={{ borderRadius: 2, fontSize: '0.72rem' }}
         >
-          {uploading ? 'Uploading…' : 'Upload'}
+          {uploading ? t('inventory.uploading') : t('inventory.upload')}
         </Button>
         <input
           ref={fileInput}
@@ -252,7 +255,7 @@ const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) =>
         >
           <ImageIcon sx={{ color: 'text.disabled', fontSize: 32, mb: 0.5 }} />
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-            No media yet — click to upload
+            {t('inventory.noMediaYet')}
           </Typography>
         </Box>
       ) : (

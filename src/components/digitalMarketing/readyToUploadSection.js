@@ -1,19 +1,24 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import AddIcon from '@mui/icons-material/Add';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchReadyToUploadList } from '../../store/store';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
 import ReadyToUploadDetail from './readyToUploadDetail';
+import ReadyToUploadForm from './readyToUploadForm';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -21,16 +26,19 @@ const fmtDate = (d) => {
   return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 };
 
-// Timeline list of ready-to-upload content — every record was created via a
-// raw content record's status toggle (never standalone), so this is purely
-// a read/edit/delete surface, not a "create" one.
-export default function ReadyToUploadSection() {
+// Timeline list of ready-to-upload content — records arrive either via a raw
+// content record's status toggle (linked back via rawContentId) or via the
+// standalone "New" button below (no back-reference).
+export default function ReadyToUploadSection({ openId = null, onOpenHandled = () => {} }) {
+  const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMob  = useMediaQuery(theme.breakpoints.down('md'));
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const { can }     = usePermissions();
+  const [formOpen, setFormOpen] = useState(false);
 
   const items      = useSelector(s => s.dmReadyToUpload);
   const total      = useSelector(s => s.dmReadyToUploadTotal);
@@ -62,6 +70,15 @@ export default function ReadyToUploadSection() {
   useEffect(() => { load(1); }, [pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setHasMore(items.length < total); }, [items, total]);
 
+  // Deep link from a notification — open that record's detail (detail re-fetches by id).
+  useEffect(() => {
+    if (!openId) return;
+    setSelected({ _id: openId });
+    if (isMob) setMobileDetail(true);
+    onOpenHandled();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId]);
+
   const loadMore = () => load(page + 1);
 
   const handleSelect = (item) => {
@@ -83,8 +100,15 @@ export default function ReadyToUploadSection() {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25 }}>
             <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-              {total} ready to upload
+              {t('dm.readyToUploadCount', { count: total })}
             </Typography>
+            {can('digitalMarketing:readyToUpload:edit') && (
+              <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
+                onClick={() => setFormOpen(true)}
+                sx={{ fontSize: '0.7rem', textTransform: 'none', borderRadius: '8px', flexShrink: 0 }}>
+                {t('common.new')}
+              </Button>
+            )}
             <PageSizeSelect value={pageSize} onChange={setPageSize} />
           </Box>
 
@@ -95,7 +119,7 @@ export default function ReadyToUploadSection() {
               </Box>
             ) : items.length === 0 ? (
               <Typography sx={{ textAlign: 'center', color: T.TEXT_TER, py: 6, fontSize: '0.82rem' }}>
-                Nothing marked ready to upload yet
+                {t('dm.nothingReadyYet')}
               </Typography>
             ) : (
               <Box sx={{ position: 'relative' }}>
@@ -118,10 +142,14 @@ export default function ReadyToUploadSection() {
                         border: `1px solid ${isSel ? T.BD2 : 'transparent'}`,
                         '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' } }}>
                         <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: T.TEXT_PRI }} noWrap>
-                          {item.files?.length || 0} file{item.files?.length !== 1 ? 's' : ''} · {item.platform || '—'}
+                          {item.title?.trim()
+                            ? item.title
+                            : `${t('dm.fileCount', { count: item.files?.length || 0 })} · ${item.platform || '—'}`}
                         </Typography>
                         <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC, mt: 0.2 }} noWrap>
-                          {item.caption || 'No caption'}
+                          {item.title?.trim()
+                            ? `${t('dm.fileCount', { count: item.files?.length || 0 })} · ${item.platform || '—'} · `
+                            : ''}{item.caption || t('dm.noCaption')}
                         </Typography>
                         <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER, mt: 0.3 }}>
                           {item.createdByName ? `${item.createdByName} · ` : ''}{fmtDate(item.insertDate)}
@@ -155,11 +183,13 @@ export default function ReadyToUploadSection() {
           <Box sx={{ textAlign: 'center' }}>
             <CloudUploadIcon sx={{ fontSize: 40, color: T.TEXT_TER, mb: 1 }} />
             <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>
-              Select a record to view details
+              {t('dm.selectRecordToViewDetails')}
             </Typography>
           </Box>
         </Box>
       )}
+
+      <ReadyToUploadForm open={formOpen} onClose={() => setFormOpen(false)} />
     </Box>
   );
 }

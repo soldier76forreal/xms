@@ -15,6 +15,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
 import { useTheme, useMediaQuery } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
@@ -27,6 +28,7 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const theme       = useTheme();
+  const { t }       = useTranslation();
   const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
   const isDark      = theme.palette.mode === 'dark';
 
@@ -94,9 +96,9 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
   }, [prefillUserId]);
 
   const handleSave = async () => {
-    if (!title.trim()) { setError('Title is required'); return; }
-    if (assigneeType === 'user'  && !selectedUser)  { setError('Select a user');  return; }
-    if (assigneeType === 'group' && !selectedGroup) { setError('Select a group'); return; }
+    if (!title.trim()) { setError(t('users.titleRequired')); return; }
+    if (assigneeType === 'user'  && !selectedUser)  { setError(t('users.selectUserError'));  return; }
+    if (assigneeType === 'group' && !selectedGroup) { setError(t('users.selectGroupError')); return; }
 
     setSaving(true); setError('');
     try {
@@ -111,11 +113,11 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
           assignedGroup: assigneeType === 'group' ? selectedGroup?._id : undefined,
         },
       });
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Task assigned', type: 'success' }));
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.taskAssignedMsg'), type: 'success' }));
       if (onSave) onSave();
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to assign task');
+      setError(err?.response?.data?.message || t('users.failedAssignTask'));
     } finally {
       setSaving(false);
     }
@@ -128,7 +130,7 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
     >
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, py: 2, borderBottom: `1px solid ${DIVIDER}` }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: TEXT_PRI }}>Assign Task</Typography>
+        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: TEXT_PRI }}>{t('users.assignTaskHeader')}</Typography>
         <IconButton onClick={onClose} size="small"
           sx={{ color: TEXT_SEC, '&:hover': { color: TEXT_PRI, bgcolor: 'rgba(255,255,255,0.06)' } }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -138,14 +140,14 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
       <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
         {/* Title */}
         <TextField
-          label="Task title" size="small" fullWidth value={title}
+          label={t('users.taskTitleLabel')} size="small" fullWidth value={title}
           onChange={e => { setTitle(e.target.value); setError(''); }}
           sx={inputSx}
         />
 
         {/* Description */}
         <TextField
-          label="Description (optional)" size="small" fullWidth multiline rows={2}
+          label={t('users.descriptionOptional')} size="small" fullWidth multiline rows={2}
           value={description} onChange={e => setDescription(e.target.value)}
           sx={inputSx}
         />
@@ -153,7 +155,7 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
         {/* Assignee type toggle */}
         <Box>
           <Typography sx={{ fontSize: '0.68rem', color: TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-            Assign to
+            {t('users.assignToLabel')}
           </Typography>
           <ToggleButtonGroup
             value={assigneeType} exclusive
@@ -168,10 +170,10 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
             }}
           >
             <ToggleButton value="user">
-              <PersonIcon sx={{ fontSize: 16, mr: 0.75 }} /> User
+              <PersonIcon sx={{ fontSize: 16, mr: 0.75 }} /> {t('users.userToggle')}
             </ToggleButton>
             <ToggleButton value="group">
-              <GroupsIcon sx={{ fontSize: 16, mr: 0.75 }} /> Group
+              <GroupsIcon sx={{ fontSize: 16, mr: 0.75 }} /> {t('users.groupToggle')}
             </ToggleButton>
           </ToggleButtonGroup>
         </Box>
@@ -186,7 +188,7 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
             getOptionLabel={u => `${u.firstName} ${u.lastName} · ${u.phoneNumber}`}
             isOptionEqualToValue={(a, b) => String(a._id) === String(b._id)}
             renderInput={(params) => (
-              <TextField {...params} label="Select user" sx={inputSx}
+              <TextField {...params} label={t('users.selectUserLabel')} sx={inputSx}
                 InputProps={{ ...params.InputProps, style: { color: TEXT_PRI } }}
               />
             )}
@@ -212,7 +214,7 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
             getOptionLabel={g => g.name || ''}
             isOptionEqualToValue={(a, b) => String(a._id) === String(b._id)}
             renderInput={(params) => (
-              <TextField {...params} label="Select group" sx={inputSx}
+              <TextField {...params} label={t('users.selectGroupLabel')} sx={inputSx}
                 InputProps={{ ...params.InputProps, style: { color: TEXT_PRI } }}
               />
             )}
@@ -234,14 +236,14 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
       <DialogActions sx={{ px: 3, pb: 3, pt: 0, gap: 1 }}>
         <Button onClick={onClose}
           sx={{ color: TEXT_SEC, textTransform: 'none', '&:hover': { bgcolor: HVR_BG, color: TEXT_PRI } }}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={saving}
           startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
           sx={{ bgcolor: BTN_BG, color: BTN_CLR, fontWeight: 700, borderRadius: '8px', px: 3,
             textTransform: 'none', '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' },
             '&.Mui-disabled': { bgcolor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)', color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.26)' } }}>
-          {saving ? 'Assigning…' : 'Assign Task'}
+          {saving ? t('users.assigningTask') : t('users.assignTaskButton')}
         </Button>
       </DialogActions>
     </Dialog>

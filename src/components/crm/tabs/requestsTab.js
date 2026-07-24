@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -28,15 +29,15 @@ import InvoiceForm from '../../mis/invoiceForm';
 // number, date, total, status (+ PDF download when the user holds the key).
 
 const STATUS_META = {
-  draft:          { label: 'Draft',     color: '#9e9e9e' },
-  sent:           { label: 'Sent',      color: '#64b5f6' },
-  accepted:       { label: 'Accepted',  color: '#81c784' },
-  converted:      { label: 'Converted', color: '#ba68c8' },
-  expired:        { label: 'Expired',   color: '#ffb74d' },
-  issued:         { label: 'Issued',    color: '#64b5f6' },
-  paid:           { label: 'Paid',      color: '#81c784' },
-  partially_paid: { label: 'Partial',   color: '#ffb74d' },
-  cancelled:      { label: 'Cancelled', color: '#e57373' },
+  draft:          { labelKey: 'crm.requestsStatusDraft',     color: '#9e9e9e' },
+  sent:           { labelKey: 'crm.requestsStatusSent',      color: '#64b5f6' },
+  accepted:       { labelKey: 'crm.requestsStatusAccepted',  color: '#81c784' },
+  converted:      { labelKey: 'crm.requestsStatusConverted', color: '#ba68c8' },
+  expired:        { labelKey: 'crm.requestsStatusExpired',   color: '#ffb74d' },
+  issued:         { labelKey: 'crm.requestsStatusIssued',    color: '#64b5f6' },
+  paid:           { labelKey: 'crm.requestsStatusPaid',      color: '#81c784' },
+  partially_paid: { labelKey: 'crm.requestsStatusPartial',   color: '#ffb74d' },
+  cancelled:      { labelKey: 'crm.requestsStatusCancelled', color: '#e57373' },
 };
 
 const fmtMoney = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -47,12 +48,13 @@ const fmtDate  = (d) => {
 };
 
 const TYPE_TABS = [
-  { id: 'all',         label: 'All' },
-  { id: 'invoice',     label: 'Invoice' },
-  { id: 'pre_invoice', label: 'Quote' },
+  { id: 'all',         labelKey: 'crm.requestsAll' },
+  { id: 'invoice',     labelKey: 'crm.requestsInvoiceType' },
+  { id: 'pre_invoice', labelKey: 'crm.requestsQuoteType' },
 ];
 
 export default function RequestsTab({ customer }) {
+  const { t } = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -98,34 +100,34 @@ export default function RequestsTab({ customer }) {
   const FilterBar = (
     <Box sx={{ px: 2.5, pt: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
       <Box sx={{ display: 'flex', gap: 0.5 }}>
-        {TYPE_TABS.map((t) => (
-          <Button key={t.id} size="small" onClick={() => setTypeFilter(t.id)}
-            variant={typeFilter === t.id ? 'contained' : 'outlined'}
+        {TYPE_TABS.map((tab) => (
+          <Button key={tab.id} size="small" onClick={() => setTypeFilter(tab.id)}
+            variant={typeFilter === tab.id ? 'contained' : 'outlined'}
             sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px', minWidth: 0, px: 1.25 }}>
-            {t.label}
+            {t(tab.labelKey)}
           </Button>
         ))}
       </Box>
       <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-        <Tooltip title={order === 'desc' ? 'Newest first' : 'Oldest first'}>
+        <Tooltip title={order === 'desc' ? t('crm.sortNewestFirstTip') : t('crm.sortOldestFirstTip')}>
           <Button size="small" onClick={() => setOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
             startIcon={order === 'desc' ? <ArrowDownwardIcon sx={{ fontSize: 13 }} /> : <ArrowUpwardIcon sx={{ fontSize: 13 }} />}
             sx={{ fontSize: '0.68rem', textTransform: 'none', color: T.TEXT_SEC }}>
-            {order === 'desc' ? 'Newest' : 'Oldest'}
+            {order === 'desc' ? t('crm.newest') : t('crm.oldest')}
           </Button>
         </Tooltip>
         {can('mis:invoice:create') && (
           <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
             onClick={() => openNewForm('invoice')}
             sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
-            New invoice
+            {t('crm.newInvoice')}
           </Button>
         )}
         {can('mis:preinvoice:create') && (
           <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
             onClick={() => openNewForm('pre_invoice')}
             sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
-            New quote
+            {t('crm.newQuote')}
           </Button>
         )}
       </Box>
@@ -164,7 +166,7 @@ export default function RequestsTab({ customer }) {
         <Box sx={{ px: 2.5, py: 4, textAlign: 'center' }}>
           <ReceiptLongIcon sx={{ fontSize: 40, color: T.TEXT_TER, mb: 1 }} />
           <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>
-            No invoices or quotes for this customer yet
+            {t('crm.noRequestsYet')}
           </Typography>
         </Box>
         {invoiceFormDialog}
@@ -197,13 +199,13 @@ export default function RequestsTab({ customer }) {
                 <Box sx={{ px: 0.6, py: '1px', borderRadius: '5px', border: `1px solid ${T.BD}`, flexShrink: 0 }}>
                   <Typography sx={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: 0.5,
                     textTransform: 'uppercase', color: T.TEXT_SEC }}>
-                    {isInvoice ? 'Invoice' : 'Quote'}
+                    {isInvoice ? t('crm.requestsInvoiceType') : t('crm.requestsQuoteType')}
                   </Typography>
                 </Box>
 
                 <Box sx={{ px: 0.6, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22`, flexShrink: 0 }}>
                   <Typography sx={{ fontSize: '0.58rem', fontWeight: 700, color: status.color }}>
-                    {status.label}
+                    {t(status.labelKey)}
                   </Typography>
                 </Box>
 
@@ -217,7 +219,7 @@ export default function RequestsTab({ customer }) {
                 </Typography>
 
                 {can(pdfKey) && (
-                  <Tooltip title="Download PDF">
+                  <Tooltip title={t('crm.savePdf')}>
                     <IconButton size="small" onClick={(e) => { e.stopPropagation(); handlePdf(doc); }}
                       sx={{ width: 24, height: 24, color: T.TEXT_TER }}>
                       <PictureAsPdfIcon sx={{ fontSize: 14 }} />

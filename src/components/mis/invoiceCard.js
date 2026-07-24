@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
@@ -22,15 +23,15 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 
 // status → chip colour (subtle alpha tints, dark/opacity language)
 const STATUS_META = {
-  draft:          { label: 'Draft',        color: '#9e9e9e' },
-  sent:           { label: 'Sent',         color: '#64b5f6' },
-  accepted:       { label: 'Accepted',     color: '#81c784' },
-  converted:      { label: 'Converted',    color: '#ba68c8' },
-  expired:        { label: 'Expired',      color: '#ffb74d' },
-  issued:         { label: 'Issued',       color: '#64b5f6' },
-  paid:           { label: 'Paid',         color: '#81c784' },
-  partially_paid: { label: 'Partial',      color: '#ffb74d' },
-  cancelled:      { label: 'Cancelled',    color: '#e57373' },
+  draft:          { labelKey: 'mis.statusDraft',     color: '#9e9e9e' },
+  sent:           { labelKey: 'mis.statusSent',      color: '#64b5f6' },
+  accepted:       { labelKey: 'mis.statusAccepted',  color: '#81c784' },
+  converted:      { labelKey: 'mis.statusConverted', color: '#ba68c8' },
+  expired:        { labelKey: 'mis.statusExpired',   color: '#ffb74d' },
+  issued:         { labelKey: 'mis.statusIssued',    color: '#64b5f6' },
+  paid:           { labelKey: 'mis.statusPaid',      color: '#81c784' },
+  partially_paid: { labelKey: 'mis.statusPartial',   color: '#ffb74d' },
+  cancelled:      { labelKey: 'mis.statusCancelled', color: '#e57373' },
 };
 
 const fmtMoney = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -41,6 +42,7 @@ const fmtDate  = (d) => {
 };
 
 export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, onConvert, onDelete, onAssign }) {
+  const { t } = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { can } = usePermissions();
@@ -95,13 +97,13 @@ export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, on
         <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', border: `1px solid ${T.BD}`, flexShrink: 0 }}>
           <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: 0.5,
             textTransform: 'uppercase', color: T.TEXT_SEC }}>
-            {isInvoice ? 'Invoice' : 'Quote'}
+            {isInvoice ? t('mis.invoiceType') : t('mis.quoteType')}
           </Typography>
         </Box>
 
         <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22`, flexShrink: 0 }}>
           <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: status.color }}>
-            {status.label}
+            {t(status.labelKey)}
           </Typography>
         </Box>
 
@@ -110,7 +112,7 @@ export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, on
         )}
 
         {(doc.assignedTo || []).length > 0 && (
-          <Tooltip title={doc.assignedByName ? `Sent by ${doc.assignedByName}` : 'Sent'}>
+          <Tooltip title={doc.assignedByName ? t('mis.sentBy', { name: doc.assignedByName }) : t('mis.sentTooltip')}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
               <SendIcon sx={{ fontSize: 12, color: '#64b5f6' }} />
               <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: T.TEXT_TER }}>
@@ -151,35 +153,35 @@ export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, on
         {can(`${permBase}:edit`) && (
           <MenuItem dense onClick={act(onEdit)} sx={{ fontSize: '0.78rem' }}>
             <ListItemIcon><EditIcon sx={{ fontSize: 15 }} /></ListItemIcon>
-            Edit
+            {t('common.edit')}
           </MenuItem>
         )}
 
         {can(`${permBase}:pdf`) && (
           <MenuItem dense onClick={act(onPdf)} sx={{ fontSize: '0.78rem' }}>
             <ListItemIcon><PictureAsPdfIcon sx={{ fontSize: 15 }} /></ListItemIcon>
-            Download PDF
+            {t('mis.savePdf')}
           </MenuItem>
         )}
 
         {canConvert && (
           <MenuItem dense onClick={act(onConvert)} sx={{ fontSize: '0.78rem' }}>
             <ListItemIcon><SwapHorizIcon sx={{ fontSize: 15 }} /></ListItemIcon>
-            Convert to invoice
+            {t('mis.convertToInvoice')}
           </MenuItem>
         )}
 
         {can(`${permBase}:edit`) && onAssign && (
           <MenuItem dense onClick={act(onAssign)} sx={{ fontSize: '0.78rem' }}>
             <ListItemIcon><SendIcon sx={{ fontSize: 15 }} /></ListItemIcon>
-            Send to…
+            {t('mis.sendToEllipsis')}
           </MenuItem>
         )}
 
         {can(`${permBase}:delete`) && (
           <MenuItem dense onClick={act(onDelete)} sx={{ fontSize: '0.78rem', color: '#EA005A' }}>
             <ListItemIcon><DeleteOutlineIcon sx={{ fontSize: 15, color: '#EA005A' }} /></ListItemIcon>
-            Delete
+            {t('common.delete')}
           </MenuItem>
         )}
       </Menu>
