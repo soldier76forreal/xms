@@ -21,21 +21,27 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchRawContentChat, sendRawContentChatMessage, actions } from '../../store/store';
 import MediaViewer, { resolveMediaKind } from './mediaViewer';
+import UserAvatar from '../main/userAvatar';
 
 const fmtTime = (d) => {
   const dt = new Date(d);
   return `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 };
 
-// Real-time chat on a raw content record — text, voice, or file messages,
-// Telegram-style. One Socket.io room per rawContentId; the frontend joins on
-// mount and leaves on unmount (dm:joinRawContent / dm:leaveRawContent).
-export default function RawContentChat({ rawContentId, T, isDark }) {
+// Real-time chat — text, voice, or file messages, Telegram-style. Lives on
+// EITHER a raw content record OR a standalone ready-to-upload record (one
+// with no source raw content to hang the thread off) — pass exactly one of
+// rawContentId / readyToUploadId. One Socket.io room per entity; the
+// frontend joins on mount and leaves on unmount.
+export default function RawContentChat({ rawContentId, readyToUploadId, T, isDark }) {
   const { t }       = useTranslation();
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { can }     = usePermissions();
+
+  const entityId = rawContentId || readyToUploadId;
+  const kind     = rawContentId ? 'rawContent' : 'readyToUpload';
 
   const messages = useSelector(s => s.dmRawContentChat);
   const total    = useSelector(s => s.dmRawContentChatTotal);
@@ -54,28 +60,31 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    await dispatch(fetchRawContentChat({ authCtx, axiosGlobal, id: rawContentId, params: { page: 1, limit: 50 } }));
+    await dispatch(fetchRawContentChat({ authCtx, axiosGlobal, id: entityId, kind, params: { page: 1, limit: 50 } }));
     setLoading(false);
-  }, [rawContentId, authCtx, axiosGlobal, dispatch]);
+  }, [entityId, kind, authCtx, axiosGlobal, dispatch]);
 
   useEffect(() => { load(); }, [load]);
 
   // Join/leave the room + listen for real-time deliveries
   useEffect(() => {
     const socket = authCtx.socket;
-    if (!socket || !rawContentId) return;
-    socket.emit('dm:joinRawContent', rawContentId);
+    if (!socket || !entityId) return;
+    const joinEvent  = kind === 'readyToUpload' ? 'dm:joinReadyToUpload'  : 'dm:joinRawContent';
+    const leaveEvent = kind === 'readyToUpload' ? 'dm:leaveReadyToUpload' : 'dm:leaveRawContent';
+    socket.emit(joinEvent, entityId);
     const handler = (msg) => {
-      if (String(msg.rawContentId) === String(rawContentId)) {
+      const msgEntityId = kind === 'readyToUpload' ? msg.readyToUploadId : msg.rawContentId;
+      if (String(msgEntityId) === String(entityId)) {
         dispatch(actions.dmRawChatPush(msg));
       }
     };
     socket.on('dm:chat:new', handler);
     return () => {
-      socket.emit('dm:leaveRawContent', rawContentId);
+      socket.emit(leaveEvent, entityId);
       socket.off('dm:chat:new', handler);
     };
-  }, [authCtx.socket, rawContentId, dispatch]);
+  }, [authCtx.socket, entityId, kind, dispatch]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -86,7 +95,7 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
     if (withProgress) setSendProgress(0);
     try {
       await dispatch(sendRawContentChatMessage({
-        authCtx, axiosGlobal, id: rawContentId, formData: payload,
+        authCtx, axiosGlobal, id: entityId, kind, formData: payload,
         onProgress: withProgress
           ? (e) => setSendProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null)
           : undefined,
@@ -169,8 +178,11 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
         ) : messages.map((m) => {
           const mine = String(m.senderId) === myId;
           return (
-            <Box key={m._id} sx={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start' }}>
-              <Box sx={{ maxWidth: '78%', px: 1.25, py: 0.75, borderRadius: '12px',
+            <Box key={m._id} sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.75,
+              flexDirection: mine ? 'row-reverse' : 'row' }}>
+              {!mine && <UserAvatar userId={m.senderId} size={22} sx={{ mb: 2.25, flexShrink: 0 }} />}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start', minWidth: 0 }}>
+              <Box sx={{ maxWidth: '100%', px: 1.25, py: 0.75, borderRadius: '12px',
                 bgcolor: mine ? (isDark ? '#ffffff' : '#000000') : T.CTRL_BG,
                 color: mine ? (isDark ? '#000000' : '#ffffff') : T.TEXT_PRI }}>
                 {!mine && (
@@ -217,6 +229,7 @@ export default function RawContentChat({ rawContentId, T, isDark }) {
                 })()}
               </Box>
               <Typography sx={{ fontSize: '0.62rem', color: T.TEXT_TER, mt: 0.25 }}>{fmtTime(m.date)}</Typography>
+              </Box>
             </Box>
           );
         })}

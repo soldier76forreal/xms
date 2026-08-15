@@ -22,9 +22,9 @@ export const AxiosGlobalProvider = (props) =>{
     // 7130/7256 on the server). Local dev keeps host-based URLs so the same
     // build works via localhost or a LAN IP.
     const contextValue = {
-        defaultTargetApi: local ? `http://${host}:7130` : 'https://api.lazulitemarble.com',
-        authTargetApi:    local ? `http://${host}:7256` : 'https://auth.lazulitemarble.com',
-        externalLink:'https://xms.lazulitemarble.com',
+        defaultTargetApi: local ? `http://${host}:5623` : 'https://api.xcapital.ir',
+        authTargetApi:    local ? `http://${host}:5304` : 'https://auth.xcapital.ir',
+        externalLink:'https://xms.xcapital.ir',
         originLink:window.location.origin
     }
     return <AxiosGlobal.Provider value={contextValue}>{props.children}</AxiosGlobal.Provider>

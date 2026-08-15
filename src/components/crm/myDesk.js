@@ -14,7 +14,6 @@ import AssignmentIcon         from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import InboxIcon              from '@mui/icons-material/Inbox';
 import ScheduleIcon           from '@mui/icons-material/Schedule';
-import PersonIcon             from '@mui/icons-material/Person';
 
 import AuthContext  from '../authAndConnections/auth';
 import AxiosGlobal  from '../authAndConnections/axiosGlobalUrl';
@@ -23,6 +22,7 @@ import { Can, usePermissions } from '../../contextApi/PermissionContext';
 import CustomerCard   from './customerCard';
 import CustomerDetail from './customerDetail';
 import CustomerForm   from './customerForm';
+import UserAvatar      from '../main/userAvatar';
 
 // labelKey resolved at render time via t(`crm.${labelKey}`) — module scope has
 // no hook access.
@@ -280,7 +280,7 @@ const MyDesk = ({ onAddToMyDesk }) => {
               {/* Assigned by */}
               {assignerName && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
-                  <PersonIcon sx={{ fontSize: 10, color: T.TEXT_TER }} />
+                  <UserAvatar userId={task.createdBy} size={14} fontSize="0.5rem" />
                   <Typography sx={{ fontSize: '0.64rem', color: T.TEXT_TER }}>
                     {t('crm.byActor', { name: assignerName })}
                   </Typography>

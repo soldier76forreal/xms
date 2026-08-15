@@ -42,6 +42,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { actions, deleteCrmCustomer } from '../../store/store';
 import { Can, usePermissions } from '../../contextApi/PermissionContext';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
+import UserAvatar from '../main/userAvatar';
 import { ISO_MAP, NAME_MAP } from './util/countryData';
 
 // ── status config ─────────────────────────────────────────────────────────────
@@ -300,9 +301,12 @@ const CustomerCard = ({
 
             {/* Who entered this record */}
             {customer.createdByName && (
-              <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.15 }}>
-                {t('crm.addedBy', { name: customer.createdByName })}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.15 }}>
+                <UserAvatar userId={customer.createdBy} size={14} fontSize="0.5rem" />
+                <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
+                  {t('crm.addedBy', { name: customer.createdByName })}
+                </Typography>
+              </Box>
             )}
           </Box>
 

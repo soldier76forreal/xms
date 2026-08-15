@@ -28,6 +28,7 @@ import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { Can } from '../../contextApi/PermissionContext';
+import UserAvatar from '../main/userAvatar';
 
 const useT = () => {
   const theme  = useTheme();
@@ -199,11 +200,8 @@ const GroupForm = ({ open, onClose, onSave, group }) => {
                 <Box key={String(m._id)} sx={{ display: 'flex', alignItems: 'center', gap: 1.5,
                   px: 1.5, py: 1, bgcolor: T.MBR_BG, borderRadius: '8px',
                   border: `1px solid ${isAdmin ? 'rgba(255,183,77,0.25)' : 'transparent'}` }}>
-                  <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: T.AVATAR_BG,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.7rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
-                    {getInitials(m)}
-                  </Box>
+                  <UserAvatar userId={m._id} size={28}
+                    sx={{ bgcolor: T.AVATAR_BG, fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }} />
                   <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_PRI, flexGrow: 1 }}>
                     {m.firstName} {m.lastName}
                     <Box component="span" sx={{ ml: 1, fontFamily: 'monospace', fontSize: '0.72rem', color: T.TEXT_TER }}>

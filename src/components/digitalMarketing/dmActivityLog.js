@@ -8,6 +8,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import UserAvatar from '../main/userAvatar';
 
 const relTime = (d, t) => {
   const diff = Date.now() - new Date(d).getTime();
@@ -64,6 +65,7 @@ export default function DmActivityLog({ endpointBase, id, T }) {
               {r.action === 'downloaded'
                 ? <DownloadIcon sx={{ fontSize: 13, color: T.TEXT_TER, flexShrink: 0 }} />
                 : <VisibilityIcon sx={{ fontSize: 13, color: T.TEXT_TER, flexShrink: 0 }} />}
+              <UserAvatar userId={r.actorId} size={16} fontSize="0.55rem" sx={{ flexShrink: 0 }} />
               <Typography sx={{ fontSize: '0.76rem', color: T.TEXT_SEC, flexGrow: 1, minWidth: 0 }} noWrap>
                 <Box component="span" sx={{ fontWeight: 600, color: T.TEXT_PRI }}>{r.actorName || t('dm.someone')}</Box>
                 {' '}

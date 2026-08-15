@@ -12,6 +12,8 @@ import Switch from '@mui/material/Switch';
 import CloseIcon from '@mui/icons-material/Close';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import TelegramIcon from '@mui/icons-material/Telegram';
+import LinkOffIcon from '@mui/icons-material/LinkOff';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
@@ -28,7 +30,10 @@ const NOTIF_TYPES = [
   { key: 'dmChat',        labelKey: 'users.notifTypeDmChat' },
   { key: 'readyToUpload', labelKey: 'users.notifTypeReadyToUpload' },
 ];
-const DEFAULT_NOTIF_PREFS = { tasks: true, assignments: true, invoices: true, dmChat: true, readyToUpload: true };
+// pushEnabled/telegramEnabled are CHANNEL-level toggles (whole channel
+// on/off) — distinct from the per-category keys above and from Telegram's
+// own linked/unlinked state.
+const DEFAULT_NOTIF_PREFS = { tasks: true, assignments: true, invoices: true, dmChat: true, readyToUpload: true, pushEnabled: true, telegramEnabled: true };
 
 // ── My Profile modal ──────────────────────────────────────────────────────────
 // Self-service: any user edits their OWN name + profile picture (backend:
@@ -81,7 +86,10 @@ const MyProfileModal = ({ open, onClose }) => {
   const [pushState, setPushState] = useState(
     (typeof Notification !== 'undefined') ? Notification.permission : 'unsupported'
   );
+  const [tgStatus, setTgStatus]   = useState(null);   // { linked, username, botUsername, pendingCode }
+  const [tgBusy, setTgBusy]       = useState(false);
   const fileInputRef = useRef(null);
+  const tgPollRef = useRef(null);
 
   // Fresh copy of the user's own record — the JWT payload can be stale.
   useEffect(() => {
@@ -109,12 +117,73 @@ const MyProfileModal = ({ open, onClose }) => {
         });
         setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...(prefRes.data || {}) });
       } catch { /* keep defaults */ }
+      await fetchTelegramStatus();
       setPushState((typeof Notification !== 'undefined') ? Notification.permission : 'unsupported');
       setLoading(false);
     })();
+    // Stop any in-flight "waiting for /start" poll once the modal closes.
+    return () => { if (tgPollRef.current) { clearInterval(tgPollRef.current); tgPollRef.current = null; } };
   }, [open]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleNotif = (key) => setNotifPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const fetchTelegramStatus = async () => {
+    try {
+      const res = await authCtx.jwtInst({
+        method: 'get', url: `${axiosGlobal.defaultTargetApi}/users/me/telegram/status`,
+      });
+      setTgStatus(res.data);
+      return res.data;
+    } catch {
+      return null;
+    }
+  };
+
+  // Generates a one-time /start <code> deep link, opens it, and polls status
+  // every 3s (up to 2 min) so the UI flips to "connected" the moment the user
+  // taps Start in Telegram — no manual refresh needed.
+  const connectTelegram = async () => {
+    setTgBusy(true);
+    try {
+      const res = await authCtx.jwtInst({
+        method: 'post', url: `${axiosGlobal.defaultTargetApi}/users/me/telegram/link-code`,
+      });
+      const { code, botUsername } = res.data;
+      setTgStatus((prev) => ({ ...(prev || {}), pendingCode: code, botUsername }));
+      window.open(`https://t.me/${botUsername}?start=${code}`, '_blank', 'noopener,noreferrer');
+
+      if (tgPollRef.current) clearInterval(tgPollRef.current);
+      let attempts = 0;
+      tgPollRef.current = setInterval(async () => {
+        attempts += 1;
+        const fresh = await fetchTelegramStatus();
+        if ((fresh && fresh.linked) || attempts >= 40) {   // ~2 min at 3s
+          clearInterval(tgPollRef.current);
+          tgPollRef.current = null;
+          if (fresh && fresh.linked) {
+            dispatch(actions.setShowSnackBar({ status: true, msg: t('users.telegramConnected'), type: 'success' }));
+          }
+        }
+      }, 3000);
+    } catch {
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.telegramConnectFailed'), type: 'error' }));
+    } finally {
+      setTgBusy(false);
+    }
+  };
+
+  const disconnectTelegram = async () => {
+    setTgBusy(true);
+    try {
+      await authCtx.jwtInst({ method: 'post', url: `${axiosGlobal.defaultTargetApi}/users/me/telegram/unlink` });
+      setTgStatus({ linked: false, username: null, pendingCode: null });
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.telegramDisconnected'), type: 'success' }));
+    } catch {
+      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.telegramDisconnectFailed'), type: 'error' }));
+    } finally {
+      setTgBusy(false);
+    }
+  };
 
   const enableOnThisDevice = async () => {
     setPushBusy(true);
@@ -251,23 +320,77 @@ const MyProfileModal = ({ open, onClose }) => {
 
           {/* ── Notifications ── */}
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-              <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, fontWeight: 600 }}>
-                {t('users.notificationsHeader')}
-              </Typography>
-              {pushSupported() && pushState !== 'granted' && (
-                <Button size="small" onClick={enableOnThisDevice} disabled={pushBusy}
-                  startIcon={pushBusy ? <CircularProgress size={12} color="inherit" /> : <NotificationsActiveIcon sx={{ fontSize: 15 }} />}
-                  sx={{ textTransform: 'none', fontSize: '0.72rem', color: T.TEXT_PRI,
-                    border: `1px solid ${T.INPUT_BD}`, borderRadius: '8px', px: 1.25, py: '2px' }}>
-                  {pushState === 'denied' ? t('users.blockedInBrowser') : t('users.enableOnThisDevice')}
-                </Button>
-              )}
-              {pushState === 'granted' && (
-                <Typography sx={{ fontSize: '0.68rem', color: '#81C784', fontWeight: 600 }}>
-                  {t('users.enabledOnThisDevice')}
-                </Typography>
-              )}
+            <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, fontWeight: 600, mb: 1 }}>
+              {t('users.notificationsHeader')}
+            </Typography>
+
+            {/* ── Push (PWA) — pushEnabled is a channel switch, independent of
+                the browser's OWN permission (Notification.permission) ── */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              py: 1, px: 1.25, mb: 1, borderRadius: '8px', bgcolor: T.INPUT_BG }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                <NotificationsActiveIcon sx={{ fontSize: 18, color: notifPrefs.pushEnabled !== false ? '#81C784' : T.TEXT_SEC, flexShrink: 0 }} />
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, fontWeight: 500 }}>
+                    {t('users.pushLabel')}
+                  </Typography>
+                  {pushSupported() && pushState !== 'granted' ? (
+                    <Button size="small" onClick={enableOnThisDevice} disabled={pushBusy}
+                      startIcon={pushBusy ? <CircularProgress size={10} color="inherit" /> : null}
+                      sx={{ textTransform: 'none', fontSize: '0.66rem', color: '#64b5f6', p: 0, minWidth: 0,
+                        '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' } }}>
+                      {pushState === 'denied' ? t('users.blockedInBrowser') : t('users.enableOnThisDevice')}
+                    </Button>
+                  ) : pushState === 'granted' && (
+                    <Typography sx={{ fontSize: '0.66rem', color: '#81C784' }}>
+                      {t('users.enabledOnThisDevice')}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+              <Switch size="small" checked={notifPrefs.pushEnabled !== false} onChange={() => toggleNotif('pushEnabled')} />
+            </Box>
+
+            {/* ── Telegram — self-service, independent of push (separate delivery
+                channel; same notificationPrefs categories gate both) ── */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              py: 1, px: 1.25, mb: 1, borderRadius: '8px', bgcolor: T.INPUT_BG }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                <TelegramIcon sx={{ fontSize: 18, color: tgStatus?.linked && notifPrefs.telegramEnabled !== false ? '#29A9EA' : T.TEXT_SEC, flexShrink: 0 }} />
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, fontWeight: 500 }}>
+                    {t('users.telegramLabel')}
+                  </Typography>
+                  {tgStatus?.linked && (
+                    <Typography noWrap sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
+                      {tgStatus.username ? `@${tgStatus.username}` : t('users.telegramConnected')}
+                    </Typography>
+                  )}
+                  {!tgStatus?.linked && tgStatus?.pendingCode && (
+                    <Typography sx={{ fontSize: '0.68rem', color: '#64b5f6' }}>
+                      {t('users.telegramWaitingForStart')}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                {tgStatus?.linked && (
+                  <Switch size="small" checked={notifPrefs.telegramEnabled !== false} onChange={() => toggleNotif('telegramEnabled')} />
+                )}
+                {tgStatus?.linked ? (
+                  <IconButton size="small" onClick={disconnectTelegram} disabled={tgBusy}
+                    sx={{ color: T.TEXT_TER, '&:hover': { color: T.ERR_CLR } }}>
+                    {tgBusy ? <CircularProgress size={14} /> : <LinkOffIcon sx={{ fontSize: 16 }} />}
+                  </IconButton>
+                ) : (
+                  <Button size="small" onClick={connectTelegram} disabled={tgBusy}
+                    startIcon={tgBusy ? <CircularProgress size={12} color="inherit" /> : <TelegramIcon sx={{ fontSize: 15 }} />}
+                    sx={{ textTransform: 'none', fontSize: '0.72rem', color: T.TEXT_PRI,
+                      border: `1px solid ${T.INPUT_BD}`, borderRadius: '8px', px: 1.25, py: '2px' }}>
+                    {tgStatus?.pendingCode ? t('users.telegramReopen') : t('users.telegramConnect')}
+                  </Button>
+                )}
+              </Box>
             </Box>
             <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, mb: 1 }}>
               {t('users.choosePushNote')}

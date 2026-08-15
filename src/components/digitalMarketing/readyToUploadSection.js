@@ -13,6 +13,7 @@ import AddIcon from '@mui/icons-material/Add';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import UserAvatar from '../main/userAvatar';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchReadyToUploadList } from '../../store/store';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
@@ -151,9 +152,12 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
                             ? `${t('dm.fileCount', { count: item.files?.length || 0 })} · ${item.platform || '—'} · `
                             : ''}{item.caption || t('dm.noCaption')}
                         </Typography>
-                        <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER, mt: 0.3 }}>
-                          {item.createdByName ? `${item.createdByName} · ` : ''}{fmtDate(item.insertDate)}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.3 }}>
+                          {item.createdByName && <UserAvatar userId={item.createdBy} size={14} fontSize="0.5rem" />}
+                          <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER }}>
+                            {item.createdByName ? `${item.createdByName} · ` : ''}{fmtDate(item.insertDate)}
+                          </Typography>
+                        </Box>
                       </Box>
                     </Box>
                   );

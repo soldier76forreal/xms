@@ -20,6 +20,7 @@ import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { notifPath } from '../../tools/pushNotifications';
+import UserAvatar from '../main/userAvatar';
 
 const useT = () => {
   const theme  = useTheme();
@@ -88,7 +89,13 @@ const NotifRow = ({ notif, onOpen }) => {
         transition: 'background 0.12s',
       }}
     >
-      <Box sx={{ mt: 0.25, flexShrink: 0 }}>{typeIcon(notif.type, T.TEXT_SEC)}</Box>
+      <Box sx={{ mt: 0.25, flexShrink: 0, position: 'relative', width: 16, height: 16 }}>
+        {typeIcon(notif.type, T.TEXT_SEC)}
+        {notif.fromId && (
+          <UserAvatar userId={notif.fromId} size={11} fontSize="0.4rem"
+            sx={{ position: 'absolute', bottom: -3, right: -3, border: `1px solid ${T.DRAWER_BG}` }} />
+        )}
+      </Box>
 
       <Box sx={{ flexGrow: 1, minWidth: 0 }}>
         <Typography sx={{ fontSize: '0.82rem', fontWeight: notif.isRead ? 400 : 600, color: T.TEXT_PRI, lineHeight: 1.4 }}>

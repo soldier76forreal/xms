@@ -16,9 +16,10 @@ import { useContext, useEffect, useState, useMemo } from 'react';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import AxiosGlobal from './components/authAndConnections/axiosGlobalUrl';
-import { fetchData, getAllTags, getContacts, getFilter, userProfileData } from './store/store';
+import { fetchData, getAllTags, getContacts, getFilter, userProfileData, fetchUserDirectory } from './store/store';
 import { useDispatch, useSelector } from 'react-redux';
-import ShowTheLink from './components/fileManager/showTheLink';
+import ShortLinkResolver from './components/main/shortLinkResolver';
+import RestrictedAccessScreen from './components/main/restrictedAccessScreen';
 import { useHistory, useLocation, Link } from "react-router-dom";
 import SnackBar from './tools/navs/snackBar';
 import PwaInstallPrompt from './tools/navs/pwaInstallPrompt';
@@ -60,6 +61,11 @@ const ThemedApp = () => {
   useEffect(() => {
     dispatch(getContacts({ authCtx, axiosGlobal }));
   }, []);
+
+  useEffect(() => {
+    if (authCtx.isLoggedIn !== true) return;
+    dispatch(fetchUserDirectory({ authCtx, axiosGlobal }));
+  }, [authCtx.isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     dispatch(getFilter({ authCtx, axiosGlobal }));
@@ -167,8 +173,26 @@ const ThemedApp = () => {
             <Redirect to="/logIn" />
           )}
 
-          <Route path="/showLink">
-            <ShowTheLink />
+          {/* Self-service Activity Log + Job Reports — login-only, deliberately
+              NOT gated by users:view (see main.js's isMyActivity branch). */}
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/myActivity">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
+          {authCtx.isLoggedIn === true && (
+            <Route path="/restricted" exact>
+              <RestrictedAccessScreen />
+            </Route>
+          )}
+
+          {/* Outside the auth gate on purpose — the resolver handles the
+              logged-out case itself (redirect to /logIn + return here after). */}
+          <Route path="/l/:code" exact>
+            <ShortLinkResolver />
           </Route>
         </Switch>
       </BranchProvider>

@@ -9,7 +9,6 @@ import AddIcon from '@mui/icons-material/Add';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
 import { useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +18,7 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { Can, usePermissions } from '../../contextApi/PermissionContext';
 import TaskAssignDialog from './taskAssignDialog';
+import UserAvatar from '../main/userAvatar';
 
 const useT = () => {
   const theme  = useTheme();
@@ -113,7 +113,7 @@ const TaskRow = ({ task, onClaim, onDone, currentUserId, onClick, isSelected }) 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
             {task.assigneeType === 'group'
               ? <GroupsIcon sx={{ fontSize: 12, color: T.TEXT_TER }} />
-              : <PersonIcon  sx={{ fontSize: 12, color: T.TEXT_TER }} />
+              : <UserAvatar userId={task.assignedUser} size={14} fontSize="0.5rem" />
             }
             {(task.assignedUserName || task.assignedGroupName) && (
               <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
@@ -122,7 +122,10 @@ const TaskRow = ({ task, onClaim, onDone, currentUserId, onClick, isSelected }) 
             )}
           </Box>
           {task.createdByName && (
-            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{t('crm.byActor', { name: task.createdByName })}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+              <UserAvatar userId={task.createdBy} size={14} fontSize="0.5rem" />
+              <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{t('crm.byActor', { name: task.createdByName })}</Typography>
+            </Box>
           )}
           <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>· {relTime(task.insertDate, t)}</Typography>
         </Box>

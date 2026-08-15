@@ -4,7 +4,6 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -12,124 +11,22 @@ import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import CircularProgress from '@mui/material/CircularProgress';
 import LinearProgress from '@mui/material/LinearProgress';
-import { useTheme } from '@mui/material/styles';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
-import ImageIcon from '@mui/icons-material/Image';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import CloseIcon from '@mui/icons-material/Close';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import AuthContext from '../../authAndConnections/auth';
 import AxiosGlobal from '../../authAndConnections/axiosGlobalUrl';
-import { uploadVariantMediaBatch, downloadInventoryMediaFile, downloadVariantMediaBatchZip } from '../../../store/store';
+import {
+  uploadVariantMediaBatch, downloadVariantMediaBatchZip,
+  deleteInventoryMedia, bulkDeleteInventoryMedia, bulkDownloadInventoryMediaZip, updateProduct,
+} from '../../../store/store';
+import InventoryGallery from './inventoryGallery';
 
 function pad(n) { return String(n).padStart(2, '0'); }
 function toDateInputValue(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
-function fileDisplayName(file) { return file.format ? `${file.name}.${file.format}` : file.name; }
 
-// ── single batch tile (image full-size / video full-size player) ──────────────
-function BatchTile({ file, apiBase }) {
-  const { t } = useTranslation();
-  const theme    = useTheme();
-  const isDark   = theme.palette.mode === 'dark';
-  const dispatch = useDispatch();
-  const authCtx  = useContext(AuthContext);
-  const [preview, setPreview]   = useState(false);
-  const [downloading, setDownloading] = useState(false);
-
-  const isImage  = file.metaData?.mimetype?.startsWith('image/');
-  const isVideo  = file.metaData?.mimetype?.startsWith('video/');
-  const thumbUrl = file.thumbnail ? `${apiBase}/uploads/${file.thumbnail}` : null;
-  const fileUrl  = file.metaData?.filename ? `${apiBase}/uploads/${file.metaData.filename}` : null;
-  const displayName = fileDisplayName(file);
-
-  const handleDownload = async (e) => {
-    e.stopPropagation();
-    if (!fileUrl) return;
-    setDownloading(true);
-    try {
-      await dispatch(downloadInventoryMediaFile({ authCtx, fileUrl, fileName: displayName })).unwrap();
-    } catch {
-      // snackBar handled inside thunk
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  return (
-    <>
-      <Box sx={{ width: 120, flexShrink: 0 }}>
-        <Box
-          onClick={() => fileUrl && setPreview(true)}
-          sx={{
-            position: 'relative', width: 120, height: 100,
-            border: '1.5px solid', borderColor: 'divider', borderRadius: '10px',
-            overflow: 'hidden', cursor: fileUrl ? 'pointer' : 'default',
-            bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-            '&:hover .tile-actions': { opacity: 1 },
-          }}
-        >
-          {thumbUrl ? (
-            <Box component="img" src={thumbUrl} alt={displayName}
-              sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {isVideo
-                ? <PlayCircleOutlineIcon sx={{ fontSize: 32, color: 'text.disabled' }} />
-                : <ImageIcon sx={{ fontSize: 32, color: 'text.disabled' }} />}
-            </Box>
-          )}
-          {isVideo && thumbUrl && (
-            <Box sx={{
-              position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              bgcolor: 'rgba(0,0,0,0.25)',
-            }}>
-              <PlayCircleOutlineIcon sx={{ fontSize: 30, color: '#fff' }} />
-            </Box>
-          )}
-
-          {/* hover download action */}
-          <Box
-            className="tile-actions"
-            sx={{
-              position: 'absolute', top: 4, right: 4, opacity: 0, transition: 'opacity 0.15s',
-            }}
-          >
-            <Tooltip title={t('inventory.downloadButton')}>
-              <IconButton size="small" onClick={handleDownload} disabled={downloading}
-                sx={{ bgcolor: 'rgba(0,0,0,0.55)', color: '#fff', p: 0.5, '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' } }}>
-                {downloading ? <CircularProgress size={12} color="inherit" /> : <DownloadIcon sx={{ fontSize: 14 }} />}
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
-
-        {/* filename caption — identifies the file without needing to click it */}
-        <Tooltip title={displayName}>
-          <Typography variant="caption" noWrap
-            sx={{ display: 'block', mt: 0.5, fontSize: '0.66rem', color: 'text.secondary', textAlign: 'center' }}>
-            {displayName}
-          </Typography>
-        </Tooltip>
-      </Box>
-
-      <Dialog open={preview} onClose={() => setPreview(false)} maxWidth="md">
-        <DialogContent sx={{ p: 1 }}>
-          {isImage && fileUrl && (
-            <Box component="img" src={fileUrl} alt={displayName}
-              sx={{ maxWidth: '85vw', maxHeight: '85vh', objectFit: 'contain', display: 'block' }} />
-          )}
-          {isVideo && fileUrl && (
-            <Box component="video" src={fileUrl} controls autoPlay
-              sx={{ maxWidth: '85vw', maxHeight: '85vh', display: 'block' }} />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-// ── upload / replace dialog ────────────────────────────────────────────────────
+// ── upload / replace dialog — unchanged, already has real progress ────────────
 function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onDone }) {
   const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
@@ -272,15 +169,19 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const apiBase     = axiosGlobal.defaultTargetApi || '';
+  // The product this variant belongs to is already loaded (variant detail is
+  // only ever opened from within a product's page) — read it directly rather
+  // than prop-drilling coverMediaId through variantDetail.js.
+  const coverMediaId = useSelector((s) => s.invCurrentProduct?.coverMediaId);
 
   const [batch,       setBatch]       = useState([]);
   const [loading,     setLoading]     = useState(false);
   const [formOpen,    setFormOpen]    = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
 
-  const fetchBatch = useCallback(async () => {
+  const fetchBatch = useCallback(async (silent = false) => {
     if (!variantId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await authCtx.jwtInst({
         method: 'get',
@@ -291,12 +192,20 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
     } catch {
       // non-fatal
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [variantId]);
 
   useEffect(() => { fetchBatch(); }, [fetchBatch]);
+
+  // While any video in the batch is still being converted server-side, quietly
+  // re-poll until none are pending, so the "Processing…" chip clears itself.
+  useEffect(() => {
+    if (!batch.some((f) => f.transcodeStatus === 'pending')) return;
+    const timer = setTimeout(() => fetchBatch(true), 4000);
+    return () => clearTimeout(timer);
+  }, [batch, fetchBatch]);
 
   const meta = batch[0];
   const isExpired = meta?.expirationDate && new Date(meta.expirationDate) < new Date();
@@ -312,37 +221,56 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
     }
   };
 
+  // Any image in this variant's batch can be pinned as the PRODUCT cover —
+  // covers aren't a per-variant concept, they belong to the parent product.
+  const handleSetCover = async (fileId) => {
+    try {
+      await dispatch(updateProduct({ authCtx, axiosGlobal, id: productId, data: { coverMediaId: fileId } })).unwrap();
+      fetchBatch();
+    } catch {
+      // error handled in thunk
+    }
+  };
+
+  const handleDeleteSelected = async (fileIds) => {
+    if (fileIds.length === 1) {
+      await dispatch(deleteInventoryMedia({ authCtx, axiosGlobal, fileId: fileIds[0], productId })).unwrap();
+    } else {
+      await dispatch(bulkDeleteInventoryMedia({ authCtx, axiosGlobal, fileIds, productId })).unwrap();
+    }
+    fetchBatch();
+  };
+
+  const handleBulkZip = async (fileIds) => {
+    await dispatch(bulkDownloadInventoryMediaZip({ authCtx, axiosGlobal, fileIds })).unwrap();
+  };
+
   return (
     <Box sx={{
       border: '1.5px solid', borderColor: 'divider', borderRadius: '14px',
       bgcolor: 'background.paper', p: 2.5, mt: 2,
     }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, gap: 1 }}>
-        <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'text.disabled' }}>
-          {batch.length ? t('inventory.mediaBatchCount', { count: batch.length }) : t('inventory.mediaBatch')}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {batch.length > 0 && (
-            <Button
-              size="small" variant="outlined"
-              startIcon={downloadingAll ? <CircularProgress size={12} /> : <DownloadIcon sx={{ fontSize: 14 }} />}
-              onClick={handleDownloadAll}
-              disabled={downloadingAll}
-              sx={{ borderRadius: 2, fontSize: '0.72rem' }}
-            >
-              {t('inventory.downloadAll')}
-            </Button>
-          )}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1.5, gap: 1 }}>
+        {batch.length > 0 && (
           <Button
             size="small" variant="outlined"
-            color={batch.length ? 'error' : 'primary'}
-            startIcon={<UploadFileIcon sx={{ fontSize: 14 }} />}
-            onClick={() => setFormOpen(true)}
+            startIcon={downloadingAll ? <CircularProgress size={12} /> : <DownloadIcon sx={{ fontSize: 14 }} />}
+            onClick={handleDownloadAll}
+            disabled={downloadingAll}
             sx={{ borderRadius: 2, fontSize: '0.72rem' }}
           >
-            {batch.length ? t('inventory.deleteReplace') : t('inventory.uploadBatch')}
+            {t('inventory.downloadAll')}
           </Button>
-        </Box>
+        )}
+        <Button
+          size="small" variant="outlined"
+          color={batch.length ? 'error' : 'primary'}
+          startIcon={<UploadFileIcon sx={{ fontSize: 14 }} />}
+          onClick={() => setFormOpen(true)}
+          sx={{ borderRadius: 2, fontSize: '0.72rem' }}
+        >
+          {batch.length ? t('inventory.deleteReplace') : t('inventory.uploadBatch')}
+        </Button>
       </Box>
 
       {meta && (
@@ -365,32 +293,16 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
         </Box>
       )}
 
-      {loading ? (
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          {[1, 2, 3].map((i) => (
-            <Box key={i} sx={{ width: 120, height: 100, borderRadius: '10px', bgcolor: 'action.hover' }} />
-          ))}
-        </Box>
-      ) : batch.length === 0 ? (
-        <Box
-          onClick={() => setFormOpen(true)}
-          sx={{
-            py: 4, textAlign: 'center', border: '1.5px dashed', borderColor: 'divider',
-            borderRadius: '10px', cursor: 'pointer',
-          }}
-        >
-          <ImageIcon sx={{ color: 'text.disabled', fontSize: 32, mb: 0.5 }} />
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-            {t('inventory.noMediaBatchYet')}
-          </Typography>
-        </Box>
-      ) : (
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          {batch.map((file) => (
-            <BatchTile key={file._id} file={file} apiBase={apiBase} />
-          ))}
-        </Box>
-      )}
+      <InventoryGallery
+        files={batch}
+        loading={loading}
+        coverMediaId={coverMediaId}
+        onSetCover={handleSetCover}
+        onDeleteSelected={handleDeleteSelected}
+        onBulkZip={handleBulkZip}
+        emptyHint={t('inventory.noMediaBatchYet')}
+        onEmptyClick={() => setFormOpen(true)}
+      />
 
       <UploadBatchDialog
         open={formOpen}

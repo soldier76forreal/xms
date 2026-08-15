@@ -17,6 +17,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { actions } from '../../store/store';
 import VariantMediaBatch from './sections/variantMediaBatch';
 import ChangeLog from './sections/changeLog';
+import CopyLinkButton from '../main/copyLinkButton';
 
 const UNIT_LABELS   = { M2: 'm²', ML: 'ml', PCS: 'pcs', SQFT: 'ft²', LNFT: 'lnft' };
 const GRADE_COLOR   = { Q: '#c49a6c', QS: '#c49a6c', W: '#90afc5', E: '#6fa46f', R: '#aaaaaa', T: '#888888' };
@@ -78,6 +79,7 @@ const VariantDetail = () => {
       <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem',
         display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box component="span" sx={{ flexGrow: 1 }}>{t('inventory.variantDetailTitle')}</Box>
+        <CopyLinkButton module="inventory" entityType="variant" entityId={variant._id} />
         <IconButton size="small" onClick={handleClose} aria-label={t('common.close')}
           sx={{ color: 'text.secondary' }}>
           <CloseIcon sx={{ fontSize: 18 }} />

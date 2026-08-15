@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useContext } from 'react';
+import { useLocation, useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -83,6 +84,8 @@ export default function Crm() {
   const isDark  = theme.palette.mode === 'dark';
   const isMob   = useMediaQuery(theme.breakpoints.down('md'));
   const dispatch    = useDispatch();
+  const location    = useLocation();
+  const history     = useHistory();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { can, scopeFor } = usePermissions();
@@ -175,6 +178,20 @@ export default function Crm() {
   useEffect(() => {
     setHasMore(customers.length < total);
   }, [customers, total]);
+
+  // Deep link from a notification click or a "copy link" short link:
+  // /crm?open=<customerId> opens that customer's detail (customerDetail
+  // self-fetches the full doc by id). Cleared afterwards so it doesn't
+  // re-trigger on later re-renders.
+  useEffect(() => {
+    const openId = new URLSearchParams(location.search).get('open');
+    if (!openId) return;
+    setSelectedCustomer({ _id: openId });
+    setFocusTab(0);
+    if (isMob) setMobileDetail(true);
+    history.replace('/crm');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const setF = (key, value) => setFilter(f => ({ ...f, [key]: value }));
 
@@ -551,6 +568,7 @@ export default function Crm() {
             <CustomerDetail customer={selectedCustomer}
               initialTab={focusTab}
               onClose={handleDetailClose}
+              onLoaded={setSelectedCustomer}
               onEdit={() => {
                 setFormMode('edit');
                 setFormCustomer(selectedCustomer);

@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import i18n, { LANGUAGES, STORAGE_KEY, DEFAULT_LANGUAGE, isRtlLang } from '../i18n';
+import AuthContext from '../components/authAndConnections/auth';
+import AxiosGlobal from '../components/authAndConnections/axiosGlobalUrl';
 
 const LanguageCtx = React.createContext({
   language: DEFAULT_LANGUAGE,
@@ -13,6 +15,9 @@ const LanguageCtx = React.createContext({
 // the document-level side effects (dir/lang attributes) that a plain i18next
 // language change doesn't handle on its own.
 export const LanguageContextProvider = ({ children }) => {
+  const authCtx     = useContext(AuthContext);
+  const axiosGlobal = useContext(AxiosGlobal);
+
   const [language, setLanguageState] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     return LANGUAGES.some((l) => l.code === stored) ? stored : DEFAULT_LANGUAGE;
@@ -34,6 +39,17 @@ export const LanguageContextProvider = ({ children }) => {
     i18n.changeLanguage(code);
     applyDocumentDirection(code);
     setLanguageState(code);
+
+    // Best-effort persist so the choice is visible to others (Users section
+    // indicator) — this browser's localStorage stays the source of truth for
+    // its own UI regardless of whether this call succeeds.
+    if (authCtx.isLoggedIn === true) {
+      authCtx.jwtInst({
+        method: 'put',
+        url: `${axiosGlobal.defaultTargetApi}/users/me/language`,
+        data: { language: code },
+      }).catch(() => {});
+    }
   };
 
   return (

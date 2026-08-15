@@ -7,6 +7,7 @@ import IconButton from '@mui/material/IconButton';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
@@ -25,10 +26,14 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { Can, usePermissions } from '../../contextApi/PermissionContext';
 import { COUNTRIES } from './countryData';
+import { LANGUAGES } from '../../i18n';
 import UserForm from './userForm';
 import UserLogs from './userLogs';
 import AssignCustomersDialog from '../crm/assignCustomersDialog';
 import InvoiceDetailDialog from '../mis/invoiceDetailDialog';
+import CopyLinkButton from '../main/copyLinkButton';
+import RestrictedAccessScreen from '../main/restrictedAccessScreen';
+import JobReportSection from './jobReportSection';
 
 // Per-type push categories (must match backend notificationPrefs keys).
 const NOTIF_TYPES = [
@@ -114,6 +119,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
 
   const [data,         setData]         = useState(null);
   const [loading,      setLoading]      = useState(true);
+  const [errorStatus,  setErrorStatus]  = useState(null);
   const [unlocking,    setUnlocking]    = useState(false);
   const [editOpen,     setEditOpen]     = useState(false);
   const [crmTasks,     setCrmTasks]     = useState([]);
@@ -125,14 +131,22 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
 
   const fetchUser = async () => {
     setLoading(true);
+    setErrorStatus(null);
     try {
       const res = await authCtx.jwtInst({
         method: 'get',
         url: `${axiosGlobal.defaultTargetApi}/users/${userId}`,
       });
       setData(res.data);
-    } catch {
-      dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedLoadUser'), type: 'error' }));
+    } catch (err) {
+      // A short-link/notification deep link can hand this a user the viewer
+      // doesn't hold users:view for — render the Restricted Access screen
+      // instead of the generic "failed to load" snackbar.
+      const status = err?.response?.status;
+      setErrorStatus(status || null);
+      if (status !== 403) {
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('users.failedLoadUser'), type: 'error' }));
+      }
     } finally {
       setLoading(false);
     }
@@ -248,6 +262,10 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
     ? COUNTRIES.find(c => c.dial === user.countryCode)
     : null;
 
+  // Selected UI language — persisted server-side (see languageContext.js /
+  // PUT /users/me/language), not just this browser's localStorage.
+  const langInfo = LANGUAGES.find(l => l.code === (user?.language || 'en')) || LANGUAGES[0];
+
   const inner = (
     <>
       {/* Back nav (only in standalone mode) */}
@@ -268,6 +286,8 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
           <CircularProgress size={26} sx={{ color: T.TEXT_TER }} />
         </Box>
+      ) : errorStatus === 403 ? (
+        <RestrictedAccessScreen />
       ) : !user ? (
         <Typography sx={{ color: T.TEXT_SEC, textAlign: 'center', py: 8 }}>{t('users.userNotFound')}</Typography>
       ) : (
@@ -319,6 +339,20 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                <CopyLinkButton module="users" entityType="user" entityId={userId} />
+                <Tooltip title={langInfo.label}>
+                  <Chip
+                    label={langInfo.nativeLabel}
+                    size="small"
+                    sx={{
+                      height: 22, fontSize: '0.68rem', fontWeight: 600, borderRadius: '6px',
+                      bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                      color: T.TEXT_SEC,
+                      border: `1px solid ${T.CARD_BD}`,
+                      '& .MuiChip-label': { px: 1 },
+                    }}
+                  />
+                </Tooltip>
                 <Chip
                   label={user.validation ? t('users.activeLabel') : t('users.inactiveBadge')}
                   size="small"
@@ -633,9 +667,12 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
           )}
 
           {/* ── Activity log ─────────────────────────────────────────────── */}
-          <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px' }}>
+          <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px', mb: 2.5 }}>
             <UserLogs userId={userId} />
           </Box>
+
+          {/* ── Job reports — self-authored, visible to anyone who can view this profile ── */}
+          <JobReportSection userId={userId} isSelf={String(authCtx.decode?.id) === String(userId)} />
 
         </Box>
       )}

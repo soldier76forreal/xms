@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState, useCallback } from 'react';
+import { useLocation, useHistory } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -32,6 +33,7 @@ import ShowProduct from './showProduct';
 import ProductForm from './productForm';
 import ImportExportDialog from './importExportDialog';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
+import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 
 const UNIT_LABELS = { M2: 'm²', ML: 'ml', PCS: 'pcs', SQFT: 'ft²', LNFT: 'lnft' };
 
@@ -105,12 +107,15 @@ function FilterGroup({ title, options, selected, onChange }) {
 
 const Inventory = () => {
   const { t } = useTranslation();
+  const location   = useLocation();
+  const history    = useHistory();
   const authCtx    = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch   = useDispatch();
   const { scopeFor, can } = usePermissions();
   const { activeBranchId } = useBranch();
   const [importExportOpen, setImportExportOpen] = useState(false);
+  const [openRestricted, setOpenRestricted] = useState(false);
   const inventoryScope = scopeFor('inventory');
   const createdByDisabled = inventoryScope === 'mine';
 
@@ -188,6 +193,39 @@ const Inventory = () => {
     setHasMore(invProducts.length < invTotal);
   }, [invProducts, invTotal]);
 
+  // Deep link from a notification click or a "copy link" short link:
+  // /inventory?open=<productId> opens that product's detail (ShowProduct
+  // self-fetches by id). /inventory?open=<variantId>&variant=1 means the id
+  // is a VARIANT — resolve it first to find its parent product, open that
+  // product underneath, then pop the variant detail dialog on top. Cleared
+  // from the URL afterwards so it doesn't re-trigger on later re-renders.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const openId = params.get('open');
+    if (!openId) return;
+    const isVariant = params.get('variant') === '1';
+    history.replace('/inventory');
+
+    if (!isVariant) {
+      setSelectedProductId(openId);
+      return;
+    }
+
+    authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/inventory/variants/${openId}` })
+      .then((res) => {
+        const { variant, product } = res.data?.data || {};
+        if (product?._id) setSelectedProductId(product._id);
+        if (variant) {
+          dispatch(actions.invSetCurrentVariant(variant));
+          dispatch(actions.invToggleVariantDetail());
+        }
+      })
+      .catch((err) => {
+        if (err?.response?.status === 403) setOpenRestricted(true);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
   const loadMoreProducts = useCallback(() => {
     dispatch(fetchProducts({ authCtx, axiosGlobal, params: buildInvParams(invProducts.length) }));
   }, [dispatch, authCtx, axiosGlobal, buildInvParams, invProducts.length]);
@@ -203,6 +241,8 @@ const Inventory = () => {
   const totalQtyDisplay = invStats?.totalByUnit
     ? Object.entries(invStats.totalByUnit).map(([u, q]) => `${q.toLocaleString()} ${UNIT_LABELS[u] || u}`).join(' · ')
     : '—';
+
+  if (openRestricted) return <RestrictedAccessScreen />;
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>

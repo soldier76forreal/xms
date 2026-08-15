@@ -30,6 +30,9 @@ import DmFileEditDialog from './dmFileEditDialog';
 import DmActivityLog from './dmActivityLog';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
+import CopyLinkButton from '../main/copyLinkButton';
+import RestrictedAccessScreen from '../main/restrictedAccessScreen';
+import UserAvatar from '../main/userAvatar';
 
 // A stored file `name` may have had its extension stripped (friendly name),
 // so append the real extension from the disk filename for the download.
@@ -56,6 +59,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   const { can }     = usePermissions();
 
   const doc = useSelector(s => s.dmSelectedRawContent);
+  const errorStatus = useSelector(s => s.dmSelectedRawContentErrorStatus);
 
   const T = {
     BD:       isDark ? 'rgba(255,255,255,0.07)' : theme.palette.divider,
@@ -156,6 +160,8 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
       .catch(() => {});
   };
 
+  if (!loading && errorStatus === 403) return <RestrictedAccessScreen />;
+
   if (loading || !doc || String(doc._id) !== String(id)) {
     return (
       <Box sx={{ p: 3 }}>
@@ -191,15 +197,26 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
           <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22`, flexShrink: 0 }}>
             <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: status.color }}>{t(status.labelKey)}</Typography>
           </Box>
+          <CopyLinkButton module="digitalMarketing" entityType="rawContent" entityId={doc._id} />
           <IconButton size="small" onClick={onClose} sx={{ color: T.TEXT_TER, flexShrink: 0 }}>
             <CloseIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Box>
-        <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, mt: 0.25 }}>
-          {doc.title?.trim() ? `${t('dm.fileCount', { count: doc.files?.length || 0 })} · ` : ''}
-          {doc.language || '—'} · {doc.useCase} · {doc.platform}
-          {doc.createdByName ? ` · ${t('crm.byActor', { name: doc.createdByName })}` : ''}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.25, flexWrap: 'wrap' }}>
+          <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC }}>
+            {doc.title?.trim() ? `${t('dm.fileCount', { count: doc.files?.length || 0 })} · ` : ''}
+            {doc.language || '—'} · {doc.useCase} · {doc.platform}
+          </Typography>
+          {doc.createdByName && (
+            <>
+              <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC }}>·</Typography>
+              <UserAvatar userId={doc.createdBy} size={14} fontSize="0.5rem" />
+              <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC }}>
+                {t('crm.byActor', { name: doc.createdByName })}
+              </Typography>
+            </>
+          )}
+        </Box>
 
         {/* status actions */}
         {can('digitalMarketing:rawContent:edit') && (

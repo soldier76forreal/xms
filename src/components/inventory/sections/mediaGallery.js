@@ -1,205 +1,169 @@
-import { useRef, useState, useContext } from 'react';
+import { useRef, useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
-import Tooltip from '@mui/material/Tooltip';
+import LinearProgress from '@mui/material/LinearProgress';
 import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import { useTheme } from '@mui/material/styles';
-import DeleteIcon from '@mui/icons-material/Delete';
-import StarIcon from '@mui/icons-material/Star';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
+import DialogActions from '@mui/material/DialogActions';
+import CloseIcon from '@mui/icons-material/Close';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import ImageIcon from '@mui/icons-material/Image';
-import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline';
 import { useDispatch } from 'react-redux';
 import AuthContext from '../../authAndConnections/auth';
 import AxiosGlobal from '../../authAndConnections/axiosGlobalUrl';
-import { uploadInventoryMedia, deleteInventoryMedia, updateProduct } from '../../../store/store';
+import {
+  uploadProductMediaBatch, deleteInventoryMedia, bulkDeleteInventoryMedia,
+  bulkDownloadInventoryMediaZip, updateProduct,
+} from '../../../store/store';
+import InventoryGallery from './inventoryGallery';
 
-// ── single media tile ─────────────────────────────────────────────────────────
-function MediaTile({ file, isCover, apiBase, onDelete, onSetCover, deleting }) {
+// ── upload dialog — multi-file picker with real progress (single XHR via the
+// new /products/:id/media-batch route, replacing the old one-request-per-file
+// loop) ─────────────────────────────────────────────────────────────────────
+function UploadDialog({ open, onClose, productId, onDone }) {
   const { t } = useTranslation();
-  const theme    = useTheme();
-  const isDark   = theme.palette.mode === 'dark';
-  const [preview, setPreview] = useState(false);
+  const authCtx     = useContext(AuthContext);
+  const axiosGlobal = useContext(AxiosGlobal);
+  const dispatch    = useDispatch();
+  const fileInput   = useRef(null);
 
-  const isImage = file.metaData?.mimetype?.startsWith('image/');
-  const isVideo = file.metaData?.mimetype?.startsWith('video/');
-  const thumbUrl = file.thumbnail ? `${apiBase}/uploads/${file.thumbnail}` : null;
-  const fileUrl  = file.metaData?.filename ? `${apiBase}/uploads/${file.metaData.filename}` : null;
+  const [files,   setFiles]   = useState([]);
+  const [busy,    setBusy]    = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    setFiles([]);
+    setProgress(0);
+  }, [open]);
+
+  const handlePick = (e) => {
+    setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+    e.target.value = '';
+  };
+  const removePending = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
+
+  const handleSubmit = async () => {
+    if (!files.length) return;
+    setBusy(true);
+    setProgress(0);
+    try {
+      const formData = new FormData();
+      files.forEach((f) => formData.append('files', f));
+      await dispatch(uploadProductMediaBatch({
+        authCtx, axiosGlobal, productId, formData,
+        onUploadProgress: (evt) => {
+          if (evt.total) setProgress(Math.round((evt.loaded / evt.total) * 100));
+        },
+      })).unwrap();
+      onDone();
+      onClose();
+    } catch {
+      // snackBar handled inside thunk
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <>
-      <Box
-        sx={{
-          position: 'relative',
-          width: 120,
-          height: 100,
-          border: isCover ? '2.5px solid' : '1.5px solid',
-          borderColor: isCover ? 'text.primary' : 'divider',
-          borderRadius: '10px',
-          overflow: 'hidden',
-          bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-          cursor: 'pointer',
-          flexShrink: 0,
-          '&:hover .tile-actions': { opacity: 1 },
-        }}
-        onClick={() => fileUrl && setPreview(true)}
-      >
-        {/* Thumbnail / placeholder */}
-        {thumbUrl ? (
-          <Box
-            component="img"
-            src={thumbUrl}
-            alt={file.name}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : isVideo && fileUrl ? (
-          // No server-side thumbnail (BUG-07: ffprobe missing) — let the browser
-          // render the first frame itself: preload="metadata" + #t=0.1 fetches
-          // only enough of the file to paint a real preview, no extra package.
-          <Box sx={{ position: 'relative', width: '100%', height: '100%', bgcolor: '#000' }}>
-            <Box component="video" src={`${fileUrl}#t=0.1`} muted preload="metadata"
-              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            <PlayCircleOutlineIcon sx={{
-              position: 'absolute', inset: 0, m: 'auto',
-              fontSize: 28, color: 'rgba(255,255,255,0.9)',
-              filter: 'drop-shadow(0 0 4px rgba(0,0,0,0.6))',
-            }} />
-          </Box>
-        ) : isVideo ? (
-          <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PlayCircleOutlineIcon sx={{ fontSize: 32, color: 'text.disabled' }} />
-          </Box>
-        ) : (
-          <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ImageIcon sx={{ fontSize: 32, color: 'text.disabled' }} />
+    <Dialog open={open} onClose={busy ? undefined : onClose} maxWidth="xs" fullWidth>
+      <DialogTitle sx={{ px: 3, py: 2.5, fontWeight: 700, fontSize: '1rem' }}>
+        {t('inventory.uploadBatchTitle')}
+      </DialogTitle>
+      <DialogContent sx={{ px: 3, display: 'flex', flexDirection: 'column', gap: 2, pt: '4px !important' }}>
+        <Box
+          onClick={() => !busy && fileInput.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            if (busy) return;
+            const dropped = Array.from(e.dataTransfer.files || []);
+            if (dropped.length) setFiles((prev) => [...prev, ...dropped]);
+          }}
+          sx={{
+            py: 3, textAlign: 'center', border: '1.5px dashed', borderColor: 'divider',
+            borderRadius: '10px', cursor: busy ? 'default' : 'pointer', opacity: busy ? 0.6 : 1,
+          }}
+        >
+          <UploadFileIcon sx={{ color: 'text.disabled', fontSize: 28, mb: 0.5 }} />
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+            {t('inventory.dropFilesHint')}
+          </Typography>
+        </Box>
+        <input ref={fileInput} type="file" multiple accept="image/*,video/*"
+          style={{ display: 'none' }} onChange={handlePick} disabled={busy} />
+
+        {files.length > 0 && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 150, overflowY: 'auto' }}>
+            {files.map((f, i) => (
+              <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" noWrap sx={{ flex: 1 }}>{f.name}</Typography>
+                <IconButton size="small" onClick={() => removePending(i)} disabled={busy}>
+                  <CloseIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Box>
+            ))}
           </Box>
         )}
 
-        {/* Cover badge */}
-        {isCover && (
-          <Box
-            sx={{
-              position: 'absolute', top: 4, left: 4,
-              bgcolor: 'rgba(0,0,0,0.6)', borderRadius: '4px',
-              px: 0.5, py: 0.125,
-            }}
-          >
-            <Typography variant="caption" sx={{ color: '#fff', fontSize: '0.6rem', fontWeight: 700 }}>
-              {t('inventory.coverBadge')}
+        {busy && (
+          <Box>
+            <LinearProgress variant="determinate" value={progress} sx={{ borderRadius: 4, height: 6 }} />
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5, textAlign: 'right' }}>
+              {t('inventory.uploadingProgress', { percent: progress })}
             </Typography>
           </Box>
         )}
-
-        {/* Hover actions */}
-        <Box
-          className="tile-actions"
-          sx={{
-            position: 'absolute', inset: 0,
-            bgcolor: 'rgba(0,0,0,0.45)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-            opacity: 0, transition: 'opacity 0.15s',
-          }}
-          onClick={(e) => e.stopPropagation()}
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2.5 }}>
+        <Button onClick={onClose} size="small" disabled={busy}>{t('common.cancel')}</Button>
+        <Button
+          onClick={handleSubmit}
+          variant="contained"
+          size="small"
+          disabled={busy || !files.length}
+          startIcon={busy ? <CircularProgress size={12} color="inherit" /> : null}
         >
-          {isImage && (
-            <Tooltip title={isCover ? t('inventory.currentCover') : t('inventory.setAsCover')}>
-              <IconButton size="small" sx={{ color: '#fff', p: 0.5 }} onClick={onSetCover}>
-                {isCover ? <StarIcon sx={{ fontSize: 18 }} /> : <StarBorderIcon sx={{ fontSize: 18 }} />}
-              </IconButton>
-            </Tooltip>
-          )}
-          <Tooltip title={t('common.delete')}>
-            <IconButton size="small" sx={{ color: '#ff4d4d', p: 0.5 }} onClick={onDelete} disabled={deleting}>
-              {deleting ? <CircularProgress size={14} color="inherit" /> : <DeleteIcon sx={{ fontSize: 18 }} />}
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-
-      {/* Full preview dialog */}
-      <Dialog open={preview} onClose={() => setPreview(false)} maxWidth="md">
-        <DialogContent sx={{ p: 1 }}>
-          {isImage && fileUrl && (
-            <Box component="img" src={fileUrl} alt={file.name}
-              sx={{ maxWidth: '80vw', maxHeight: '80vh', objectFit: 'contain' }} />
-          )}
-          {isVideo && fileUrl && (
-            <Box component="video" src={fileUrl} controls
-              sx={{ maxWidth: '80vw', maxHeight: '80vh' }} />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+          {t('inventory.upload')}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 
-// ── MediaGallery ──────────────────────────────────────────────────────────────
+// ── MediaGallery — product-level, accumulating gallery ─────────────────────────
 const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) => {
   const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
 
-  const fileInput  = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const [deletingId, setDeletingId] = useState(null);
-
-  const apiBase = axiosGlobal.defaultTargetApi || '';
-
-  const handleFileChange = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    setUploading(true);
-    try {
-      for (const f of files) {
-        const formData = new FormData();
-        formData.append('file', f);
-        await dispatch(uploadInventoryMedia({
-          authCtx, axiosGlobal,
-          subjectType: 'product',
-          subjectId: productId,
-          productId,
-          formData,
-        })).unwrap();
-      }
-      onRefresh();
-    } catch {
-      // snackBar handled inside thunk
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleDelete = async (fileId) => {
-    setDeletingId(fileId);
-    try {
-      await dispatch(deleteInventoryMedia({ authCtx, axiosGlobal, fileId, productId })).unwrap();
-      onRefresh();
-    } catch {
-      // snackBar handled inside thunk
-    } finally {
-      setDeletingId(null);
-    }
-  };
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   const handleSetCover = async (fileId) => {
     try {
-      await dispatch(updateProduct({
-        authCtx, axiosGlobal,
-        id: productId,
-        data: { coverMediaId: fileId },
-      })).unwrap();
+      await dispatch(updateProduct({ authCtx, axiosGlobal, id: productId, data: { coverMediaId: fileId } })).unwrap();
       onRefresh();
     } catch {
       // error handled in thunk
     }
+  };
+
+  const handleDeleteSelected = async (fileIds) => {
+    if (fileIds.length === 1) {
+      await dispatch(deleteInventoryMedia({ authCtx, axiosGlobal, fileId: fileIds[0], productId })).unwrap();
+    } else {
+      await dispatch(bulkDeleteInventoryMedia({ authCtx, axiosGlobal, fileIds, productId })).unwrap();
+    }
+    onRefresh();
+  };
+
+  const handleBulkZip = async (fileIds) => {
+    await dispatch(bulkDownloadInventoryMediaZip({ authCtx, axiosGlobal, fileIds })).unwrap();
   };
 
   return (
@@ -213,66 +177,29 @@ const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) =>
         mb: 3,
       }}
     >
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'text.disabled' }}>
-          {t('inventory.mediaCount', { count: media.length })}
-        </Typography>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={uploading ? <CircularProgress size={12} /> : <UploadFileIcon sx={{ fontSize: 14 }} />}
-          onClick={() => fileInput.current?.click()}
-          disabled={uploading}
-          sx={{ borderRadius: 2, fontSize: '0.72rem' }}
-        >
-          {uploading ? t('inventory.uploading') : t('inventory.upload')}
-        </Button>
-        <input
-          ref={fileInput}
-          type="file"
-          multiple
-          accept="image/*,video/*"
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-      </Box>
+      <InventoryGallery
+        files={media}
+        loading={loading}
+        coverMediaId={coverMediaId}
+        onSetCover={handleSetCover}
+        onDeleteSelected={handleDeleteSelected}
+        onBulkZip={handleBulkZip}
+        emptyHint={t('inventory.noMediaYet')}
+        onEmptyClick={() => setUploadOpen(true)}
+        extraHeaderAction={
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<UploadFileIcon sx={{ fontSize: 14 }} />}
+            onClick={() => setUploadOpen(true)}
+            sx={{ borderRadius: 2, fontSize: '0.72rem' }}
+          >
+            {t('inventory.upload')}
+          </Button>
+        }
+      />
 
-      {/* Gallery grid */}
-      {loading ? (
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          {[1, 2, 3].map((i) => (
-            <Box key={i} sx={{ width: 120, height: 100, borderRadius: '10px', bgcolor: 'action.hover' }} />
-          ))}
-        </Box>
-      ) : media.length === 0 ? (
-        <Box
-          sx={{
-            py: 4, textAlign: 'center', border: '1.5px dashed', borderColor: 'divider',
-            borderRadius: '10px', cursor: 'pointer',
-          }}
-          onClick={() => fileInput.current?.click()}
-        >
-          <ImageIcon sx={{ color: 'text.disabled', fontSize: 32, mb: 0.5 }} />
-          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-            {t('inventory.noMediaYet')}
-          </Typography>
-        </Box>
-      ) : (
-        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-          {media.map((file) => (
-            <MediaTile
-              key={file._id}
-              file={file}
-              isCover={String(file._id) === String(coverMediaId)}
-              apiBase={apiBase}
-              onDelete={() => handleDelete(file._id)}
-              onSetCover={() => handleSetCover(file._id)}
-              deleting={deletingId === file._id}
-            />
-          ))}
-        </Box>
-      )}
+      <UploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} productId={productId} onDone={onRefresh} />
     </Box>
   );
 };

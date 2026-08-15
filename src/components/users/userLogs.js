@@ -7,6 +7,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -50,10 +51,11 @@ const useT = () => {
 
 // ── Section pills ─────────────────────────────────────────────────────────────
 const SECTIONS = [
-  { id: 'all',       labelKey: 'users.logSectionAll' },
-  { id: 'crm',       labelKey: 'users.logSectionCrm' },
-  { id: 'inventory', labelKey: 'users.logSectionInventory' },
-  { id: 'mis',       labelKey: 'users.logSectionInvoices' },
+  { id: 'all',              labelKey: 'users.logSectionAll' },
+  { id: 'crm',              labelKey: 'users.logSectionCrm' },
+  { id: 'inventory',        labelKey: 'users.logSectionInventory' },
+  { id: 'mis',              labelKey: 'users.logSectionInvoices' },
+  { id: 'digitalMarketing', labelKey: 'users.logSectionDm' },
 ];
 
 const Pill = ({ active, onClick, children, T }) => (
@@ -97,9 +99,10 @@ const CHANGE_TYPE = {
 };
 
 const SECTION_ICON = {
-  inventory: InventoryIcon,
-  crm:       PeopleAltOutlinedIcon,
-  mis:       ReceiptLongOutlinedIcon,
+  inventory:        InventoryIcon,
+  crm:              PeopleAltOutlinedIcon,
+  mis:              ReceiptLongOutlinedIcon,
+  digitalMarketing: MovieOutlinedIcon,
 };
 
 // ── Date formatting ───────────────────────────────────────────────────────────
@@ -144,6 +147,10 @@ const LogEntry = ({ entry, isLast, T, t }) => {
   } else if (entry.changeType === 'created') {
     if (entry.section === 'crm') description = t('users.logNewCustomer');
     else if (entry.section === 'mis') description = entry.docType === 'invoice' ? t('users.logNewInvoice') : t('users.logNewQuote');
+    else if (entry.section === 'digitalMarketing') {
+      description = entry.subjectType === 'readyToUpload' ? t('users.logNewReadyToUpload') : t('users.logNewRawContent');
+      if (entry.productName) description += ` — ${entry.productName}`;
+    }
     else description = entry.subjectType === 'product' ? t('users.logNewProduct') : t('users.logNewVariant');
   } else if (entry.changeType === 'spec') {
     description = entry.field ? `${entry.field}: ${entry.oldValue ?? '—'} → ${entry.newValue ?? '—'}` : t('users.logSpecUpdated');
@@ -260,7 +267,7 @@ const UserLogs = ({ userId }) => {
   const [hasMore,  setHasMore]  = useState(false);
   const [total,    setTotal]    = useState(0);
 
-  const LIMIT = 30;
+  const LIMIT = 8;
 
   const fetchLogs = useCallback(async (pg = 1, append = false) => {
     if (append) setLoadingMore(true);
@@ -308,7 +315,7 @@ const UserLogs = ({ userId }) => {
       </Box>
 
       {/* Section filter */}
-      <Box sx={{ display: 'flex', gap: 0.5, mb: 2.5 }}>
+      <Box sx={{ display: 'flex', gap: 0.5, mb: 2.5, flexWrap: 'wrap' }}>
         {SECTIONS.map(s => (
           <Pill key={s.id} active={section === s.id} onClick={() => setSection(s.id)} T={T}>
             {t(s.labelKey)}

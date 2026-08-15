@@ -5,7 +5,6 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -16,6 +15,7 @@ import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { Can } from '../../contextApi/PermissionContext';
+import UserAvatar from '../main/userAvatar';
 
 const STATUS = {
   open:    { labelKey: 'users.taskStatusOpen',    color: '#64B5F6', bg: 'rgba(100,181,246,0.12)' },
@@ -142,15 +142,29 @@ const TaskPanel = ({ task: initialTask, currentUserId, onUpdate }) => {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               {task.assigneeType === 'group'
                 ? <GroupsIcon sx={{ fontSize: 14, color: T.TEXT_TER }} />
-                : <PersonIcon  sx={{ fontSize: 14, color: T.TEXT_TER }} />
+                : <UserAvatar userId={task.assignedUser} size={18} fontSize="0.6rem" />
               }
               <span>{task.assignedUserName || task.assignedGroupName || '—'}</span>
             </Box>
           }
         />
-        <InfoRow label={t('users.taskCreatedBy')} T={T} value={task.createdByName || '—'} />
+        <InfoRow label={t('users.taskCreatedBy')} T={T}
+          value={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <UserAvatar userId={task.createdBy} size={18} fontSize="0.6rem" />
+              <span>{task.createdByName || '—'}</span>
+            </Box>
+          }
+        />
         {task.claimedByName && task.status !== 'open' && (
-          <InfoRow label={t('users.taskClaimedBy')} T={T} value={task.claimedByName} />
+          <InfoRow label={t('users.taskClaimedBy')} T={T}
+            value={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <UserAvatar userId={task.claimedBy} size={18} fontSize="0.6rem" />
+                <span>{task.claimedByName}</span>
+              </Box>
+            }
+          />
         )}
         <InfoRow label={t('users.taskCreated')} T={T} value={task.insertDate ? new Date(task.insertDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} />
       </Box>

@@ -1,10 +1,12 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
 import LockIcon from '@mui/icons-material/Lock';
 import { useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { COUNTRIES } from './countryData';
+import { LANGUAGES } from '../../i18n';
 
 const getInitials = (user) => {
   const f = (user.firstName || '').charAt(0).toUpperCase();
@@ -50,6 +52,10 @@ const UserCard = ({ user, onClick, selected = false, apiBase = '' }) => {
   const countryInfo = user.countryCode
     ? COUNTRIES.find(c => c.dial === user.countryCode)
     : null;
+
+  // Selected UI language — persisted server-side (see languageContext.js /
+  // PUT /users/me/language), not just this browser's localStorage.
+  const langInfo = LANGUAGES.find(l => l.code === (user.language || 'en')) || LANGUAGES[0];
 
   return (
     <Box
@@ -109,6 +115,22 @@ const UserCard = ({ user, onClick, selected = false, apiBase = '' }) => {
           </Typography>
         )}
       </Box>
+
+      {/* Selected language indicator */}
+      <Tooltip title={langInfo.label}>
+        <Chip
+          label={langInfo.nativeLabel}
+          size="small"
+          sx={{
+            height: 20, fontSize: '0.65rem', fontWeight: 600, flexShrink: 0,
+            bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+            color:   isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)',
+            border:  `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+            borderRadius: '4px',
+            '& .MuiChip-label': { px: 1 },
+          }}
+        />
+      </Tooltip>
 
       {/* Role chips */}
       {(user.roleNames || []).length > 0 && (

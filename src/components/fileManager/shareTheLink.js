@@ -19,31 +19,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { newLink } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-
-// Clipboard with a fallback: navigator.clipboard only exists on secure origins
-// (https / localhost) — on a LAN http:// origin it's undefined, which is why
-// the old share flow silently failed. execCommand works everywhere.
-const copyText = async (text) => {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch (_) { /* fall through */ }
-  try {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.opacity = '0';
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(ta);
-    return ok;
-  } catch (_) {
-    return false;
-  }
-};
+import { copyText } from '../../tools/clipboard';
 
 const EXPIRY_OPTIONS = [
   { minutes: 60,    labelKey: 'files.expiry1Hour'  },

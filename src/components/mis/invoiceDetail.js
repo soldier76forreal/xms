@@ -34,6 +34,9 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { updateMisPayment, actions } from '../../store/store';
 import SendToDialog from './sendToDialog';
+import CopyLinkButton from '../main/copyLinkButton';
+import RestrictedAccessScreen from '../main/restrictedAccessScreen';
+import UserAvatar from '../main/userAvatar';
 
 // Phase 6 — MIS invoice/pre-invoice detail container (Session 45).
 // Header (number/type/status/customer/total + actions) · live document preview
@@ -99,6 +102,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
   const [pay, setPay]             = useState({ cash: '', chequeBank: '', card: '' });
   const [paySaving, setPaySaving] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [restricted, setRestricted] = useState(false);
 
   const isInvoice = doc.docType === 'invoice';
   const permBase  = isInvoice ? 'mis:invoice' : 'mis:preinvoice';
@@ -121,12 +125,17 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
       setPreviewHtml(typeof htmlRes.data === 'string' ? htmlRes.data : '');
       const p = detailRes.data?.payment || {};
       setPay({ cash: p.cash || '', chequeBank: p.chequeBank || '', card: p.card || '' });
-    } catch (_) { /* snackbar handled globally on 401; detail keeps list data */ }
+    } catch (err) {
+      // A short-link/notification deep link can hand this component a doc the
+      // viewer isn't scoped/permitted to see — show the full-page Restricted
+      // Access screen instead of a blank/broken detail.
+      if (err?.response?.status === 403) setRestricted(true);
+    }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authCtx, axiosGlobal, doc._id, permBase, can, previewLang]);
 
-  useEffect(() => { loadDetail(true); }, [doc._id]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setRestricted(false); loadDetail(true); }, [doc._id]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (full) loadDetail(false); }, [previewLang]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSavePayment = async () => {
@@ -140,6 +149,8 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
     setPayOpen(false);
     loadDetail();   // refresh totals/status/activity + preview
   };
+
+  if (restricted) return <RestrictedAccessScreen />;
 
   const activity = full?.activity || [];
 
@@ -172,14 +183,18 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
                   {live.assignedTo.length}
                 </Typography>
                 {live.assignedByName && (
-                  <Typography sx={{ fontSize: '0.68rem', color: '#64b5f6', fontWeight: 600 }}>
-                    {t('mis.fromName', { name: live.assignedByName })}
-                  </Typography>
+                  <>
+                    <UserAvatar userId={live.assignedBy} size={14} fontSize="0.5rem" />
+                    <Typography sx={{ fontSize: '0.68rem', color: '#64b5f6', fontWeight: 600 }}>
+                      {t('mis.fromName', { name: live.assignedByName })}
+                    </Typography>
+                  </>
                 )}
               </Box>
             </Tooltip>
           )}
           <Box sx={{ flexGrow: 1 }} />
+          <CopyLinkButton module="mis" entityType="invoice" entityId={doc._id} />
           <IconButton size="small" onClick={onClose} sx={{ color: T.TEXT_TER }}>
             <CloseIcon sx={{ fontSize: 16 }} />
           </IconButton>
@@ -367,9 +382,12 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
                           {a.body}
                         </Typography>
                       )}
-                      <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER, mt: 0.25 }}>
-                        {a.actorName ? `${a.actorName} · ` : ''}{fmtDateTime(a.date)}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.25 }}>
+                        {a.actorName && <UserAvatar userId={a.actorId} size={14} fontSize="0.5rem" />}
+                        <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER }}>
+                          {a.actorName ? `${a.actorName} · ` : ''}{fmtDateTime(a.date)}
+                        </Typography>
+                      </Box>
                     </Box>
                   </Box>
                 );

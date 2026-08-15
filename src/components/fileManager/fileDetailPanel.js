@@ -27,6 +27,7 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import { actions, deleteTag } from '../../store/store';
 import MediaViewer, { resolveMediaKind } from '../digitalMarketing/mediaViewer';
 import SearchInputForTags from './searchInputForTags';
+import UserAvatar from '../main/userAvatar';
 
 const fmtSize = (bytes) => {
   if (!bytes) return '—';
@@ -240,7 +241,13 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
                   <Row label={t('files.sizeLabel')} value={fmtSize(doc.metaData?.size)} T={T} />
                 </>
               )}
-              <Row label={t('files.uploadedByLabel')} value={doc.uploadedByName || '—'} T={T} />
+              <Row label={t('files.uploadedByLabel')} T={T}
+                value={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: 'flex-end' }}>
+                    {doc.generatedBy && <UserAvatar userId={doc.generatedBy} size={18} fontSize="0.6rem" />}
+                    <span>{doc.uploadedByName || '—'}</span>
+                  </Box>
+                } />
               <Row label={t('files.dateLabel')} value={fmtDate(doc.insertDate)} T={T} />
               {doc.updateDate && <Row label={t('files.lastUpdatedLabel')} value={fmtDate(doc.updateDate)} T={T} />}
             </Box>
@@ -283,10 +290,13 @@ export default function FileDetailPanel({ entry, pinned, onClose, onRename, onMo
                   <Box sx={{ width: 6, height: 6, borderRadius: '50%', mt: '6px', flexShrink: 0,
                     bgcolor: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }} />
                   <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI }}>
-                      {ACTIVITY_LABEL_KEYS[a.type] ? t(ACTIVITY_LABEL_KEYS[a.type]) : a.type}
-                      {a.actorName ? <Box component="span" sx={{ color: T.TEXT_SEC }}> — {a.actorName}</Box> : null}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      {a.actorId && <UserAvatar userId={a.actorId} size={16} fontSize="0.55rem" />}
+                      <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI }}>
+                        {ACTIVITY_LABEL_KEYS[a.type] ? t(ACTIVITY_LABEL_KEYS[a.type]) : a.type}
+                        {a.actorName ? <Box component="span" sx={{ color: T.TEXT_SEC }}> — {a.actorName}</Box> : null}
+                      </Typography>
+                    </Box>
                     <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{fmtDate(a.date)}</Typography>
                   </Box>
                 </Box>

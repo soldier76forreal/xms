@@ -46,6 +46,16 @@ const inputSx = {
 };
 
 const OTP_LENGTH = 6;
+const POST_LOGIN_REDIRECT_KEY = 'xms_postLoginRedirect';
+
+// After a short link bounces a logged-out visitor here, ShortLinkResolver
+// stashes where to send them back to. Consumed once, on the next successful
+// login, from either step (OTP or the password fallback).
+const consumePostLoginRedirect = () => {
+  const dest = sessionStorage.getItem(POST_LOGIN_REDIRECT_KEY);
+  sessionStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+  return dest || '/';
+};
 
 const LogIn = () => {
   const { t }       = useTranslation();
@@ -157,7 +167,7 @@ const LogIn = () => {
         data: { phoneNumber: phone.trim(), otp },
       });
       authCtx.login(res.data.accessToken);
-      history.push('/');
+      history.push(consumePostLoginRedirect());
     } catch (err) {
       const status = err?.response?.status;
       const data   = err?.response?.data;
@@ -192,7 +202,7 @@ const LogIn = () => {
         data: { phoneNumber: phone.trim(), password },
       });
       authCtx.login(res.data.accessToken);
-      history.push('/');
+      history.push(consumePostLoginRedirect());
     } catch (err) {
       const status = err?.response?.status;
       const data   = err?.response?.data;

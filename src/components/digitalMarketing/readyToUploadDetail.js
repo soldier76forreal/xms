@@ -18,16 +18,21 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import MovieIcon from '@mui/icons-material/Movie';
 import DownloadIcon from '@mui/icons-material/Download';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
-import { fetchReadyToUpload, updateReadyToUpload, deleteReadyToUpload } from '../../store/store';
+import { fetchReadyToUpload, updateReadyToUpload, deleteReadyToUpload, actions } from '../../store/store';
+import { copyText } from '../../tools/clipboard';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
 import DmFileEditDialog from './dmFileEditDialog';
 import DmActivityLog from './dmActivityLog';
 import RawContentChat from './rawContentChat';
+import CopyLinkButton from '../main/copyLinkButton';
+import RestrictedAccessScreen from '../main/restrictedAccessScreen';
+import UserAvatar from '../main/userAvatar';
 
 // A stored file `name` may have had its extension stripped, so fall back to
 // the disk filename's extension for the download (same helper as raw content).
@@ -47,6 +52,7 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
   const { can }     = usePermissions();
 
   const doc = useSelector(s => s.dmSelectedReadyToUpload);
+  const errorStatus = useSelector(s => s.dmSelectedReadyToUploadErrorStatus);
 
   const T = {
     BD:       isDark ? 'rgba(255,255,255,0.07)' : theme.palette.divider,
@@ -83,6 +89,16 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
     fd.append('caption', caption);
     await dispatch(updateReadyToUpload({ authCtx, axiosGlobal, id, formData: fd }));
     setCaptionDirty(false);
+  };
+
+  const copyCaption = async () => {
+    if (!caption) return;
+    const copied = await copyText(caption);
+    dispatch(actions.setShowSnackBar({
+      status: true,
+      msg: copied ? t('files.copied') : caption,
+      type: copied ? 'success' : 'info',
+    }));
   };
 
   const saveTitle = async () => {
@@ -135,6 +151,8 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
     });
   };
 
+  if (!loading && errorStatus === 403) return <RestrictedAccessScreen />;
+
   if (loading || !doc || String(doc._id) !== String(id)) {
     return (
       <Box sx={{ p: 3 }}>
@@ -166,15 +184,26 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
             </Typography>
           )}
           <Box sx={{ flexGrow: 1 }} />
+          <CopyLinkButton module="digitalMarketing" entityType="readyToUpload" entityId={doc._id} />
           <IconButton size="small" onClick={onClose} sx={{ color: T.TEXT_TER, flexShrink: 0 }}>
             <CloseIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Box>
-        <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, mt: 0.25 }}>
-          {doc.title?.trim() ? `${t('dm.fileCount', { count: doc.files?.length || 0 })} · ` : ''}
-          {doc.language || '—'} · {doc.platform || '—'}
-          {doc.createdByName ? ` · ${t('crm.byActor', { name: doc.createdByName })}` : ''}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mt: 0.25, flexWrap: 'wrap' }}>
+          <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC }}>
+            {doc.title?.trim() ? `${t('dm.fileCount', { count: doc.files?.length || 0 })} · ` : ''}
+            {doc.language || '—'} · {doc.platform || '—'}
+          </Typography>
+          {doc.createdByName && (
+            <>
+              <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC }}>·</Typography>
+              <UserAvatar userId={doc.createdBy} size={14} fontSize="0.5rem" />
+              <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC }}>
+                {t('crm.byActor', { name: doc.createdByName })}
+              </Typography>
+            </>
+          )}
+        </Box>
 
         {doc.rawContent && (
           <Box sx={{ mt: 1, p: 1, borderRadius: '8px', bgcolor: T.CTRL_BG }}>
@@ -256,10 +285,20 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
           </Box>
         )}
 
-        <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
-          color: T.TEXT_TER, mb: 1 }}>
-          {t('dm.captionSectionLabel')}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
+            color: T.TEXT_TER }}>
+            {t('dm.captionSectionLabel')}
+          </Typography>
+          <Tooltip title={t('common.copyToClipboard')}>
+            <span>
+              <IconButton size="small" onClick={copyCaption} disabled={!caption}
+                sx={{ color: T.TEXT_TER, width: 24, height: 24, '&:hover': { color: T.TEXT_PRI } }}>
+                <ContentCopyIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
         <TextField fullWidth multiline minRows={3} size="small" value={caption}
           disabled={!can('digitalMarketing:readyToUpload:edit')}
           onChange={(e) => { setCaption(e.target.value); setCaptionDirty(true); }}
@@ -272,13 +311,17 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
         </Box>
       </Box>
 
-      {/* ── Chat — same thread as the source raw content batch (one
-          conversation about this content, not a forked parallel chat).
-          Rendered by RawContentChat itself, which carries its own px:3
-          padding + border-top, matching the raw-content detail exactly. ── */}
-      {doc.rawContentId && can('digitalMarketing:rawContent:chat') && (
+      {/* ── Chat — a graduated record reuses the SAME thread as its source raw
+          content batch (one conversation about this content, not a forked
+          parallel chat); a standalone record (no rawContentId) gets its own
+          thread keyed by its own id instead. Rendered by RawContentChat
+          itself, which carries its own px:3 padding + border-top, matching
+          the raw-content detail exactly. ── */}
+      {can('digitalMarketing:rawContent:chat') && (
         <Box sx={{ flexShrink: 0, overflowY: 'auto', maxHeight: '45%' }}>
-          <RawContentChat rawContentId={doc.rawContentId} T={T} isDark={isDark} />
+          {doc.rawContentId
+            ? <RawContentChat rawContentId={doc.rawContentId} T={T} isDark={isDark} />
+            : <RawContentChat readyToUploadId={doc._id} T={T} isDark={isDark} />}
         </Box>
       )}
 

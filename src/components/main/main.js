@@ -16,6 +16,7 @@ import FileMain   from '../fileManager/fileMain';
 import Inventory  from '../inventory/inventory';
 import Users      from '../users/users';
 import DigitalMarketing from '../digitalMarketing/digitalMarketing';
+import MyActivityPage from '../users/myActivityPage';
 
 import PageSection from '../../contextApi/pageSection';
 import { usePermissions } from '../../contextApi/PermissionContext';
@@ -82,6 +83,27 @@ const Main = () => {
     }
   }, [location.pathname, ready]);   // eslint-disable-line react-hooks/exhaustive-deps
 
+  // What to actually RENDER, computed synchronously from the URL (not from
+  // pageSection.selectedSection, which only catches up a render later via the
+  // effect above). Without this, navigating straight from one section to a
+  // DIFFERENT one (e.g. a short link/notification opened while CRM is showing,
+  // pointing at Digital Marketing) rendered the OLD section for one extra
+  // frame; that section's own `?open=` handler would see the query string —
+  // `open` isn't namespaced per section — misinterpret it as its own, and call
+  // history.replace to its own base path, wiping the target section's query
+  // params before it ever got a chance to mount and read them. Same-section
+  // links "worked" only because the stale frame and the real one agreed.
+  const matchedEntry   = Object.entries(PATH_TO_SECTION).find(([p]) => location.pathname.startsWith(p));
+  const matchedSection = matchedEntry ? matchedEntry[1] : null;
+  const matchedNavItem = matchedEntry ? NAV_ITEMS.find((n) => n.path === matchedEntry[0]) : null;
+  const matchedAllowed = !ready || !matchedNavItem?.permission || can(matchedNavItem.permission);
+  const renderSection  = matchedSection !== null && matchedAllowed ? matchedSection : pageSection.selectedSection;
+
+  // "My Activity" is deliberately NOT in PATH_TO_SECTION / NAV_ITEMS — it has no
+  // rail icon and no permission gate (reachable via the profile popup only, by
+  // anyone logged in, even without users:view — see myActivityPage.js).
+  const isMyActivity = location.pathname.startsWith('/myActivity');
+
   return (
     <Fragment>
       <MainNav />
@@ -91,12 +113,13 @@ const Main = () => {
           sections that don't paint their own full-height background. */}
       <Box sx={{ mt: '60px', ml: { xs: 0, md: `${railWidth}px` }, transition: 'margin-left 0.18s ease',
         bgcolor: 'background.default', minHeight: 'calc(100vh - 60px)' }}>
-        {pageSection.selectedSection === 0 ? <Mis />
-          : pageSection.selectedSection === 1 ? <FileMain />
-          : pageSection.selectedSection === 2 ? <Crm />
-          : pageSection.selectedSection === 5 ? <Inventory />
-          : pageSection.selectedSection === 6 ? <Users />
-          : pageSection.selectedSection === 7 ? <DigitalMarketing />
+        {isMyActivity ? <MyActivityPage />
+          : renderSection === 0 ? <Mis />
+          : renderSection === 1 ? <FileMain />
+          : renderSection === 2 ? <Crm />
+          : renderSection === 5 ? <Inventory />
+          : renderSection === 6 ? <Users />
+          : renderSection === 7 ? <DigitalMarketing />
           : null}
       </Box>
 

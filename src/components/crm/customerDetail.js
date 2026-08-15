@@ -45,6 +45,9 @@ import { useDispatch } from 'react-redux';
 import { deleteCrmCustomer } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import RequestsTab from './tabs/requestsTab';
+import CopyLinkButton from '../main/copyLinkButton';
+import RestrictedAccessScreen from '../main/restrictedAccessScreen';
+import UserAvatar from '../main/userAvatar';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -101,12 +104,13 @@ function relativeDate(d, t) {
 
 // ── CustomerDetail (main) ──────────────────────────────────────────────────────
 
-const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }) => {
+const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, onLoaded, initialTab = 0 }) => {
   const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const [activeTab,    setActiveTab]    = useState(initialTab);
   const [confirmOpen,  setConfirmOpen]  = useState(false);
+  const [restricted,   setRestricted]   = useState(false);
 
   // Re-sync when the caller requests a specific tab (e.g. "New communication"
   // from the card menu opens straight to Communication) — fires whenever the
@@ -117,6 +121,30 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
   const { can }     = usePermissions();
+
+  // Self-fetches the full doc by id every time a different customer is shown —
+  // covers both a normal card click (refreshes stale list data) and a short-
+  // link/notification deep link that only hands this component a bare
+  // {_id}. A 403 here (row-level scope denies this customer) renders the
+  // full-page Restricted Access screen instead of a blank/broken detail.
+  useEffect(() => {
+    if (!customer?._id) return;
+    setRestricted(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authCtx.jwtInst({
+          method: 'get',
+          url: `${axiosGlobal.defaultTargetApi}/crm/customers/${customer._id}`,
+        });
+        if (!cancelled) onLoaded && onLoaded(res.data);
+      } catch (err) {
+        if (!cancelled && err?.response?.status === 403) setRestricted(true);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer?._id]);
 
   const T = {
     BG:       isDark ? '#0d0d0d' : theme.palette.background.default,
@@ -131,6 +159,7 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
   };
 
   if (!customer) return null;
+  if (restricted) return <RestrictedAccessScreen />;
 
   const pi           = customer.personalInformation || {};
   const isComp       = (pi.personOrCompany || pi.customerType) === 'company';
@@ -175,6 +204,7 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, initialTab = 0 }
           </Box>
 
           <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>
+            <CopyLinkButton module="crm" entityType="customer" entityId={customer._id} />
             {can('crm:customer:edit') && (
               <Tooltip title={t('common.edit')}>
                 <IconButton size="small" onClick={onEdit}
@@ -681,9 +711,12 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
                       {t(`crm.${cfg.labelKey}`)}
                     </Typography>
                     {act.actorName && (
-                      <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
-                        {t('crm.byActor', { name: act.actorName })}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                        <UserAvatar userId={act.actorId} size={14} fontSize="0.5rem" />
+                        <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
+                          {t('crm.byActor', { name: act.actorName })}
+                        </Typography>
+                      </Box>
                     )}
                     <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, ml: 'auto' }}>
                       {relativeDate(act.date, t)}

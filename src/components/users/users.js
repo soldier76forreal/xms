@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
+import { useLocation, useHistory } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
@@ -317,6 +318,8 @@ const Users = () => {
   const { t }              = useTranslation();
   const theme           = useTheme();
   const isMd            = useMediaQuery(theme.breakpoints.up('md'));
+  const location        = useLocation();
+  const history          = useHistory();
 
   const [tab,            setTab]            = useState('users');
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -341,6 +344,19 @@ const Users = () => {
     if (updatedTask) setSelectedTask(updatedTask);
     setTaskRefreshKey(k => k + 1);
   }, []);
+
+  // Deep link from a notification click or a "copy link" short link:
+  // /users?open=<userId> selects that user on the Users tab (ShowUser
+  // self-fetches by id). Cleared afterwards so it doesn't re-trigger on
+  // later re-renders.
+  useEffect(() => {
+    const openId = new URLSearchParams(location.search).get('open');
+    if (!openId) return;
+    setTab('users');
+    setSelectedUserId(openId);
+    history.replace('/users');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   // Current selection for the active tab
   const currentSelection = { users: selectedUserId, roles: selectedRole, groups: selectedGroup, tasks: selectedTask }[tab];

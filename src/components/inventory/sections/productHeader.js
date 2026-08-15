@@ -11,6 +11,7 @@ import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import Tooltip from '@mui/material/Tooltip';
 import { useTranslation } from 'react-i18next';
+import CopyLinkButton from '../../main/copyLinkButton';
 
 const STONE_ACCENT = {
   TR: '#c49a6c', MA: '#90afc5', GR: '#7a7a7a', ON: '#c9a84c',
@@ -50,6 +51,7 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, f
         <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1, minWidth: 0 }} noWrap>
           {t('nav.inventory')}
         </Typography>
+        <CopyLinkButton module="inventory" entityType="product" entityId={product?._id} />
         {onToggleFullView && (
           <Tooltip title={fullView ? t('inventory.collapseToSidebar') : t('inventory.openInFullView')}>
             <IconButton

@@ -144,10 +144,12 @@ export const newLink = createAsyncThunk('getFilesAndFolders/newLink', async (the
       })
       const data = await response.data;
       dispatch(actions.newLinkCreationLoading(false))
-      // The share modal displays this and owns copying — navigator.clipboard
-      // is undefined on non-secure origins (http:// LAN IPs), so writing it
-      // here silently failed and the user never saw the link at all.
-      return `${window.location.origin}/showLink?token=${data}`;
+      // Unified short-link system (2026-07-30) — internal-only, requires
+      // login. The share modal displays this and owns copying —
+      // navigator.clipboard is undefined on non-secure origins (http://
+      // LAN IPs), so writing it here silently failed and the user never
+      // saw the link at all.
+      return `${window.location.origin}/l/${data.code}`;
 
   }catch(error){
     dispatch(actions.newLinkCreationLoading(false))
@@ -553,6 +555,7 @@ export const fetchRawContents = createAsyncThunk('overallAssets/fetchRawContents
 });
 
 export const fetchRawContent = createAsyncThunk('overallAssets/fetchRawContent', async (theData, { dispatch }) => {
+  dispatch(actions.dmRawSetSelectedErrorStatus(null));
   try {
     const response = await theData.authCtx.jwtInst({
       method: 'get',
@@ -560,7 +563,13 @@ export const fetchRawContent = createAsyncThunk('overallAssets/fetchRawContent',
     });
     dispatch(actions.dmRawSetSelected(response.data));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load raw content record', type: 'error' }));
+    // A short-link/notification deep link can hand this a record the viewer
+    // isn't scoped/permitted to see — remember the status so rawContentDetail.js
+    // can render the Restricted Access screen instead of a blank panel.
+    dispatch(actions.dmRawSetSelectedErrorStatus(err?.response?.status || null));
+    if (err?.response?.status !== 403) {
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load raw content record', type: 'error' }));
+    }
   }
 });
 
@@ -638,11 +647,15 @@ export const submitReadyToUpload = createAsyncThunk('overallAssets/submitReadyTo
   }
 });
 
+// theData.kind — 'rawContent' (default) or 'readyToUpload'; picks which thread
+// the shared RawContentChat component/model is reading (see rawContentChatModel.js —
+// a message belongs to exactly one of rawContentId/readyToUploadId).
 export const fetchRawContentChat = createAsyncThunk('overallAssets/fetchRawContentChat', async (theData, { dispatch }) => {
   try {
+    const base = theData.kind === 'readyToUpload' ? 'ready-to-upload' : 'raw-contents';
     const response = await theData.authCtx.jwtInst({
       method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/raw-contents/${theData.id}/chat`,
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/${base}/${theData.id}/chat`,
       params: theData.params || {},
     });
     const isFirstPage = !theData.params?.page || theData.params.page <= 1;
@@ -663,9 +676,10 @@ export const fetchRawContentChat = createAsyncThunk('overallAssets/fetchRawConte
 // response so the UI can push it immediately without waiting on the socket echo.
 export const sendRawContentChatMessage = createAsyncThunk('overallAssets/sendRawContentChatMessage', async (theData, { dispatch }) => {
   try {
+    const base = theData.kind === 'readyToUpload' ? 'ready-to-upload' : 'raw-contents';
     const response = await theData.authCtx.jwtInst({
       method: 'post',
-      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/raw-contents/${theData.id}/chat`,
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/${base}/${theData.id}/chat`,
       data: theData.formData,
       ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
     });
@@ -718,6 +732,7 @@ export const fetchReadyToUploadList = createAsyncThunk('overallAssets/fetchReady
 });
 
 export const fetchReadyToUpload = createAsyncThunk('overallAssets/fetchReadyToUpload', async (theData, { dispatch }) => {
+  dispatch(actions.dmReadySetSelectedErrorStatus(null));
   try {
     const response = await theData.authCtx.jwtInst({
       method: 'get',
@@ -725,7 +740,10 @@ export const fetchReadyToUpload = createAsyncThunk('overallAssets/fetchReadyToUp
     });
     dispatch(actions.dmReadySetSelected(response.data));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load ready-to-upload record', type: 'error' }));
+    dispatch(actions.dmReadySetSelectedErrorStatus(err?.response?.status || null));
+    if (err?.response?.status !== 403) {
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load ready-to-upload record', type: 'error' }));
+    }
   }
 });
 
@@ -789,6 +807,26 @@ export const deleteReadyToUpload = createAsyncThunk('overallAssets/deleteReadyTo
     });
   //------------------------------contact list
 
+// Lightweight id -> {firstName,lastName,profileImage} map, used to render a
+// real avatar anywhere a user's identity is shown by id (chat bubbles, task
+// assignee, activity actor, "shared by"...) without needing every module's
+// own actor-name route to also carry profileImage. Fetched once per session.
+export const fetchUserDirectory = createAsyncThunk('users/fetchUserDirectory', async (theData, { dispatch, getState }) => {
+  if (getState().userDirectoryLoaded) return;
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/users/directory`,
+    });
+    const map = {};
+    (response.data.data || []).forEach((u) => { map[u._id] = u; });
+    dispatch(actions.setUserDirectory(map));
+  } catch (err) {
+    console.log(err);
+  }
+});
+//------------------------------user directory
+
 
 //------------------------------inventory start
 
@@ -815,6 +853,7 @@ export const fetchProducts = createAsyncThunk('inventory/fetchProducts', async (
 
 export const fetchProduct = createAsyncThunk('inventory/fetchProduct', async (theData, { dispatch }) => {
   dispatch(actions.invSetCurrentProductLoading(true));
+  dispatch(actions.invSetCurrentProductErrorStatus(null));
   try {
     const response = await theData.authCtx.jwtInst({
       method: 'get',
@@ -823,6 +862,10 @@ export const fetchProduct = createAsyncThunk('inventory/fetchProduct', async (th
     dispatch(actions.invSetCurrentProduct(response.data.data));
   } catch (err) {
     dispatch(actions.invSetCurrentProduct(null));
+    // A short-link/notification deep link can hand this a product the viewer
+    // isn't scoped/permitted to see — remember the status so showProduct.js
+    // can render the Restricted Access screen instead of a blank panel.
+    dispatch(actions.invSetCurrentProductErrorStatus(err?.response?.status || null));
   } finally {
     dispatch(actions.invSetCurrentProductLoading(false));
   }
@@ -1002,6 +1045,54 @@ export const deleteInventoryMedia = createAsyncThunk('inventory/deleteMedia', as
   toast(dispatch, 'Media deleted');
 });
 
+// Product-level media as a real batch (single XHR, real onUploadProgress) —
+// PURELY ADDITIVE, mirrors uploadVariantMediaBatch but with none of that
+// route's delete-and-replace semantics (product media accumulates, it isn't
+// a versioned set like a variant's batch).
+export const uploadProductMediaBatch = createAsyncThunk('inventory/uploadProductMediaBatch', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.productId}/media-batch`,
+    data: theData.formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: theData.onUploadProgress,
+  });
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  toast(dispatch, 'Media uploaded');
+  return response.data.data;
+});
+
+export const bulkDeleteInventoryMedia = createAsyncThunk('inventory/bulkDeleteMedia', async (theData, { dispatch }) => {
+  await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/media/bulk`,
+    data: { fileIds: theData.fileIds, action: 'delete' },
+  });
+  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
+  toast(dispatch, 'Media deleted');
+});
+
+export const bulkDownloadInventoryMediaZip = createAsyncThunk('inventory/bulkDownloadMediaZip', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/media/bulk`,
+      data: { fileIds: theData.fileIds, action: 'zip' },
+      responseType: 'blob',
+    });
+    const url  = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'inventory-media.zip';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Could not download media', type: 'error' }));
+  }
+});
+
 export const fetchInventoryLogs = createAsyncThunk('inventory/fetchLogs', async (theData, { dispatch }) => {
   try {
     const response = await theData.authCtx.jwtInst({
@@ -1106,6 +1197,8 @@ const dataSlice = createSlice({
     userProfileRefresh:2,
     showSnackBar:{status:false , msg:'' , type:''},
     contactList : {sa:[],inv:[],req:[] , all:[] , allAll:[] , lenght:0},
+    userDirectory: {},
+    userDirectoryLoaded: false,
 
 
     //------------------------------crm (Phase 5)
@@ -1126,12 +1219,14 @@ const dataSlice = createSlice({
     dmRawContentsTotal: 0,
     dmRawContentsLoading: false,
     dmSelectedRawContent: null,
+    dmSelectedRawContentErrorStatus: null,
     dmRawContentChat: [],
     dmRawContentChatTotal: 0,
     dmReadyToUpload: [],
     dmReadyToUploadTotal: 0,
     dmReadyToUploadLoading: false,
     dmSelectedReadyToUpload: null,
+    dmSelectedReadyToUploadErrorStatus: null,
     dmRefreshKey: 0,
     //------------------------------mis
     misRefresh:'',
@@ -1150,6 +1245,7 @@ const dataSlice = createSlice({
     invRefreshKey: '',
     invCurrentProduct: null,
     invCurrentProductLoading: false,
+    invCurrentProductErrorStatus: null,
     invVariants: [],
     invLogs: [],
     invLogsTotal: 0,
@@ -1632,6 +1728,9 @@ const dataSlice = createSlice({
       dmRawSetSelected(state, action) {
         state.dmSelectedRawContent = action.payload;
       },
+      dmRawSetSelectedErrorStatus(state, action) {
+        state.dmSelectedRawContentErrorStatus = action.payload;
+      },
       dmRawRemove(state, action) {
         state.dmRawContents      = state.dmRawContents.filter(d => String(d._id) !== String(action.payload));
         state.dmRawContentsTotal = Math.max(0, state.dmRawContentsTotal - 1);
@@ -1673,6 +1772,9 @@ const dataSlice = createSlice({
       dmReadySetSelected(state, action) {
         state.dmSelectedReadyToUpload = action.payload;
       },
+      dmReadySetSelectedErrorStatus(state, action) {
+        state.dmSelectedReadyToUploadErrorStatus = action.payload;
+      },
       dmReadyRemove(state, action) {
         state.dmReadyToUpload      = state.dmReadyToUpload.filter(d => String(d._id) !== String(action.payload));
         state.dmReadyToUploadTotal = Math.max(0, state.dmReadyToUploadTotal - 1);
@@ -1713,6 +1815,13 @@ const dataSlice = createSlice({
         state.contactList.lenght = action.payload.ln;
       },
     //------------------------------contact list
+
+    //------------------------------user directory
+      setUserDirectory(state, action) {
+        state.userDirectory = action.payload;
+        state.userDirectoryLoaded = true;
+      },
+    //------------------------------user directory
 
     
 
@@ -1804,6 +1913,7 @@ const dataSlice = createSlice({
     invRefresh(state)                       { state.invRefreshKey = Math.random().toString(); },
     invSetCurrentProduct(state, action)     { state.invCurrentProduct = action.payload; },
     invSetCurrentProductLoading(state, action) { state.invCurrentProductLoading = action.payload; },
+    invSetCurrentProductErrorStatus(state, action) { state.invCurrentProductErrorStatus = action.payload; },
     invSetVariants(state, action)           { state.invVariants = action.payload; },
     invSetLogs(state, action)               { state.invLogs = action.payload.data; state.invLogsTotal = action.payload.total; },
     invSetLookups(state, action)            { state.invLookups = action.payload; state.invLookupsLoaded = true; },

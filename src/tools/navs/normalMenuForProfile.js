@@ -1,4 +1,5 @@
 import { useContext, useState } from 'react';
+import { useHistory } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Menu from '@mui/material/Menu';
 import Box from '@mui/material/Box';
@@ -11,6 +12,8 @@ import { useTheme } from '@mui/material/styles';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import NoteAltIcon from '@mui/icons-material/NoteAlt';
+import HistoryIcon from '@mui/icons-material/History';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
@@ -20,6 +23,7 @@ import AxiosGlobal from '../../components/authAndConnections/axiosGlobalUrl';
 import ThemeCtx from '../../contextApi/themeContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import MyProfileModal from '../../components/users/myProfileModal';
+import MyNotesModal from '../../components/users/myNotesModal';
 
 // Human labels for the module part of permission keys (module:resource:action)
 const MODULE_LABELS = {
@@ -33,6 +37,7 @@ const MODULE_LABELS = {
 // actions: my profile, push notifications, theme toggle, logout.
 export default function NormalMenuForProfile(props) {
   const { t } = useTranslation();
+  const history     = useHistory();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { themeMode, toggleTheme } = useContext(ThemeCtx);
@@ -41,6 +46,7 @@ export default function NormalMenuForProfile(props) {
   const isDark  = theme.palette.mode === 'dark';
 
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notesOpen, setNotesOpen]     = useState(false);
 
   const decoded = authCtx.decode || {};
 
@@ -110,6 +116,7 @@ export default function NormalMenuForProfile(props) {
   return (
     <>
     <MyProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+    <MyNotesModal open={notesOpen} onClose={() => setNotesOpen(false)} />
     <Menu
       id="demo-positioned-menu"
       aria-labelledby="demo-positioned-button"
@@ -172,6 +179,8 @@ export default function NormalMenuForProfile(props) {
       {/* ── Actions ── */}
       <Box sx={{ py: 0.75 }}>
         {row(<AccountCircleIcon />, t('profile.myProfile'), () => { props.handleClose(); setProfileOpen(true); })}
+        {row(<NoteAltIcon />, t('users.myNotes'), () => { props.handleClose(); setNotesOpen(true); })}
+        {row(<HistoryIcon />, t('users.myActivityTitle'), () => { props.handleClose(); history.push('/myActivity'); })}
         {row(<NotificationsActiveIcon />, 'Enable push notifications', activeNotif)}
         {row(themeMode === 'light' ? <DarkModeIcon /> : <LightModeIcon />,
           themeMode === 'light' ? t('profile.darkMode') : t('profile.lightMode'), toggleTheme)}

@@ -22,7 +22,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 
 // ── Move / Copy destination picker (Phase 9 redesign) ─────────────────────────
 // Same props + browsing mechanics as the legacy modal (also used by gallery.js
-// and showTheLink.js — the contract must not change): the picker navigates the
+// — the contract must not change): the picker navigates the
 // REAL URL (history.push) and dispatches openFilePickerFolder, which re-derives
 // currentDisplayFilePicker from window.location.pathname; the URL is restored
 // on close via lastUrl. Only the presentation is new.

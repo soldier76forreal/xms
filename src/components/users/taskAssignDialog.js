@@ -20,6 +20,7 @@ import { useDispatch } from 'react-redux';
 import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import UserAvatar from '../main/userAvatar';
 
 // tokens derived inside component via useTheme()
 
@@ -187,9 +188,18 @@ const TaskAssignDialog = ({ open, onClose, onSave, prefillUserId = null }) => {
             onChange={(_, val) => { setSelectedUser(val); setError(''); }}
             getOptionLabel={u => `${u.firstName} ${u.lastName} · ${u.phoneNumber}`}
             isOptionEqualToValue={(a, b) => String(a._id) === String(b._id)}
+            renderOption={(liProps, u) => (
+              <Box component="li" {...liProps} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <UserAvatar userId={u._id} size={24} />
+                <span>{u.firstName} {u.lastName} · {u.phoneNumber}</span>
+              </Box>
+            )}
             renderInput={(params) => (
               <TextField {...params} label={t('users.selectUserLabel')} sx={inputSx}
-                InputProps={{ ...params.InputProps, style: { color: TEXT_PRI } }}
+                InputProps={{
+                  ...params.InputProps, style: { color: TEXT_PRI },
+                  startAdornment: selectedUser ? <UserAvatar userId={selectedUser._id} size={22} sx={{ ml: 0.5 }} /> : null,
+                }}
               />
             )}
             PaperComponent={({ children }) => (
