@@ -777,7 +777,244 @@ export const deleteReadyToUpload = createAsyncThunk('overallAssets/deleteReadyTo
   }
 });
 
+export const fetchLinkPages = createAsyncThunk('overallAssets/fetchLinkPages', async (theData, { dispatch }) => {
+  dispatch(actions.dmLinkSetLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/link-pages`,
+      params: theData.params || {},
+    });
+    const isFirstPage = !theData.params?.page || theData.params.page <= 1;
+    if (isFirstPage) {
+      dispatch(actions.dmLinkSetList({ data: response.data.data, total: response.data.total }));
+    } else {
+      dispatch(actions.dmLinkAppendList({ data: response.data.data, total: response.data.total }));
+    }
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load link pages', type: 'error' }));
+  } finally {
+    dispatch(actions.dmLinkSetLoading(false));
+  }
+});
+
+export const fetchLinkPage = createAsyncThunk('overallAssets/fetchLinkPage', async (theData, { dispatch }) => {
+  dispatch(actions.dmLinkSetSelectedErrorStatus(null));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/link-pages/${theData.id}`,
+    });
+    dispatch(actions.dmLinkSetSelected(response.data));
+  } catch (err) {
+    dispatch(actions.dmLinkSetSelectedErrorStatus(err?.response?.status || null));
+    if (err?.response?.status !== 403) {
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load link page', type: 'error' }));
+    }
+  }
+});
+
+// theData.formData — companyName, links (JSON string), status, restrictToOwner, cover (file, optional).
+export const createLinkPage = createAsyncThunk('overallAssets/createLinkPage', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/link-pages`,
+      data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
+    });
+    dispatch(actions.dmLinkUpsert(response.data));
+    dispatch(actions.dmBumpRefresh());
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Link page created', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to create link page', type: 'error' }));
+    throw err;
+  }
+});
+
+export const updateLinkPage = createAsyncThunk('overallAssets/updateLinkPage', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'put',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/link-pages/${theData.id}`,
+      data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
+    });
+    dispatch(actions.dmLinkUpsert(response.data));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Link page updated', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to update link page', type: 'error' }));
+    throw err;
+  }
+});
+
+export const deleteLinkPage = createAsyncThunk('overallAssets/deleteLinkPage', async (theData, { dispatch }) => {
+  try {
+    await theData.authCtx.jwtInst({
+      method: 'delete',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/link-pages/${theData.id}`,
+    });
+    dispatch(actions.dmLinkRemove(theData.id));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Link page deleted', type: 'success' }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete link page', type: 'error' }));
+  }
+});
+
+export const fetchWhatsappShares = createAsyncThunk('overallAssets/fetchWhatsappShares', async (theData, { dispatch }) => {
+  dispatch(actions.dmWhatsappSetLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/whatsapp-shares`,
+      params: theData.params || {},
+    });
+    const isFirstPage = !theData.params?.page || theData.params.page <= 1;
+    if (isFirstPage) {
+      dispatch(actions.dmWhatsappSetList({ data: response.data.data, total: response.data.total }));
+    } else {
+      dispatch(actions.dmWhatsappAppendList({ data: response.data.data, total: response.data.total }));
+    }
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load WhatsApp shares', type: 'error' }));
+  } finally {
+    dispatch(actions.dmWhatsappSetLoading(false));
+  }
+});
+
+export const fetchWhatsappShare = createAsyncThunk('overallAssets/fetchWhatsappShare', async (theData, { dispatch }) => {
+  dispatch(actions.dmWhatsappSetSelectedErrorStatus(null));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/whatsapp-shares/${theData.id}`,
+    });
+    dispatch(actions.dmWhatsappSetSelected(response.data));
+  } catch (err) {
+    dispatch(actions.dmWhatsappSetSelectedErrorStatus(err?.response?.status || null));
+    if (err?.response?.status !== 403) {
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load WhatsApp share', type: 'error' }));
+    }
+  }
+});
+
+export const deleteWhatsappShare = createAsyncThunk('overallAssets/deleteWhatsappShare', async (theData, { dispatch }) => {
+  try {
+    await theData.authCtx.jwtInst({
+      method: 'delete',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/whatsapp-shares/${theData.id}`,
+    });
+    dispatch(actions.dmWhatsappRemove(theData.id));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'WhatsApp share deleted', type: 'success' }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete WhatsApp share', type: 'error' }));
+  }
+});
+
 //------------------------------Digital Marketing end
+
+//------------------------------Tutorial Center start
+
+export const fetchTutorials = createAsyncThunk('overallAssets/fetchTutorials', async (theData, { dispatch }) => {
+  dispatch(actions.tutSetLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/tutorials`,
+      params: theData.params || {},
+    });
+    const isFirstPage = !theData.params?.page || theData.params.page <= 1;
+    if (isFirstPage) {
+      dispatch(actions.tutSetList({ data: response.data.data, total: response.data.total }));
+    } else {
+      dispatch(actions.tutAppendList({ data: response.data.data, total: response.data.total }));
+    }
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load tutorials', type: 'error' }));
+  } finally {
+    dispatch(actions.tutSetLoading(false));
+  }
+});
+
+export const fetchTutorial = createAsyncThunk('overallAssets/fetchTutorial', async (theData, { dispatch }) => {
+  dispatch(actions.tutSetSelectedErrorStatus(null));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/tutorials/${theData.id}`,
+    });
+    dispatch(actions.tutSetSelected(response.data));
+  } catch (err) {
+    dispatch(actions.tutSetSelectedErrorStatus(err?.response?.status || null));
+    if (err?.response?.status !== 403) {
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load tutorial', type: 'error' }));
+    }
+  }
+});
+
+// Permission catalog grouped by module — powers the tag picker in tutorialForm.js.
+export const fetchTutorialActionTags = createAsyncThunk('overallAssets/fetchTutorialActionTags', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/tutorials/action-tags`,
+    });
+    dispatch(actions.tutSetActionTags(response.data.byModule || {}));
+  } catch (err) { /* tag picker just shows empty groups */ }
+});
+
+// theData.formData — title, description, language, section, tags (JSON string), files[].
+export const createTutorial = createAsyncThunk('overallAssets/createTutorial', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/tutorials`,
+      data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
+    });
+    dispatch(actions.tutUpsert(response.data));
+    dispatch(actions.tutBumpRefresh());
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Tutorial uploaded', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to upload tutorial', type: 'error' }));
+    throw err;
+  }
+});
+
+export const updateTutorial = createAsyncThunk('overallAssets/updateTutorial', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'put',
+      url: `${theData.axiosGlobal.defaultTargetApi}/tutorials/${theData.id}`,
+      data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
+    });
+    dispatch(actions.tutUpsert(response.data));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Tutorial updated', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to update tutorial', type: 'error' }));
+    throw err;
+  }
+});
+
+export const deleteTutorial = createAsyncThunk('overallAssets/deleteTutorial', async (theData, { dispatch }) => {
+  try {
+    await theData.authCtx.jwtInst({
+      method: 'delete',
+      url: `${theData.axiosGlobal.defaultTargetApi}/tutorials/${theData.id}`,
+    });
+    dispatch(actions.tutRemove(theData.id));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Tutorial deleted', type: 'success' }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete tutorial', type: 'error' }));
+  }
+});
+
+//------------------------------Tutorial Center end
 
 
 
@@ -1227,7 +1464,25 @@ const dataSlice = createSlice({
     dmReadyToUploadLoading: false,
     dmSelectedReadyToUpload: null,
     dmSelectedReadyToUploadErrorStatus: null,
+    dmLinkPages: [],
+    dmLinkPagesTotal: 0,
+    dmLinkPagesLoading: false,
+    dmSelectedLinkPage: null,
+    dmSelectedLinkPageErrorStatus: null,
+    dmWhatsappShares: [],
+    dmWhatsappSharesTotal: 0,
+    dmWhatsappSharesLoading: false,
+    dmSelectedWhatsappShare: null,
+    dmSelectedWhatsappShareErrorStatus: null,
     dmRefreshKey: 0,
+    //------------------------------tutorial center
+    tutorials: [],
+    tutorialsTotal: 0,
+    tutorialsLoading: false,
+    tutorialActionTags: {},
+    selectedTutorial: null,
+    selectedTutorialErrorStatus: null,
+    tutorialRefreshKey: 0,
     //------------------------------mis
     misRefresh:'',
     invoicesToShow:[],
@@ -1785,7 +2040,101 @@ const dataSlice = createSlice({
       dmBumpRefresh(state) {
         state.dmRefreshKey = state.dmRefreshKey + 1;
       },
+      dmLinkSetList(state, action) {
+        state.dmLinkPages      = action.payload.data;
+        state.dmLinkPagesTotal = action.payload.total;
+      },
+      dmLinkAppendList(state, action) {
+        state.dmLinkPages      = [...state.dmLinkPages, ...(action.payload.data || [])];
+        state.dmLinkPagesTotal = action.payload.total;
+      },
+      dmLinkSetLoading(state, action) {
+        state.dmLinkPagesLoading = action.payload;
+      },
+      dmLinkSetSelected(state, action) {
+        state.dmSelectedLinkPage = action.payload;
+      },
+      dmLinkSetSelectedErrorStatus(state, action) {
+        state.dmSelectedLinkPageErrorStatus = action.payload;
+      },
+      dmLinkRemove(state, action) {
+        state.dmLinkPages      = state.dmLinkPages.filter(d => String(d._id) !== String(action.payload));
+        state.dmLinkPagesTotal = Math.max(0, state.dmLinkPagesTotal - 1);
+        if (state.dmSelectedLinkPage && String(state.dmSelectedLinkPage._id) === String(action.payload)) {
+          state.dmSelectedLinkPage = null;
+        }
+      },
+      dmLinkUpsert(state, action) {
+        const idx = state.dmLinkPages.findIndex(d => String(d._id) === String(action.payload._id));
+        if (idx >= 0) state.dmLinkPages[idx] = action.payload;
+        if (state.dmSelectedLinkPage && String(state.dmSelectedLinkPage._id) === String(action.payload._id)) {
+          state.dmSelectedLinkPage = { ...state.dmSelectedLinkPage, ...action.payload };
+        }
+      },
+      dmWhatsappSetList(state, action) {
+        state.dmWhatsappShares      = action.payload.data;
+        state.dmWhatsappSharesTotal = action.payload.total;
+      },
+      dmWhatsappAppendList(state, action) {
+        state.dmWhatsappShares      = [...state.dmWhatsappShares, ...(action.payload.data || [])];
+        state.dmWhatsappSharesTotal = action.payload.total;
+      },
+      dmWhatsappSetLoading(state, action) {
+        state.dmWhatsappSharesLoading = action.payload;
+      },
+      dmWhatsappSetSelected(state, action) {
+        state.dmSelectedWhatsappShare = action.payload;
+      },
+      dmWhatsappSetSelectedErrorStatus(state, action) {
+        state.dmSelectedWhatsappShareErrorStatus = action.payload;
+      },
+      dmWhatsappRemove(state, action) {
+        state.dmWhatsappShares      = state.dmWhatsappShares.filter(d => String(d._id) !== String(action.payload));
+        state.dmWhatsappSharesTotal = Math.max(0, state.dmWhatsappSharesTotal - 1);
+        if (state.dmSelectedWhatsappShare && String(state.dmSelectedWhatsappShare._id) === String(action.payload)) {
+          state.dmSelectedWhatsappShare = null;
+        }
+      },
     //------------------------------digital marketing reducers end
+    //------------------------------tutorial center reducers
+      tutSetList(state, action) {
+        state.tutorials      = action.payload.data;
+        state.tutorialsTotal = action.payload.total;
+      },
+      tutAppendList(state, action) {
+        state.tutorials      = [...state.tutorials, ...(action.payload.data || [])];
+        state.tutorialsTotal = action.payload.total;
+      },
+      tutSetLoading(state, action) {
+        state.tutorialsLoading = action.payload;
+      },
+      tutSetActionTags(state, action) {
+        state.tutorialActionTags = action.payload;
+      },
+      tutSetSelected(state, action) {
+        state.selectedTutorial = action.payload;
+      },
+      tutSetSelectedErrorStatus(state, action) {
+        state.selectedTutorialErrorStatus = action.payload;
+      },
+      tutRemove(state, action) {
+        state.tutorials      = state.tutorials.filter(d => String(d._id) !== String(action.payload));
+        state.tutorialsTotal = Math.max(0, state.tutorialsTotal - 1);
+        if (state.selectedTutorial && String(state.selectedTutorial._id) === String(action.payload)) {
+          state.selectedTutorial = null;
+        }
+      },
+      tutUpsert(state, action) {
+        const idx = state.tutorials.findIndex(d => String(d._id) === String(action.payload._id));
+        if (idx >= 0) state.tutorials[idx] = action.payload;
+        if (state.selectedTutorial && String(state.selectedTutorial._id) === String(action.payload._id)) {
+          state.selectedTutorial = { ...state.selectedTutorial, ...action.payload };
+        }
+      },
+      tutBumpRefresh(state) {
+        state.tutorialRefreshKey = state.tutorialRefreshKey + 1;
+      },
+    //------------------------------tutorial center reducers end
       toggleDownloadNavMenu(state , action){
         state.downloadNavMenu = !state.downloadNavMenu
       },

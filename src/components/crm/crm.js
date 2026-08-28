@@ -45,6 +45,8 @@ import AssignCustomersDialog from './assignCustomersDialog';
 import ConfirmDialog         from '../../tools/modal/confirmDialog';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect        from '../../tools/inputs/pageSizeSelect';
+import SectionTutorials      from '../tutorials/sectionTutorials';
+import COUNTRIES             from './util/countryData';
 
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -388,6 +390,7 @@ export default function Crm() {
             </Button>
           </Tooltip>
         )}
+        <SectionTutorials section="crm" tag="crm:customer:create" />
       </Box>
 
       {/* ── Bulk actions bar ── */}
@@ -620,10 +623,16 @@ export default function Crm() {
             </Select>
           </FormControl>
 
-          <TextField size="small" label={t('common.country')} value={filter.country}
-            onChange={(e) => setF('country', e.target.value)}
-            inputProps={{ style: { fontSize: '0.8rem' } }}
-            sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }} />
+          <FormControl size="small" fullWidth>
+            <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.country')}</InputLabel>
+            <Select value={filter.country} onChange={(e) => setF('country', e.target.value)} label={t('common.country')}
+              sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
+              <MenuItem value=""><em>{t('common.all')}</em></MenuItem>
+              {COUNTRIES.map((c) => (
+                <MenuItem key={c.code} value={c.name}>{c.flag} {c.name}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <FormControl size="small" fullWidth>
             <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.status')}</InputLabel>

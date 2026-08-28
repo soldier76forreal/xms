@@ -45,7 +45,10 @@ export const downloadFile = (url, name) => {
   a.remove();
 };
 
-const MediaViewer = ({ open, onClose, media }) => {
+// sx — optional passthrough to the root Dialog (e.g. a zIndex bump when this
+// viewer can be opened from inside another Dialog/Drawer — see tutorialForm.js
+// / tutorialDetail.js, which nest it inside sectionTutorials.js's Dialog).
+const MediaViewer = ({ open, onClose, media, sx }) => {
   const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -56,7 +59,7 @@ const MediaViewer = ({ open, onClose, media }) => {
   const handleDownload = () => downloadFile(url, name);
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth sx={sx}
       PaperProps={{ sx: {
         bgcolor: isDark ? '#0d0d0d' : theme.palette.background.paper,
         border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : theme.palette.divider}`,

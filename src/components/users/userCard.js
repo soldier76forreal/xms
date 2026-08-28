@@ -57,11 +57,20 @@ const UserCard = ({ user, onClick, selected = false, apiBase = '' }) => {
   // PUT /users/me/language), not just this browser's localStorage.
   const langInfo = LANGUAGES.find(l => l.code === (user.language || 'en')) || LANGUAGES[0];
 
+  const chipSx = {
+    height: 20, fontSize: '0.65rem', fontWeight: 600,
+    bgcolor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
+    color:   isDark ? 'rgba(255,255,255,0.5)'  : 'rgba(0,0,0,0.5)',
+    border:  `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+    borderRadius: '4px',
+    '& .MuiChip-label': { px: 1 },
+  };
+
   return (
     <Box
       onClick={onClick}
       sx={{
-        display: 'flex', alignItems: 'center', gap: 1.5,
+        display: 'flex', flexDirection: 'column', gap: 1,
         px: 2, py: 1.5,
         bgcolor: selected ? SEL_BG : CARD_BG,
         border: `1px solid ${selected ? SEL_BD : CARD_BD}`,
@@ -71,87 +80,64 @@ const UserCard = ({ user, onClick, selected = false, apiBase = '' }) => {
         '&:hover': { borderColor: selected ? SEL_BD : HVR_BD, bgcolor: selected ? SEL_BG : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)') },
       }}
     >
-      {/* Avatar + presence dot */}
-      <Box sx={{ position: 'relative', flexShrink: 0 }}>
-        <Box sx={{
-          width: 38, height: 38, borderRadius: '50%',
-          bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '0.8rem', fontWeight: 700, color: TEXT_PRI,
-          overflow: 'hidden',
-        }}>
-          {user.profileImage?.url
-            ? <img src={`${apiBase}${user.profileImage.url}`} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : initials
-          }
+      {/* Top row: avatar + name/phone/last-seen — always one line each, never squeezed by chips */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ position: 'relative', flexShrink: 0 }}>
+          <Box sx={{
+            width: 38, height: 38, borderRadius: '50%',
+            bgcolor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.8rem', fontWeight: 700, color: TEXT_PRI,
+            overflow: 'hidden',
+          }}>
+            {user.profileImage?.url
+              ? <img src={`${apiBase}${user.profileImage.url}`} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : initials
+            }
+          </Box>
+          <Box sx={{
+            position: 'absolute', bottom: 1, right: 1,
+            width: 9, height: 9, borderRadius: '50%',
+            bgcolor: user.isOnline ? '#4CAF50' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
+            border: `1.5px solid ${CARD_BG}`,
+          }} />
         </Box>
-        <Box sx={{
-          position: 'absolute', bottom: 1, right: 1,
-          width: 9, height: 9, borderRadius: '50%',
-          bgcolor: user.isOnline ? '#4CAF50' : (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
-          border: `1.5px solid ${CARD_BG}`,
-        }} />
-      </Box>
 
-      {/* Name + phone + last seen */}
-      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: TEXT_PRI, lineHeight: 1.3 }}>
-            {user.firstName} {user.lastName}
-          </Typography>
-          {locked && <LockIcon sx={{ fontSize: 12, color: '#FF4D8D', flexShrink: 0 }} />}
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          {countryInfo && (
-            <span style={{ fontSize: '0.8rem' }} title={countryInfo.name}>{countryInfo.flag}</span>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Typography noWrap sx={{ fontSize: '0.875rem', fontWeight: 600, color: TEXT_PRI, lineHeight: 1.3, minWidth: 0 }}>
+              {user.firstName} {user.lastName}
+            </Typography>
+            {locked && <LockIcon sx={{ fontSize: 12, color: '#FF4D8D', flexShrink: 0 }} />}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            {countryInfo && (
+              <span style={{ fontSize: '0.8rem' }} title={countryInfo.name}>{countryInfo.flag}</span>
+            )}
+            <Typography sx={{ fontSize: '0.75rem', color: TEXT_SEC, fontFamily: 'monospace', lineHeight: 1.4 }} noWrap>
+              {user.phoneNumber}
+            </Typography>
+          </Box>
+          {!user.isOnline && lastSeenTx && (
+            <Typography sx={{ fontSize: '0.7rem', color: TEXT_TER, lineHeight: 1.4 }}>
+              {lastSeenTx}
+            </Typography>
           )}
-          <Typography sx={{ fontSize: '0.75rem', color: TEXT_SEC, fontFamily: 'monospace', lineHeight: 1.4 }} noWrap>
-            {user.phoneNumber}
-          </Typography>
         </Box>
-        {!user.isOnline && lastSeenTx && (
-          <Typography sx={{ fontSize: '0.7rem', color: TEXT_TER, lineHeight: 1.4 }}>
-            {lastSeenTx}
-          </Typography>
-        )}
       </Box>
 
-      {/* Selected language indicator */}
-      <Tooltip title={langInfo.label}>
-        <Chip
-          label={langInfo.nativeLabel}
-          size="small"
-          sx={{
-            height: 20, fontSize: '0.65rem', fontWeight: 600, flexShrink: 0,
-            bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-            color:   isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)',
-            border:  `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-            borderRadius: '4px',
-            '& .MuiChip-label': { px: 1 },
-          }}
-        />
-      </Tooltip>
-
-      {/* Role chips */}
-      {(user.roleNames || []).length > 0 && (
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', flexShrink: 0, maxWidth: 160, justifyContent: 'flex-end' }}>
-          {user.roleNames.map(name => (
-            <Chip
-              key={name}
-              label={name}
-              size="small"
-              sx={{
-                height: 20, fontSize: '0.65rem', fontWeight: 600,
-                bgcolor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
-                color:   isDark ? 'rgba(255,255,255,0.5)'  : 'rgba(0,0,0,0.5)',
-                border:  `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-                borderRadius: '4px',
-                '& .MuiChip-label': { px: 1 },
-              }}
-            />
-          ))}
-        </Box>
-      )}
+      {/* Bottom row: language + role chips — full width, wraps freely, never
+          competes with the name/phone for horizontal space (that was the
+          jammed-layout bug: cramming chips into the name's row squeezed it
+          down to a sliver, so long names wrapped one word per line). */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, pl: '50px' }}>
+        <Tooltip title={langInfo.label}>
+          <Chip label={langInfo.nativeLabel} size="small" sx={chipSx} />
+        </Tooltip>
+        {(user.roleNames || []).map(name => (
+          <Chip key={name} label={name} size="small" sx={chipSx} />
+        ))}
+      </Box>
     </Box>
   );
 };

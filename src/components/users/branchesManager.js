@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -21,6 +22,7 @@ import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { useBranch } from '../../contextApi/BranchContext';
+import COUNTRIES from '../crm/util/countryData';
 
 // ── Branch management (superAdmin only) ───────────────────────────────────────
 // Branches are fully isolated Inventory + Invoice sections. CRUD here is gated
@@ -76,6 +78,7 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
 
   const [name,        setName]        = useState('');
   const [description, setDescription] = useState('');
+  const [country,     setCountry]     = useState(null);
   const [status,      setStatus]      = useState('active');
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState('');
@@ -86,9 +89,10 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
     if (branch) {
       setName(branch.name || '');
       setDescription(branch.description || '');
+      setCountry(COUNTRIES.find((c) => c.code === branch.country) || null);
       setStatus(branch.status || 'active');
     } else {
-      setName(''); setDescription(''); setStatus('active');
+      setName(''); setDescription(''); setCountry(null); setStatus('active');
     }
   }, [open, branch]);
 
@@ -96,7 +100,7 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
     if (!name.trim()) { setError(t('users.branchNameRequired')); return; }
     setSaving(true); setError('');
     try {
-      const data = { name: name.trim(), description: description.trim(), status };
+      const data = { name: name.trim(), description: description.trim(), status, country: country?.code || null };
       if (isNew) {
         await authCtx.jwtInst({ method: 'post', url: `${axiosGlobal.defaultTargetApi}/branches`, data });
       } else {
@@ -136,6 +140,23 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
           onChange={e => { setName(e.target.value); setError(''); }} sx={inputSx} autoFocus />
         <TextField label={t('users.descriptionLabel')} size="small" fullWidth multiline rows={2} value={description}
           onChange={e => setDescription(e.target.value)} sx={inputSx} />
+
+        <Autocomplete
+          value={country}
+          onChange={(_, val) => setCountry(val)}
+          options={COUNTRIES}
+          getOptionLabel={opt => opt ? `${opt.flag} ${opt.name}` : ''}
+          isOptionEqualToValue={(opt, val) => opt.code === val?.code}
+          renderOption={(props, opt) => (
+            <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <span>{opt.flag}</span> {opt.name}
+            </Box>
+          )}
+          renderInput={params => (
+            <TextField {...params} size="small" label={t('users.branchCountryLabel')} sx={inputSx}
+              inputProps={{ ...params.inputProps, style: { fontSize: '0.85rem' } }} />
+          )}
+        />
 
         {!isNew && (
           <Box>

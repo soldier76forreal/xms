@@ -2,14 +2,26 @@ import { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import Tooltip from '@mui/material/Tooltip';
 import MovieIcon from '@mui/icons-material/Movie';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import { useTheme } from '@mui/material/styles';
+import LinkIcon from '@mui/icons-material/Link';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useHistory } from 'react-router-dom';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import RawContentSection from './rawContentSection';
 import ReadyToUploadSection from './readyToUploadSection';
+import LinkPageSection from './linkPageSection';
+import WhatsappShareSection from './whatsappShareSection';
+
+const TABS = [
+  { id: 'rawContent',    Icon: MovieIcon,       labelKey: 'dm.tabRawContents' },
+  { id: 'readyToUpload', Icon: CloudUploadIcon, labelKey: 'dm.tabReadyToUpload' },
+  { id: 'linkPages',     Icon: LinkIcon,        labelKey: 'dm.tabLinkPages' },
+  { id: 'whatsappShares', Icon: WhatsAppIcon,   labelKey: 'dm.tabWhatsappShares' },
+];
 
 // Phase 8 — Digital Marketing. Two sub-sections: Raw Contents (batch upload +
 // real-time chat with the creator + status pipeline) and Ready to Upload
@@ -19,6 +31,7 @@ export default function DigitalMarketing() {
   const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const isMob  = useMediaQuery(theme.breakpoints.down('sm'));
   const location = useLocation();
   const history  = useHistory();
   const { can } = usePermissions();
@@ -61,26 +74,34 @@ export default function DigitalMarketing() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: T.APP_BG, overflow: 'hidden' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1,
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: { xs: 1.25, sm: 2 }, py: 1,
         bgcolor: isDark ? '#0d0d0d' : 'background.paper', borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
-        <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
-          {t('nav.digitalMarketing')}
-        </Typography>
+        {!isMob && (
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
+            {t('nav.digitalMarketing')}
+          </Typography>
+        )}
+        {/* overflowX fallback keeps every tab reachable even if a future 4th
+            tab (or a long translated label) still doesn't fit — icon-only on
+            mobile already keeps this well under any phone's width, but this
+            is what actually fixed the bug: buttons were getting clipped by
+            an ancestor's overflow:hidden with no scroll escape hatch at all. */}
         <Box sx={{ display: 'flex', gap: 0.5, bgcolor: T.CTRL_BG, borderRadius: '9px',
-          p: '3px', border: `1px solid ${T.BD}`, flexShrink: 0, ml: 1 }}>
-          {[
-            { id: 'rawContent',    Icon: MovieIcon,       labelKey: 'dm.tabRawContents' },
-            { id: 'readyToUpload', Icon: CloudUploadIcon, labelKey: 'dm.tabReadyToUpload' },
-          ].map(({ id, Icon, labelKey }) => (
-            <Button key={id} size="small" onClick={() => setTab(id)}
-              startIcon={<Icon sx={{ fontSize: 14 }} />}
-              sx={{ minWidth: 0, height: 26, px: 1.25, py: 0, borderRadius: '7px',
-                fontSize: '0.72rem', fontWeight: tab === id ? 700 : 400, textTransform: 'none',
-                color: tab === id ? T.TEXT_PRI : T.TEXT_TER,
-                bgcolor: tab === id ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
-                '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)', color: T.TEXT_PRI } }}>
-              {t(labelKey)}
-            </Button>
+          p: '3px', border: `1px solid ${T.BD}`, flexShrink: 1, minWidth: 0, ml: isMob ? 0 : 1,
+          overflowX: 'auto', '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none' }}>
+          {TABS.map(({ id, Icon, labelKey }) => (
+            <Tooltip key={id} title={isMob ? t(labelKey) : ''}>
+              <Button onClick={() => setTab(id)}
+                startIcon={isMob ? null : <Icon sx={{ fontSize: 14 }} />}
+                sx={{ minWidth: 0, height: 26, flexShrink: 0, px: isMob ? 0 : 1.25, py: 0, borderRadius: '7px',
+                  width: isMob ? 34 : 'auto',
+                  fontSize: '0.72rem', fontWeight: tab === id ? 700 : 400, textTransform: 'none',
+                  color: tab === id ? T.TEXT_PRI : T.TEXT_TER,
+                  bgcolor: tab === id ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
+                  '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)', color: T.TEXT_PRI } }}>
+                {isMob ? <Icon sx={{ fontSize: 16 }} /> : t(labelKey)}
+              </Button>
+            </Tooltip>
           ))}
         </Box>
       </Box>
@@ -88,7 +109,11 @@ export default function DigitalMarketing() {
       <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
         {tab === 'rawContent'
           ? <RawContentSection openId={tab === 'rawContent' ? openId : null} onOpenHandled={() => setOpenId(null)} />
-          : <ReadyToUploadSection openId={tab === 'readyToUpload' ? openId : null} onOpenHandled={() => setOpenId(null)} />}
+          : tab === 'readyToUpload'
+          ? <ReadyToUploadSection openId={tab === 'readyToUpload' ? openId : null} onOpenHandled={() => setOpenId(null)} />
+          : tab === 'linkPages'
+          ? <LinkPageSection />
+          : <WhatsappShareSection />}
       </Box>
     </Box>
   );

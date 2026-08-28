@@ -48,6 +48,7 @@ import RequestsTab from './tabs/requestsTab';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
+import CustomerViewedLog from './customerViewedLog';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -475,6 +476,10 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
           <PlainText text={`${new Date(customer.updateDate).toLocaleDateString()} (${relativeDate(customer.updateDate, t)})`} T={T} />
         </InfoRow>
       )}
+
+      <Box sx={{ mt: 2 }}>
+        <CustomerViewedLog customerId={customer._id} T={T} />
+      </Box>
 
       <Box sx={{ pb: 2 }} />
     </Box>

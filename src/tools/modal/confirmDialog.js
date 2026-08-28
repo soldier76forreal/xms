@@ -11,6 +11,9 @@ import {
  *   title, message
  *   confirmLabel (default "Confirm"), cancelLabel (default "Cancel")
  *   destructive — makes confirm button red (#EA005A)
+ *   sx — optional passthrough to the root Dialog (e.g. a zIndex bump when this
+ *        confirm can be opened from inside another Dialog/Drawer, which would
+ *        otherwise sit behind it — see tutorialForm.js for a real example)
  */
 export default function ConfirmDialog({
   open, onClose, onConfirm,
@@ -19,11 +22,13 @@ export default function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   destructive = false,
+  sx,
 }) {
   return (
     <Dialog
       open={open}
       onClose={onClose}
+      sx={sx}
       PaperProps={{
         sx: {
           borderRadius: '14px',

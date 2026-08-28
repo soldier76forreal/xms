@@ -19,6 +19,7 @@ import AxiosGlobal from './components/authAndConnections/axiosGlobalUrl';
 import { fetchData, getAllTags, getContacts, getFilter, userProfileData, fetchUserDirectory } from './store/store';
 import { useDispatch, useSelector } from 'react-redux';
 import ShortLinkResolver from './components/main/shortLinkResolver';
+import PublicLinkPage from './components/digitalMarketing/publicLinkPage';
 import RestrictedAccessScreen from './components/main/restrictedAccessScreen';
 import { useHistory, useLocation, Link } from "react-router-dom";
 import SnackBar from './tools/navs/snackBar';
@@ -173,6 +174,14 @@ const ThemedApp = () => {
             <Redirect to="/logIn" />
           )}
 
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/tutorials">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
           {/* Self-service Activity Log + Job Reports — login-only, deliberately
               NOT gated by users:view (see main.js's isMyActivity branch). */}
           {authCtx.isLoggedIn === true ? (
@@ -193,6 +202,13 @@ const ThemedApp = () => {
               logged-out case itself (redirect to /logIn + return here after). */}
           <Route path="/l/:code" exact>
             <ShortLinkResolver />
+          </Route>
+
+          {/* Genuinely public, no login at all — a customer with no XMS
+              account opens this. See publicLinkPage.js + the unauthenticated
+              GET /digitalMarketing/public/link-pages/:code backend route. */}
+          <Route path="/p/:code" exact>
+            <PublicLinkPage />
           </Route>
         </Switch>
       </BranchProvider>

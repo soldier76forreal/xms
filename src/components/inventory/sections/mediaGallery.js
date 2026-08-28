@@ -20,6 +20,7 @@ import {
   bulkDownloadInventoryMediaZip, updateProduct,
 } from '../../../store/store';
 import InventoryGallery from './inventoryGallery';
+import SectionTutorials from '../../tutorials/sectionTutorials';
 
 // ── upload dialog — multi-file picker with real progress (single XHR via the
 // new /products/:id/media-batch route, replacing the old one-request-per-file
@@ -187,15 +188,18 @@ const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) =>
         emptyHint={t('inventory.noMediaYet')}
         onEmptyClick={() => setUploadOpen(true)}
         extraHeaderAction={
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<UploadFileIcon sx={{ fontSize: 14 }} />}
-            onClick={() => setUploadOpen(true)}
-            sx={{ borderRadius: 2, fontSize: '0.72rem' }}
-          >
-            {t('inventory.upload')}
-          </Button>
+          <>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<UploadFileIcon sx={{ fontSize: 14 }} />}
+              onClick={() => setUploadOpen(true)}
+              sx={{ borderRadius: 2, fontSize: '0.72rem' }}
+            >
+              {t('inventory.upload')}
+            </Button>
+            <SectionTutorials section="inventory" tag="inventory:media:edit" />
+          </>
         }
       />
 

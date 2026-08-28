@@ -29,6 +29,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
+import SectionTutorials from '../tutorials/sectionTutorials';
 import { actions, setFilesAsync, uploadFile, startDownload } from '../../store/store';
 
 import FileCard from './fileCard';
@@ -384,6 +385,7 @@ export default function FileMain() {
                     {t('files.uploadAction')}
                     <input ref={fileInputRef} type="file" hidden multiple onChange={handleFileChange} />
                   </Button>
+                  <SectionTutorials section="files" tag="files:upload" />
                 </>
               )}
             </>

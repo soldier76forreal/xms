@@ -4,6 +4,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import Diversity2Icon from '@mui/icons-material/Diversity2';
 import MovieIcon from '@mui/icons-material/Movie';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import SchoolIcon from '@mui/icons-material/School';
 
 // ── Phase 7 navConfig — the single source of truth for section navigation ─────
 // Consumed by BOTH the desktop icon rail (sideRail.js) and the mobile drawer
@@ -22,6 +23,7 @@ export const NAV_ITEMS = [
   { label: 'Inventory',         navKey: 'inventory',         icon: <InventoryIcon />,       section: 5, path: '/inventory',        permission: 'inventory:view' },
   { label: 'People',            navKey: 'people',            icon: <Diversity2Icon />,      section: 6, path: '/users',            permission: 'users:view' },
   { label: 'Digital Marketing', navKey: 'digitalMarketing',  icon: <MovieIcon />,           section: 7, path: '/digitalMarketing', permission: 'digitalMarketing:view' },
+  { label: 'Tutorials',         navKey: 'tutorials',         icon: <SchoolIcon />,          section: 8, path: '/tutorials',        permission: 'tutorials:view' },
 ];
 
 export const RAIL_WIDTH_COLLAPSED = 52;

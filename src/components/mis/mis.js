@@ -45,6 +45,7 @@ import CompanyProfileDrawer from './settings/companyProfile';
 import ConfirmDialog        from '../../tools/modal/confirmDialog';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect        from '../../tools/inputs/pageSizeSelect';
+import SectionTutorials      from '../tutorials/sectionTutorials';
 
 // Phase 6 — MIS / Invoices master-detail page (Session 44).
 // The three tabs (Invoice / Pre-invoice / All) are just a docType filter — ONE
@@ -319,6 +320,7 @@ export default function Mis() {
             </Button>
           </Tooltip>
         )}
+        <SectionTutorials section="mis" tag="mis:invoice:create" />
 
         {can('mis:preinvoice:create') && (
           <Tooltip title={isMob ? t('mis.newQuote') : ''}>
@@ -333,6 +335,7 @@ export default function Mis() {
             </Button>
           </Tooltip>
         )}
+        <SectionTutorials section="mis" tag="mis:preinvoice:create" />
 
         {can('mis:settings:edit') && (
           <Tooltip title={t('mis.templateSettingsTitle')}>

@@ -1,11 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import CloseIcon from '@mui/icons-material/Close';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -15,9 +17,11 @@ import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useDispatch, useSelector } from 'react-redux';
 import { actions } from '../../store/store';
+import { usePermissions } from '../../contextApi/PermissionContext';
 import VariantMediaBatch from './sections/variantMediaBatch';
 import ChangeLog from './sections/changeLog';
 import CopyLinkButton from '../main/copyLinkButton';
+import ShareWhatsAppDialog from '../digitalMarketing/shareWhatsAppDialog';
 
 const UNIT_LABELS   = { M2: 'm²', ML: 'ml', PCS: 'pcs', SQFT: 'ft²', LNFT: 'lnft' };
 const GRADE_COLOR   = { Q: '#c49a6c', QS: '#c49a6c', W: '#90afc5', E: '#6fa46f', R: '#aaaaaa', T: '#888888' };
@@ -48,6 +52,8 @@ const VariantDetail = () => {
   const variant  = useSelector((s) => s.invCurrentVariant);
   const theme    = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { can }  = usePermissions();
+  const [shareOpen, setShareOpen] = useState(false);
 
   const handleClose = useCallback(() => {
     dispatch(actions.invToggleVariantDetail());
@@ -80,6 +86,14 @@ const VariantDetail = () => {
         display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box component="span" sx={{ flexGrow: 1 }}>{t('inventory.variantDetailTitle')}</Box>
         <CopyLinkButton module="inventory" entityType="variant" entityId={variant._id} />
+        {can('inventory:share:whatsapp') && (
+          <Tooltip title={t('inventory.shareButtonTip')}>
+            <IconButton size="small" onClick={() => setShareOpen(true)}
+              sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#25D366' } }}>
+              <WhatsAppIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        )}
         <IconButton size="small" onClick={handleClose} aria-label={t('common.close')}
           sx={{ color: 'text.secondary' }}>
           <CloseIcon sx={{ fontSize: 18 }} />
@@ -179,6 +193,8 @@ const VariantDetail = () => {
           {t('common.edit')}
         </Button>
       </DialogActions>
+
+      <ShareWhatsAppDialog open={shareOpen} onClose={() => setShareOpen(false)} variantId={variant._id} />
     </Dialog>
   );
 };

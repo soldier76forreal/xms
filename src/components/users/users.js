@@ -23,6 +23,7 @@ import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { Can, usePermissions } from '../../contextApi/PermissionContext';
+import SectionTutorials from '../tutorials/sectionTutorials';
 import UserCard from './userCard';
 import ShowUser from './showUser';
 import UserForm from './userForm';
@@ -232,6 +233,7 @@ const UserListView = ({ socket, onSelect, selectedId }) => {
             {t('users.newShort')}
           </Button>
         </Can>
+        <SectionTutorials section="users" tag="users:create" />
       </Box>
 
       <TextField fullWidth size="small" placeholder={t('users.searchNameOrPhone')}

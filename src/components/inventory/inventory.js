@@ -28,6 +28,7 @@ import {
 import SkeletonWrapper from '../../tools/loader/skeletonWrapper';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
+import SectionTutorials from '../tutorials/sectionTutorials';
 import ProductCard from './productCard';
 import ShowProduct from './showProduct';
 import ProductForm from './productForm';
@@ -273,6 +274,7 @@ const Inventory = () => {
             onClick={handleNewProduct} sx={{ borderRadius: 2 }}>
             {t('inventory.newProductButton')}
           </Button>
+          <SectionTutorials section="inventory" tag="inventory:product:create" />
         </Box>
       </Box>
 
