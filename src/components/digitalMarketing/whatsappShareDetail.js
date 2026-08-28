@@ -124,14 +124,19 @@ export default function WhatsappShareDetail({ id, onClose, onDeleted }) {
           </Box>
         )}
 
-        {doc.contactName && (
+        {doc.contacts?.length > 0 && (
           <Box>
             <Typography variant="caption" sx={{ color: T.TEXT_TER, display: 'block', mb: 0.5 }}>
               {t('inventory.shareContactLabel')}
             </Typography>
-            <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI }}>
-              {doc.contactName} {doc.contactWaNumber ? `(+${doc.contactWaNumber})` : ''}
-            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {doc.contacts.map((c, i) => (
+                <Typography key={i} sx={{ fontSize: '0.78rem', color: T.TEXT_PRI }}>
+                  {c.name} {c.waNumber ? `(+${c.waNumber})` : ''}
+                  {c.branchNames?.length > 0 ? ` — ${c.branchNames.join(', ')}` : ''}
+                </Typography>
+              ))}
+            </Box>
           </Box>
         )}
 

@@ -41,10 +41,18 @@ export function normalizeWaNumber(countryCode, phoneNumber) {
 // Arabic product name, or vice versa. Defaults to following `lang` (ar->ar,
 // anything else->en) only when not explicitly given, for backward
 // compatibility with any caller that doesn't pass it.
+//
+// `contacts` — array of { name, waNumber, branchNames } (multi-select — see
+// shareWhatsAppDialog.js). Each becomes its own contact block, labeled with
+// the person's name and branch(es) so a customer knows who they're reaching.
+//
+// Unsized slabs (variant.spec.unsized — e.g. MA01W00000020, per
+// utils/stoneCodeParser.js: length/width both 0, only thickness is real)
+// show as "Slab" instead of a meaningless "0 x 0 cm" line.
 export function buildShareText({
   product, variant, lang, nameLanguage,
   includeName = true, includeDimensions = true, includeCode = true, includeContact = true,
-  branches = [], contactWaNumber = null,
+  branches = [], contacts = [],
 }) {
   const t = i18n.getFixedT(lang, 'translation');
   const lines = [];
@@ -62,9 +70,13 @@ export function buildShareText({
   });
 
   if (includeDimensions && variant?.spec) {
-    const cm = t('inventory.shareCm');
-    if (variant.spec.lengthCm != null) lines.push(`📐 ${t('inventory.shareLength')}: ${variant.spec.lengthCm} ${cm}`);
-    if (variant.spec.widthCm != null)  lines.push(`📏 ${t('inventory.shareWidth')}: ${variant.spec.widthCm} ${cm}`);
+    if (variant.spec.unsized) {
+      lines.push(`📐 ${t('inventory.shareSlabThickness', { mm: variant.spec.thicknessMm })}`);
+    } else {
+      const cm = t('inventory.shareCm');
+      if (variant.spec.lengthCm != null) lines.push(`📐 ${t('inventory.shareLength')}: ${variant.spec.lengthCm} ${cm}`);
+      if (variant.spec.widthCm != null)  lines.push(`📏 ${t('inventory.shareWidth')}: ${variant.spec.widthCm} ${cm}`);
+    }
   }
 
   if (includeCode && variant?.code) {
@@ -80,9 +92,12 @@ export function buildShareText({
     });
   }
 
-  if (includeContact && contactWaNumber) {
-    lines.push(`💬 ${t('inventory.shareContactToOrder')}:`);
-    lines.push(`https://wa.me/${contactWaNumber}`);
+  if (includeContact && contacts.length) {
+    contacts.forEach((c) => {
+      const branchSuffix = c.branchNames?.length ? ` — ${c.branchNames.join(', ')}` : '';
+      lines.push(`💬 ${t('inventory.shareContactToOrder')} (${c.name}${branchSuffix}):`);
+      lines.push(`https://wa.me/${c.waNumber}`);
+    });
   }
 
   return lines.join('\n');

@@ -374,6 +374,8 @@
     "shareLength": "طول",
     "shareWidth": "عرض",
     "shareCm": "سانتی‌متر",
+    "shareSlabThickness": "اسلب — ضخامت {{mm}} میلی‌متر",
+    "shareContactsFailedToLoad": "بارگذاری مخاطبین ناموفق بود — دوباره امتحان کنید",
     "shareProductCode": "کد محصول",
     "shareAvailableQuantity": "موجودی قابل عرضه",
     "shareContactToOrder": "برای مشاوره و خرید",

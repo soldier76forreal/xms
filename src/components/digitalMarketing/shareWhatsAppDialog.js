@@ -11,6 +11,7 @@ import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Checkbox from '@mui/material/Checkbox';
+import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Autocomplete from '@mui/material/Autocomplete';
 import Divider from '@mui/material/Divider';
@@ -80,7 +81,7 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
   const [includeCode, setIncludeCode] = useState(true);
   const [includeContact, setIncludeContact] = useState(true);
   const [selectedBranchIds, setSelectedBranchIds] = useState([]);
-  const [contact, setContact] = useState(null);
+  const [contacts, setContacts] = useState([]);   // multi-select — see contactSnapshots below
   const [previewText, setPreviewText] = useState('');
   const [manuallyEdited, setManuallyEdited] = useState(false);
 
@@ -132,14 +133,15 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
   };
   const backToSearch = () => { setStep('search'); setSelectedVariantId(null); };
 
+  const [contactsFailed, setContactsFailed] = useState(false);
+
   const load = useCallback(async () => {
     if (!selectedVariantId) return;
     setLoading(true);
     try {
-      const [detailRes, availRes, contactsRes] = await Promise.all([
+      const [detailRes, availRes] = await Promise.all([
         authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/inventory/variants/${selectedVariantId}` }),
         authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/inventory/variants/${selectedVariantId}/branch-availability` }),
-        authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/inventory/share-contacts` }),
       ]);
       const v = detailRes.data.data.variant;
       const p = detailRes.data.data.product;
@@ -147,12 +149,25 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
       setProduct(p);
       setBranchOptions(availRes.data.data || []);
       setSelectedBranchIds([v.branchId]);
-      setContactOptions(contactsRes.data.data || []);
-      setContact(null);
+      setContacts([]);
       setManuallyEdited(false);
     } catch (err) {
       dispatch(actions.setShowSnackBar({ status: true, msg: t('inventory.shareFailedToLoad'), type: 'error' }));
       if (variantIdProp) onClose(); else backToSearch();
+      setLoading(false);
+      return;
+    }
+    // The contact picker is a separate, best-effort fetch — a hiccup here
+    // must never take down the rest of the form (that used to be bundled
+    // into the same Promise.all, so ANY failure — even just contacts —
+    // silently bounced the whole dialog back to search/closed).
+    setContactsFailed(false);
+    try {
+      const contactsRes = await authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/inventory/share-contacts` });
+      setContactOptions(contactsRes.data.data || []);
+    } catch (err) {
+      setContactOptions([]);
+      setContactsFailed(true);
     } finally {
       setLoading(false);
     }
@@ -166,15 +181,23 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
     [branchOptions, selectedBranchIds]
   );
 
-  const contactWaNumber = contact ? normalizeWaNumber(contact.countryCode, contact.phoneNumber) : null;
+  // contacts state holds the full picked user objects; contactSnapshots is
+  // the {name, waNumber, branchNames} shape both the template and the saved
+  // record need.
+  const contactSnapshots = useMemo(() => contacts.map((c) => ({
+    name: `${c.firstName || ''} ${c.lastName || ''}`.trim(),
+    waNumber: normalizeWaNumber(c.countryCode, c.phoneNumber),
+    branchNames: c.branchNames || [],
+    userId: c._id,
+  })), [contacts]);
 
   const generatedText = useMemo(() => {
     if (!variant || !product) return '';
     return buildShareText({
       product, variant, lang, nameLanguage, includeName, includeDimensions, includeCode, includeContact,
-      branches: selectedBranches, contactWaNumber,
+      branches: selectedBranches, contacts: contactSnapshots,
     });
-  }, [product, variant, lang, nameLanguage, includeName, includeDimensions, includeCode, includeContact, selectedBranches, contactWaNumber]);
+  }, [product, variant, lang, nameLanguage, includeName, includeDimensions, includeCode, includeContact, selectedBranches, contactSnapshots]);
 
   // Keep the preview in sync with the field toggles/selections — unless the
   // rep has started hand-editing it, in which case their edits win until they
@@ -196,13 +219,13 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
       data: {
         variantId: variant?._id, productId: product?._id,
         productName: product?.name || '', productNameAr: product?.nameAr || '',
-        variantCode: variant?.code || '', lengthCm: variant?.spec?.lengthCm ?? null, widthCm: variant?.spec?.widthCm ?? null,
+        variantCode: variant?.code || '',
+        unsized: !!variant?.spec?.unsized, lengthCm: variant?.spec?.lengthCm ?? null,
+        widthCm: variant?.spec?.widthCm ?? null, thicknessMm: variant?.spec?.thicknessMm ?? null,
         language: lang, nameLanguage,
         includeName, includeDimensions, includeCode, includeContact,
         branches: selectedBranches,
-        contactUserId: contact?._id || null,
-        contactName: contact ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim() : '',
-        contactWaNumber: contactWaNumber || '',
+        contacts: contactSnapshots,
         text: previewText, action,
       },
     }).catch(() => {});
@@ -377,14 +400,33 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
 
                 {includeContact && (
                   <Autocomplete
+                    multiple
                     options={contactOptions}
-                    value={contact}
-                    onChange={(_, val) => setContact(val)}
+                    value={contacts}
+                    onChange={(_, val) => setContacts(val)}
                     getOptionLabel={(o) => `${o.firstName || ''} ${o.lastName || ''}`.trim()}
                     isOptionEqualToValue={(o, v) => o._id === v._id}
+                    noOptionsText={contactsFailed ? t('inventory.shareContactsFailedToLoad') : t('inventory.shareNoResults')}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props} key={option._id}>
+                        <Box>
+                          <Typography variant="body2">{`${option.firstName || ''} ${option.lastName || ''}`.trim()}</Typography>
+                          {option.branchNames?.length > 0 && (
+                            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                              {option.branchNames.join(', ')}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    )}
+                    renderTags={(value, getTagProps) => value.map((option, index) => (
+                      <Chip size="small" {...getTagProps({ index })}
+                        label={`${option.firstName || ''} ${option.lastName || ''}`.trim()} />
+                    ))}
                     renderInput={(params) => (
                       <TextField {...params} size="small" label={t('inventory.shareContactLabel')}
-                        helperText={t('inventory.shareContactHelper')} />
+                        helperText={contactsFailed ? t('inventory.shareContactsFailedToLoad') : t('inventory.shareContactHelper')}
+                        FormHelperTextProps={contactsFailed ? { sx: { color: 'error.main' } } : undefined} />
                     )}
                   />
                 )}

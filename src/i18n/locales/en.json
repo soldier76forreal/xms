@@ -384,6 +384,8 @@
     "shareLength": "Length",
     "shareWidth": "Width",
     "shareCm": "cm",
+    "shareSlabThickness": "Slab — {{mm}} mm thick",
+    "shareContactsFailedToLoad": "Failed to load contacts — try again",
     "shareProductCode": "Product code",
     "shareAvailableQuantity": "Available quantity",
     "shareContactToOrder": "For inquiries and purchase",
