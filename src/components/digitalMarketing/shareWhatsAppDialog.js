@@ -29,6 +29,7 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { actions } from '../../store/store';
 import { LANGUAGES } from '../../i18n';
+import { DEFAULT_COUNTRY } from '../users/countryData';
 import { buildShareText, normalizeWaNumber, countryFlag, formatQty, UNIT_LABELS } from '../inventory/util/whatsappTemplate';
 
 // Same 13-entry catalog as api/routes/inventory/lookups.js's stoneTypes — kept
@@ -205,9 +206,14 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
   // contacts state holds the full picked user objects; contactSnapshots is
   // the {name, waNumber, branchNames} shape both the template and the saved
   // record need.
+  // countryCode is nullable on the user model (default: null) and legacy
+  // records predating the field have none — without a fallback those produce
+  // a wa.me link missing its country code entirely, i.e. a silently wrong
+  // number. Falls back to the same DEFAULT_COUNTRY userForm.js itself
+  // defaults to, so the app stays self-consistent.
   const contactSnapshots = useMemo(() => contacts.map((c) => ({
     name: `${c.firstName || ''} ${c.lastName || ''}`.trim(),
-    waNumber: normalizeWaNumber(c.countryCode, c.phoneNumber),
+    waNumber: normalizeWaNumber(c.countryCode || DEFAULT_COUNTRY.dial, c.phoneNumber),
     branchNames: c.branchNames || [],
     userId: c._id,
   })), [contacts]);
@@ -430,6 +436,16 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
                 {includeContact && (
                   <Autocomplete
                     multiple
+                    // THE reason the contact list "never showed up": this
+                    // dropdown renders in a portal at document.body with
+                    // MUI's default popper z-index of theme.zIndex.modal
+                    // (1300), while this Dialog is deliberately bumped to
+                    // modal + 1 (1301, see the Dialog below) so it can open
+                    // over variantDetail.js's own Dialog. The options were
+                    // loading fine all along — they were painting BEHIND the
+                    // dialog surface. Must stay above whatever the Dialog
+                    // uses. (Same bug class as tutorialForm.js's Drawer.)
+                    slotProps={{ popper: { sx: { zIndex: (theme) => theme.zIndex.modal + 2 } } }}
                     options={contactOptions}
                     value={contacts}
                     onChange={(_, val) => setContacts(val)}

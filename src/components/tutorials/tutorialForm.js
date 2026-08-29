@@ -221,6 +221,11 @@ export default function TutorialForm({ open, onClose, initialSection = 'general'
         </TextField>
 
         <Autocomplete multiple size="small"
+          // Same portal/z-index trap as the Drawer above: MUI's Autocomplete
+          // popper defaults to theme.zIndex.modal (1300), which is BELOW this
+          // Drawer's own bumped modal + 1 — so the tag list would open behind
+          // the form it belongs to.
+          slotProps={{ popper: { sx: { zIndex: (theme) => theme.zIndex.modal + 2 } } }}
           options={tagOptions}
           disabled={section === 'general'}
           noOptionsText={t('tutorials.noTagsForSection')}
