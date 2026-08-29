@@ -74,7 +74,20 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
   const [branchOptions, setBranchOptions] = useState([]);
   const [contactOptions, setContactOptions] = useState([]);
 
-  const [lang, setLang] = useState('ar');
+  // Multi-select — any subset of en/fa/ar. Sections are always rendered in
+  // the fixed LANGUAGES catalog order (en -> fa -> ar) by buildShareText
+  // regardless of pick order, matching the client's "must place after each
+  // other" ask (English first, then the RTL language).
+  const [langs, setLangs] = useState(['ar']);
+  const toggleLang = (code) => {
+    setLangs((prev) => {
+      if (prev.includes(code)) {
+        const next = prev.filter((c) => c !== code);
+        return next.length ? next : prev; // never allow zero languages selected
+      }
+      return [...prev, code];
+    });
+  };
   const [nameLanguage, setNameLanguage] = useState('ar');
   const [includeName, setIncludeName] = useState(true);
   const [includeDimensions, setIncludeDimensions] = useState(true);
@@ -133,7 +146,13 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
   };
   const backToSearch = () => { setStep('search'); setSelectedVariantId(null); };
 
+  // Split from a generic boolean so a permission gap (403 — role/seed hasn't
+  // caught up on the server) shows a message distinct from a plain network/
+  // server failure, instead of both collapsing into one unhelpful "failed to
+  // load" — this is the second report of the contact list being empty, so
+  // the next report should carry an actual diagnosis instead of a guess.
   const [contactsFailed, setContactsFailed] = useState(false);
+  const [contactsFailedStatus, setContactsFailedStatus] = useState(null);
 
   const load = useCallback(async () => {
     if (!selectedVariantId) return;
@@ -162,12 +181,14 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
     // into the same Promise.all, so ANY failure — even just contacts —
     // silently bounced the whole dialog back to search/closed).
     setContactsFailed(false);
+    setContactsFailedStatus(null);
     try {
       const contactsRes = await authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/inventory/share-contacts` });
       setContactOptions(contactsRes.data.data || []);
     } catch (err) {
       setContactOptions([]);
       setContactsFailed(true);
+      setContactsFailedStatus(err?.response?.status || null);
     } finally {
       setLoading(false);
     }
@@ -194,10 +215,10 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
   const generatedText = useMemo(() => {
     if (!variant || !product) return '';
     return buildShareText({
-      product, variant, lang, nameLanguage, includeName, includeDimensions, includeCode, includeContact,
+      product, variant, langs, nameLanguage, includeName, includeDimensions, includeCode, includeContact,
       branches: selectedBranches, contacts: contactSnapshots,
     });
-  }, [product, variant, lang, nameLanguage, includeName, includeDimensions, includeCode, includeContact, selectedBranches, contactSnapshots]);
+  }, [product, variant, langs, nameLanguage, includeName, includeDimensions, includeCode, includeContact, selectedBranches, contactSnapshots]);
 
   // Keep the preview in sync with the field toggles/selections — unless the
   // rep has started hand-editing it, in which case their edits win until they
@@ -222,7 +243,7 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
         variantCode: variant?.code || '',
         unsized: !!variant?.spec?.unsized, lengthCm: variant?.spec?.lengthCm ?? null,
         widthCm: variant?.spec?.widthCm ?? null, thicknessMm: variant?.spec?.thicknessMm ?? null,
-        language: lang, nameLanguage,
+        languages: langs, nameLanguage,
         includeName, includeDimensions, includeCode, includeContact,
         branches: selectedBranches,
         contacts: contactSnapshots,
@@ -348,18 +369,26 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
               </Box>
             ) : (
               <>
-                <Box sx={{ display: 'flex', gap: 1.5 }}>
-                  <TextField select size="small" fullWidth label={t('inventory.shareTemplateLanguage')} value={lang}
-                    onChange={(e) => setLang(e.target.value)} SelectProps={{ native: true }}>
-                    {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.nativeLabel}</option>)}
-                  </TextField>
-                  <TextField select size="small" fullWidth label={t('inventory.shareNameLanguage')} value={nameLanguage}
-                    onChange={(e) => setNameLanguage(e.target.value)} SelectProps={{ native: true }}
-                    disabled={!includeName}>
-                    <option value="en">{t('inventory.shareNameLanguageEnglish')}</option>
-                    <option value="ar">{t('inventory.shareNameLanguageArabic')}</option>
-                  </TextField>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mb: 0.5 }}>
+                    {t('inventory.shareTemplateLanguage')}
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {LANGUAGES.map((l) => (
+                      <FormControlLabel key={l.code}
+                        control={<Checkbox size="small" checked={langs.includes(l.code)} onChange={() => toggleLang(l.code)} />}
+                        label={<Typography variant="body2">{l.nativeLabel}</Typography>} />
+                    ))}
+                  </Box>
                 </Box>
+
+                <TextField select size="small" fullWidth label={t('inventory.shareNameLanguage')} value={nameLanguage}
+                  onChange={(e) => setNameLanguage(e.target.value)} SelectProps={{ native: true }}
+                  disabled={!includeName || langs.length > 1}
+                  helperText={langs.length > 1 ? t('inventory.shareNameLanguageMultiHint') : undefined}>
+                  <option value="en">{t('inventory.shareNameLanguageEnglish')}</option>
+                  <option value="ar">{t('inventory.shareNameLanguageArabic')}</option>
+                </TextField>
 
                 <Box>
                   <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mb: 0.5 }}>
@@ -406,7 +435,9 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
                     onChange={(_, val) => setContacts(val)}
                     getOptionLabel={(o) => `${o.firstName || ''} ${o.lastName || ''}`.trim()}
                     isOptionEqualToValue={(o, v) => o._id === v._id}
-                    noOptionsText={contactsFailed ? t('inventory.shareContactsFailedToLoad') : t('inventory.shareNoResults')}
+                    noOptionsText={contactsFailed
+                      ? (contactsFailedStatus === 403 ? t('inventory.shareContactsForbidden') : t('inventory.shareContactsFailedToLoad'))
+                      : t('inventory.shareNoResults')}
                     renderOption={(props, option) => (
                       <Box component="li" {...props} key={option._id}>
                         <Box>
@@ -425,7 +456,9 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
                     ))}
                     renderInput={(params) => (
                       <TextField {...params} size="small" label={t('inventory.shareContactLabel')}
-                        helperText={contactsFailed ? t('inventory.shareContactsFailedToLoad') : t('inventory.shareContactHelper')}
+                        helperText={contactsFailed
+                          ? (contactsFailedStatus === 403 ? t('inventory.shareContactsForbidden') : t('inventory.shareContactsFailedToLoad'))
+                          : t('inventory.shareContactHelper')}
                         FormHelperTextProps={contactsFailed ? { sx: { color: 'error.main' } } : undefined} />
                     )}
                   />
@@ -448,7 +481,12 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
                   </Box>
                   <TextField multiline minRows={6} fullWidth value={previewText}
                     onChange={(e) => { setPreviewText(e.target.value); setManuallyEdited(true); }}
-                    sx={{ '& textarea': { fontFamily: lang === 'en' ? 'inherit' : undefined, direction: lang === 'en' ? 'ltr' : 'rtl' } }} />
+                    // unicode-bidi:plaintext makes each LINE resolve its own
+                    // direction from its own first strong character (per the
+                    // Unicode bidi algorithm), independent of the box's base
+                    // `direction` — the correct behavior once a message can
+                    // mix English and Arabic/Farsi sections in one preview.
+                    sx={{ '& textarea': { direction: 'ltr', unicodeBidi: 'plaintext' } }} />
                 </Box>
               </>
             )}

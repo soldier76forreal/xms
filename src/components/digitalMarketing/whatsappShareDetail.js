@@ -106,7 +106,9 @@ export default function WhatsappShareDetail({ id, onClose, onDeleted }) {
             label={doc.action === 'openedWhatsApp' ? t('dm.whatsappShareActionOpened') : t('dm.whatsappShareActionCopied')}
             size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#25D36622', color: '#25D366' }} />
           <Chip label={doc.variantCode} size="small" sx={{ height: 20, fontSize: '0.65rem', fontFamily: 'monospace', bgcolor: T.CTRL_BG, color: T.TEXT_SEC }} />
-          <Chip label={(doc.language || 'en').toUpperCase()} size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: T.CTRL_BG, color: T.TEXT_SEC }} />
+          {(doc.languages?.length ? doc.languages : [doc.language || 'en']).map((l) => (
+            <Chip key={l} label={l.toUpperCase()} size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: T.CTRL_BG, color: T.TEXT_SEC }} />
+          ))}
         </Box>
 
         {doc.branches?.length > 0 && (
@@ -153,7 +155,10 @@ export default function WhatsappShareDetail({ id, onClose, onDeleted }) {
           </Box>
           <Box sx={{ p: 1.5, borderRadius: '10px', bgcolor: T.CARD_BG, border: `1px solid ${T.BD}`,
             whiteSpace: 'pre-wrap', fontSize: '0.8rem', color: T.TEXT_PRI,
-            direction: doc.language === 'en' ? 'ltr' : 'rtl' }}>
+            // Same per-line auto-direction as the editable preview in
+            // shareWhatsAppDialog.js — a saved record can mix English and
+            // Arabic/Farsi sections in one message.
+            direction: 'ltr', unicodeBidi: 'plaintext' }}>
             {doc.text}
           </Box>
         </Box>
