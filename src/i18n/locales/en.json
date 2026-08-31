@@ -1447,5 +1447,17 @@
     "folderEmpty": "This folder is empty",
     "itemsCount_one": "{{count}} item",
     "itemsCount_other": "{{count}} items"
+  },
+  "ghost": {
+    "sectionTitle": "Ghost mode",
+    "enterButton": "Ghost in as this user",
+    "enterHelp": "Opens the app exactly as they see it, against a temporary copy of the database. Nothing you do is saved to their real data.",
+    "bannerViewingAs": "Ghost mode — viewing as {{name}}",
+    "bannerViewingGeneric": "Ghost mode — viewing as another user",
+    "bannerSandboxNote": "Changes are sandboxed and discarded on exit.",
+    "exitButton": "Exit ghost",
+    "grantLabel": "Allow this user to ghost in",
+    "grantHelp": "Only you can grant this. It lets them view other accounts for testing.",
+    "grantFailed": "Could not update ghost access"
   }
 }

@@ -33,6 +33,8 @@ import AssignCustomersDialog from '../crm/assignCustomersDialog';
 import InvoiceDetailDialog from '../mis/invoiceDetailDialog';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import { enterGhost } from '../../tools/ghost';
 import JobReportSection from './jobReportSection';
 
 // Per-type push categories (must match backend notificationPrefs keys).
@@ -128,6 +130,13 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
   const [assignedInvoices, setAssignedInvoices] = useState([]);
   const [misLoading,       setMisLoading]       = useState(false);
   const [viewInvoice,      setViewInvoice]      = useState(null);
+  // Ghost capability of the CURRENT viewer (not of the user being viewed) —
+  // decides whether the ghost controls render at all. Fetched rather than
+  // derived from permissions because ghost rights are a separate access axis
+  // that only the owner account can grant (see api/utils/ghost.js).
+  const [ghostMe,      setGhostMe]      = useState(null);
+  const [ghostBusy,    setGhostBusy]    = useState(false);
+  const [targetCanGhost, setTargetCanGhost] = useState(false);
 
   const fetchUser = async () => {
     setLoading(true);
@@ -206,6 +215,31 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
   }, [authCtx, axiosGlobal, userId]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchAssignedInvoices(); }, [fetchAssignedInvoices]);
+
+  // Ghost mode is disabled by default on the server (503 + ghostDisabled), so a
+  // failure here simply means the controls stay hidden — never an error toast.
+  useEffect(() => {
+    let cancelled = false;
+    authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/ghost/me` })
+      .then((res) => { if (!cancelled) setGhostMe(res.data); })
+      .catch(() => { if (!cancelled) setGhostMe(null); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Owner-only: whether the user being VIEWED currently holds ghost rights.
+  useEffect(() => {
+    if (!ghostMe?.isOwner || !userId) return;
+    let cancelled = false;
+    authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/ghost/access` })
+      .then((res) => {
+        if (cancelled) return;
+        setTargetCanGhost((res.data?.users || []).some((u) => String(u._id) === String(userId)));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ghostMe?.isOwner, userId]);
 
   // Real-time presence for this specific user
   useEffect(() => {
@@ -375,6 +409,76 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                 </Can>
               </Box>
             </Box>
+
+            {/* ── Ghost mode ──────────────────────────────────────────────
+                Hidden entirely unless the CURRENT viewer holds ghost rights
+                (or is the owner) and is not already ghosting. Never shown for
+                your own record — ghosting yourself is meaningless. */}
+            {ghostMe && !ghostMe.inGhost && (ghostMe.canGhost || ghostMe.isOwner)
+              && String(userId) !== String(authCtx.userId) && (
+              <>
+                <Divider sx={{ my: 2, borderColor: T.CARD_BD }} />
+                <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
+                  {t('ghost.sectionTitle')}
+                </Typography>
+
+                {ghostMe.canGhost && (
+                  <>
+                    <Button
+                      size="small"
+                      startIcon={ghostBusy ? <CircularProgress size={13} sx={{ color: 'inherit' }} /> : <VisibilityIcon sx={{ fontSize: 16 }} />}
+                      disabled={ghostBusy}
+                      onClick={async () => {
+                        setGhostBusy(true);
+                        const r = await enterGhost(authCtx, axiosGlobal, userId);
+                        if (!r.ok) {
+                          setGhostBusy(false);
+                          dispatch(actions.setShowSnackBar({ status: true, msg: r.message, type: 'error' }));
+                        }
+                        // On success the page navigates — leave the spinner up.
+                      }}
+                      sx={{
+                        textTransform: 'none', fontSize: '0.78rem', fontWeight: 700, borderRadius: '8px',
+                        bgcolor: '#B26A00', color: '#fff', px: 1.75,
+                        '&:hover': { bgcolor: '#8F5500' },
+                      }}>
+                      {t('ghost.enterButton', { name: user.firstName || '' })}
+                    </Button>
+                    <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, mt: 0.75 }}>
+                      {t('ghost.enterHelp')}
+                    </Typography>
+                  </>
+                )}
+
+                {/* Owner-only: grant/revoke ghost rights for this user. */}
+                {ghostMe.isOwner && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: ghostMe.canGhost ? 1.5 : 0 }}>
+                    <Switch
+                      size="small"
+                      checked={targetCanGhost}
+                      onChange={async (e) => {
+                        const next = e.target.checked;
+                        setTargetCanGhost(next);
+                        try {
+                          await authCtx.jwtInst({
+                            method: 'put',
+                            url: `${axiosGlobal.defaultTargetApi}/ghost/access/${userId}`,
+                            data: { canGhost: next },
+                          });
+                        } catch (_) {
+                          setTargetCanGhost(!next);   // revert on failure
+                          dispatch(actions.setShowSnackBar({ status: true, msg: t('ghost.grantFailed'), type: 'error' }));
+                        }
+                      }}
+                    />
+                    <Box>
+                      <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_SEC }}>{t('ghost.grantLabel')}</Typography>
+                      <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{t('ghost.grantHelp')}</Typography>
+                    </Box>
+                  </Box>
+                )}
+              </>
+            )}
 
             <Divider sx={{ my: 2, borderColor: T.CARD_BD }} />
 

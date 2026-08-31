@@ -23,6 +23,7 @@ import PublicLinkPage from './components/digitalMarketing/publicLinkPage';
 import RestrictedAccessScreen from './components/main/restrictedAccessScreen';
 import { useHistory, useLocation, Link } from "react-router-dom";
 import SnackBar from './tools/navs/snackBar';
+import GhostBanner from './components/main/ghostBanner';
 import PwaInstallPrompt from './tools/navs/pwaInstallPrompt';
 import EnableNotificationsPrompt from './tools/navs/enableNotificationsPrompt';
 import { pushSupported, subscribeToPush } from './tools/pushNotifications';
@@ -111,6 +112,7 @@ const ThemedApp = () => {
       <PermissionProvider>
       <BranchProvider>
         <SnackBar />
+        {authCtx.isLoggedIn === true && <GhostBanner />}
         {authCtx.isLoggedIn === true && <PwaInstallPrompt />}
         {authCtx.isLoggedIn === true && <EnableNotificationsPrompt />}
         <Switch>
