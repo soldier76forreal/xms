@@ -182,6 +182,15 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   const [prodLoading,  setProdLoading]  = useState(false);
   const [discardOpen,  setDiscardOpen]  = useState(false);
 
+  // Live phone-number duplicate check — the phone field sits at the top of
+  // the form on its own, and every OTHER field is gated behind this resolving
+  // clear, so a rep never types a name/address for someone already in the
+  // system. status: 'idle' (empty) | 'checking' | 'clear' | 'duplicate' | 'error'.
+  // 'error' counts as verified (fails OPEN, not closed) — a network hiccup
+  // here must never permanently lock the rest of the form; the server still
+  // enforces the real guard at submit time (see the 409 handling below).
+  const [phoneCheck, setPhoneCheck] = useState({ status: 'idle', match: null });
+
   // Reset form when customer or open changes
   useEffect(() => {
     if (open) {
@@ -190,9 +199,41 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
       setTagInput('');
       setProdSearch('');
       setProdResults([]);
+      setPhoneCheck({ status: 'idle', match: null });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer?._id]);
+
+  // Debounced — fires as the phone number is typed (mirrors the product-search
+  // debounce below), not just on blur, so the gate opens as soon as possible.
+  // excludeId lets the edit form check without matching the record itself.
+  // Reads form.values.phoneNumber (not the later-destructured `values`) and
+  // `mode` (the prop, not the later-derived `isEdit`) since both of those are
+  // declared further down this component — `form` and `mode` are the only
+  // things this early in the body that already hold the same information.
+  useEffect(() => {
+    const phone = form.values.phoneNumber?.trim();
+    if (!phone) { setPhoneCheck({ status: 'idle', match: null }); return; }
+    setPhoneCheck({ status: 'checking', match: null });
+    const timer = setTimeout(async () => {
+      try {
+        const res = await authCtx.jwtInst({
+          method: 'get',
+          url: `${axiosGlobal.defaultTargetApi}/crm/customers/check-phone`,
+          params: { phoneNumber: phone, ...(mode === 'edit' && customer?._id ? { excludeId: customer._id } : {}) },
+        });
+        setPhoneCheck(res.data?.exists
+          ? { status: 'duplicate', match: res.data.customer || null }
+          : { status: 'clear', match: null });
+      } catch (_) {
+        setPhoneCheck({ status: 'error', match: null });
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.values.phoneNumber, mode, customer?._id]);
+
+  const phoneVerified = phoneCheck.status === 'clear' || phoneCheck.status === 'error';
 
   // Product search (debounced) — scoped to the currently active branch, since
   // Inventory is fully branch-isolated (interested products must come from the
@@ -296,6 +337,11 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   // ── submit ─────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
+    // Defense in depth — the Save button is already disabled while
+    // !phoneVerified, this just covers a submit reached some other way
+    // (e.g. Enter key) while a duplicate is showing.
+    if (phoneCheck.status === 'duplicate') return;
+
     const schema = buildSchema();
     let hasErr = false;
     const errs = {};
@@ -431,6 +477,75 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         {/* ── Body ── */}
         <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 2.5, py: 2 }}>
 
+          {/* ── 0. Phone number — always visible, checked BEFORE anything else.
+              Everything below this section is gated behind phoneVerified so a
+              rep never types a name/address for a customer already in the
+              system (Pouriya: "before user enter any name they must enter the
+              phone number to check if it already exists"). ── */}
+          <SectionHeader label={t('crm.sectionPhoneNumber')} T={T} />
+
+          <Box sx={{ display: 'flex', gap: 0.75, mb: 1, alignItems: 'flex-start' }}>
+            {/* Country code selector */}
+            <Autocomplete
+              value={values.phoneCountryCode}
+              onChange={(_, val) => handleChange('phoneCountryCode', val)}
+              options={COUNTRIES}
+              getOptionLabel={opt => opt ? `${opt.flag} ${opt.dialCode}` : ''}
+              isOptionEqualToValue={(opt, val) => opt.code === val?.code}
+              disableClearable
+              sx={{ width: 120, flexShrink: 0, ...autocompleteSx }}
+              renderOption={(props, opt) => (
+                <Box component="li" {...props} sx={{ fontSize: '0.8rem', py: '4px !important' }}>
+                  <Typography sx={{ mr: 0.75, fontSize: '1rem' }}>{opt.flag}</Typography>
+                  <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mr: 0.5 }}>{opt.dialCode}</Typography>
+                  <Typography sx={{ fontSize: '0.75rem' }}>{opt.name}</Typography>
+                </Box>
+              )}
+              renderInput={params => (
+                <TextField {...params} size="small" label={t('crm.fieldCode')}
+                  sx={autocompleteSx}
+                  inputProps={{ ...params.inputProps, style: { fontSize: '0.8rem' } }} />
+              )}
+            />
+            {/* Phone number field */}
+            <TextField label={`${t('auth.phoneNumber')} *`} size="small" sx={{ ...fieldSx, flexGrow: 1 }}
+              value={values.phoneNumber}
+              autoFocus={!isEdit}
+              onChange={e => { handleChange('phoneNumber', e.target.value); setDupError(null); }}
+              onBlur={() => handleBlur('phoneNumber')}
+              error={!!fieldError('phoneNumber') || !!dupError || phoneCheck.status === 'duplicate'}
+              helperText={fieldError('phoneNumber') || dupError
+                || (phoneCheck.status === 'duplicate' ? t('crm.duplicatePhoneError') : '')}
+              InputProps={phoneCheck.status === 'checking' ? {
+                endAdornment: <InputAdornment position="end"><CircularProgress size={13} sx={{ color: T.TEXT_TER }} /></InputAdornment>,
+              } : undefined}
+              placeholder="50 123 4567" />
+          </Box>
+
+          {/* Status feedback under the field — hint while empty, a clear block
+              when a duplicate is found (with the matched customer's name if
+              the backend resolved one), nothing once verified clean. */}
+          {phoneCheck.status === 'idle' && !values.phoneNumber && (
+            <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_TER, mb: 2 }}>
+              {t('crm.phoneCheckHint')}
+            </Typography>
+          )}
+          {phoneCheck.status === 'duplicate' && (
+            <Box sx={{ p: 1.25, borderRadius: '9px', mb: 2,
+              bgcolor: isDark ? 'rgba(234,0,90,0.1)' : 'rgba(234,0,90,0.07)',
+              border: `1px solid ${T.ERR}` }}>
+              <Typography sx={{ fontSize: '0.78rem', color: T.ERR, fontWeight: 600 }}>
+                {t('crm.duplicatePhoneError')}
+              </Typography>
+              {phoneCheck.match?.name && (
+                <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC, mt: 0.25 }}>
+                  {t('crm.phoneMatchesExisting', { name: phoneCheck.match.name })}
+                </Typography>
+              )}
+            </Box>
+          )}
+          {phoneVerified && (
+          <>
           {/* ── 1. Identity ── */}
           <SectionHeader label={t('crm.sectionIdentity')} T={T} />
 
@@ -492,40 +607,6 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
 
           {/* ── 2. Contact & channels ── */}
           <SectionHeader label={t('crm.sectionContact')} T={T} />
-
-          {/* Phone number with country code selector */}
-          <Box sx={{ display: 'flex', gap: 0.75, mb: 1.5, alignItems: 'flex-start' }}>
-            {/* Country code selector */}
-            <Autocomplete
-              value={values.phoneCountryCode}
-              onChange={(_, val) => handleChange('phoneCountryCode', val)}
-              options={COUNTRIES}
-              getOptionLabel={opt => opt ? `${opt.flag} ${opt.dialCode}` : ''}
-              isOptionEqualToValue={(opt, val) => opt.code === val?.code}
-              disableClearable
-              sx={{ width: 120, flexShrink: 0, ...autocompleteSx }}
-              renderOption={(props, opt) => (
-                <Box component="li" {...props} sx={{ fontSize: '0.8rem', py: '4px !important' }}>
-                  <Typography sx={{ mr: 0.75, fontSize: '1rem' }}>{opt.flag}</Typography>
-                  <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mr: 0.5 }}>{opt.dialCode}</Typography>
-                  <Typography sx={{ fontSize: '0.75rem' }}>{opt.name}</Typography>
-                </Box>
-              )}
-              renderInput={params => (
-                <TextField {...params} size="small" label={t('crm.fieldCode')}
-                  sx={autocompleteSx}
-                  inputProps={{ ...params.inputProps, style: { fontSize: '0.8rem' } }} />
-              )}
-            />
-            {/* Phone number field */}
-            <TextField label={`${t('auth.phoneNumber')} *`} size="small" sx={{ ...fieldSx, flexGrow: 1 }}
-              value={values.phoneNumber}
-              onChange={e => { handleChange('phoneNumber', e.target.value); setDupError(null); }}
-              onBlur={() => handleBlur('phoneNumber')}
-              error={!!fieldError('phoneNumber') || !!dupError}
-              helperText={fieldError('phoneNumber') || dupError}
-              placeholder="50 123 4567" />
-          </Box>
 
           {/* Channel chips */}
           <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, mb: 0.75,
@@ -811,6 +892,8 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
             value={values.explanations}
             onChange={e => handleChange('explanations', e.target.value)}
             sx={{ ...fieldSx, mb: 2 }} />
+          </>
+          )}
         </Box>
 
         {/* ── Footer ── */}
@@ -822,7 +905,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
               '&:hover': { borderColor: T.BD2, bgcolor: T.CTRL_BG } }}>
             {t('common.cancel')}
           </Button>
-          <Button fullWidth variant="contained" onClick={handleSubmit} disabled={saving}
+          <Button fullWidth variant="contained" onClick={handleSubmit} disabled={saving || !phoneVerified}
             sx={{ borderRadius: '9px', textTransform: 'none', fontSize: '0.85rem', fontWeight: 700 }}>
             {saving ? <CircularProgress size={16} sx={{ color: 'inherit' }} /> : (isEdit ? t('crm.saveChanges') : t('crm.addCustomer'))}
           </Button>
