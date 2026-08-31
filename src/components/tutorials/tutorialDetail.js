@@ -8,7 +8,10 @@ import IconButton from '@mui/material/IconButton';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import Skeleton from '@mui/material/Skeleton';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import CloseIcon from '@mui/icons-material/Close';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -60,6 +63,12 @@ export default function TutorialDetail({ id, onClose, onDeleted }) {
   const [editOpen, setEditOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [viewerMedia, setViewerMedia] = useState(null);
+  const [tab, setTab] = useState('content');
+
+  // Who watched this tutorial. Local state rather than a Redux slice — it's
+  // view-local, only ever read by this panel, and always refetched on open.
+  const [views, setViews] = useState({ viewers: [], totalViews: 0, uniqueViewers: 0 });
+  const [viewsLoading, setViewsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +77,25 @@ export default function TutorialDetail({ id, onClose, onDeleted }) {
   }, [id, authCtx, axiosGlobal, dispatch]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Reset to the content tab whenever a different tutorial is opened, so the
+  // panel never lands on a stale Views list from the previous record.
+  useEffect(() => { setTab('content'); }, [id]);
+
+  // Fetched only when the Views tab is actually opened. Deliberately re-runs
+  // on every open: opening the detail writes a 'viewed' row server-side, so a
+  // cached roster would always be one view stale.
+  useEffect(() => {
+    if (tab !== 'views' || !id) return;
+    let cancelled = false;
+    setViewsLoading(true);
+    authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/tutorials/${id}/views` })
+      .then((res) => { if (!cancelled) setViews(res.data || { viewers: [], totalViews: 0, uniqueViewers: 0 }); })
+      .catch(() => { if (!cancelled) setViews({ viewers: [], totalViews: 0, uniqueViewers: 0 }); })
+      .finally(() => { if (!cancelled) setViewsLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, id]);
 
   if (errorStatus === 403 || errorStatus === 404) {
     return <RestrictedAccessScreen />;
@@ -120,6 +148,62 @@ export default function TutorialDetail({ id, onClose, onDeleted }) {
         </IconButton>
       </Box>
 
+      <Tabs value={tab} onChange={(_, v) => setTab(v)}
+        sx={{ px: 3, minHeight: 38, borderBottom: `1px solid ${T.BD}`,
+          '& .MuiTab-root': { minHeight: 38, fontSize: '0.75rem', textTransform: 'none', color: T.TEXT_SEC },
+          '& .Mui-selected': { color: T.TEXT_PRI },
+          '& .MuiTabs-indicator': { bgcolor: T.TEXT_PRI } }}>
+        <Tab value="content" label={t('tutorials.tabContent')} />
+        <Tab value="views"   label={t('tutorials.tabViews')} />
+      </Tabs>
+
+      {tab === 'views' ? (
+        <Box sx={{ px: 3, py: 2 }}>
+          {viewsLoading ? (
+            <>
+              <Skeleton variant="text" width="40%" />
+              <Skeleton variant="rectangular" height={64} sx={{ mt: 1, borderRadius: '10px' }} />
+            </>
+          ) : views.viewers.length === 0 ? (
+            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_TER }}>
+              {t('tutorials.noViewsYet')}
+            </Typography>
+          ) : (
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.5 }}>
+                <VisibilityOutlinedIcon sx={{ fontSize: 15, color: T.TEXT_TER }} />
+                <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC }}>
+                  {t('tutorials.viewsSummary', {
+                    people: views.uniqueViewers,
+                    views: views.totalViews,
+                  })}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                {views.viewers.map((v, i) => (
+                  <Box key={v.actorId || `${v.actorName}-${i}`}
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1.25, p: 1.25,
+                      borderRadius: '10px', bgcolor: T.CARD_BG, border: `1px solid ${T.BD}` }}>
+                    <UserAvatar userId={v.actorId} size={26} fontSize="0.7rem" />
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }} noWrap>
+                        {v.actorName || '—'}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>
+                        {t('tutorials.lastWatched', { date: new Date(v.lastViewedAt).toLocaleString() })}
+                      </Typography>
+                    </Box>
+                    {v.count > 1 && (
+                      <Chip label={t('tutorials.watchCount', { count: v.count })} size="small"
+                        sx={{ height: 19, fontSize: '0.62rem', bgcolor: T.CTRL_BG, color: T.TEXT_SEC }} />
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </>
+          )}
+        </Box>
+      ) : (
       <Box sx={{ px: 3, py: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
           <Chip label={sectionLabel(doc.section, t)} size="small"
@@ -172,6 +256,7 @@ export default function TutorialDetail({ id, onClose, onDeleted }) {
           </Typography>
         </Box>
       </Box>
+      )}
 
       <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia}
         sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }} />

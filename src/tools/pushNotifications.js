@@ -42,6 +42,7 @@ export function notifPath(entityType, entityId) {
     case 'task':          return '/crm';
     case 'customer':      return id ? `/crm?open=${id}` : '/crm';
     case 'user':          return id ? `/users?open=${id}` : '/users';
+    case 'tutorial':      return id ? `/tutorials?open=${id}` : '/tutorials';
     default:              return null;
   }
 }
@@ -60,6 +61,7 @@ export function shortLinkPath(module, entityType, entityId) {
     case 'rawContent':    return id ? `/digitalMarketing?dm=raw&open=${id}`   : '/digitalMarketing?dm=raw';
     case 'readyToUpload': return id ? `/digitalMarketing?dm=ready&open=${id}` : '/digitalMarketing?dm=ready';
     case 'user':          return id ? `/users?open=${id}` : '/users';
+    case 'tutorial':      return id ? `/tutorials?open=${id}` : '/tutorials';
     default:              return '/';
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
@@ -38,6 +39,8 @@ export default function Tutorials() {
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const history     = useHistory();
+  const location    = useLocation();
   const { can } = usePermissions();
 
   const items      = useSelector((s) => s.tutorials);
@@ -80,6 +83,19 @@ export default function Tutorials() {
 
   useEffect(() => { load(1); }, [section, language, search, pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setHasMore(items.length < total); }, [items, total]);
+
+  // Deep link from a "new tutorial" notification click or a short link:
+  // /tutorials?open=<id> opens that tutorial's detail (tutorialDetail
+  // self-fetches the full doc by id). Cleared afterwards so it doesn't
+  // re-trigger on later re-renders. Same pattern as crm.js/mis.js/users.js.
+  useEffect(() => {
+    const openId = new URLSearchParams(location.search).get('open');
+    if (!openId) return;
+    setSelected({ _id: openId });
+    if (isMob) setMobileDetail(true);
+    history.replace('/tutorials');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const loadMore = () => load(page + 1);
 
