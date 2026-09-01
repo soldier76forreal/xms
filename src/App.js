@@ -176,6 +176,17 @@ const ThemedApp = () => {
             <Redirect to="/logIn" />
           )}
 
+          {/* Job Reports — login-only, no permission gate for "my reports"
+              mode (same precedent as /myActivity below); "all reports" admin
+              mode is gated inside the component by jobReports:viewAll. */}
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/jobReports">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
           {authCtx.isLoggedIn === true ? (
             <Route path="/tutorials">
               <Main />

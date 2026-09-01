@@ -43,6 +43,7 @@ export function notifPath(entityType, entityId) {
     case 'customer':      return id ? `/crm?open=${id}` : '/crm';
     case 'user':          return id ? `/users?open=${id}` : '/users';
     case 'tutorial':      return id ? `/tutorials?open=${id}` : '/tutorials';
+    case 'jobReport':     return id ? `/jobReports?open=${id}` : '/jobReports';
     default:              return null;
   }
 }
@@ -62,6 +63,7 @@ export function shortLinkPath(module, entityType, entityId) {
     case 'readyToUpload': return id ? `/digitalMarketing?dm=ready&open=${id}` : '/digitalMarketing?dm=ready';
     case 'user':          return id ? `/users?open=${id}` : '/users';
     case 'tutorial':      return id ? `/tutorials?open=${id}` : '/tutorials';
+    case 'jobReport':     return id ? `/jobReports?open=${id}` : '/jobReports';
     default:              return '/';
   }
 }

@@ -5,6 +5,7 @@ import Diversity2Icon from '@mui/icons-material/Diversity2';
 import MovieIcon from '@mui/icons-material/Movie';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import SchoolIcon from '@mui/icons-material/School';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 
 // ── Phase 7 navConfig — the single source of truth for section navigation ─────
 // Consumed by BOTH the desktop icon rail (sideRail.js) and the mobile drawer
@@ -23,6 +24,12 @@ export const NAV_ITEMS = [
   { label: 'Inventory',         navKey: 'inventory',         icon: <InventoryIcon />,       section: 5, path: '/inventory',        permission: 'inventory:view' },
   { label: 'People',            navKey: 'people',            icon: <Diversity2Icon />,      section: 6, path: '/users',            permission: 'users:view' },
   { label: 'Digital Marketing', navKey: 'digitalMarketing',  icon: <MovieIcon />,           section: 7, path: '/digitalMarketing', permission: 'digitalMarketing:view' },
+  // No `permission` key — every authenticated user files their own reports
+  // (same precedent as /myActivity), so the icon is unconditionally visible,
+  // matching `!item.permission || can(item.permission)` in sideRail.js /
+  // leftSideNav.js. "All reports" admin mode is gated inside the section
+  // itself by jobReports:viewAll. Placed before Tutorials per explicit request.
+  { label: 'Job Reports',       navKey: 'jobReports',        icon: <AssignmentIcon />,      section: 9, path: '/jobReports' },
   { label: 'Tutorials',         navKey: 'tutorials',         icon: <SchoolIcon />,          section: 8, path: '/tutorials',        permission: 'tutorials:view' },
 ];
 

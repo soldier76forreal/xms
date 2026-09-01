@@ -90,9 +90,82 @@ const ReportAttachments = ({ files, T, isDark, axiosGlobal, onOpen, size = 68 })
   </Box>
 );
 
+// ── Follow-up / reply thread — shared shape for both, distinguished by an
+// accent color (follow-ups = the report owner's own updates; replies = an
+// admin's response). Chronologically merged so the whole conversation reads
+// as one timeline rather than two separate lists.
+const ReportThread = ({ report, T }) => {
+  const { t } = useTranslation();
+  const entries = [
+    ...(report.followUps || []).map((f) => ({ ...f, kind: 'followUp' })),
+    ...(report.replies || []).map((r) => ({ ...r, kind: 'reply' })),
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (!entries.length) return null;
+
+  return (
+    <Box sx={{ mt: 2.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase',
+        letterSpacing: 1, fontWeight: 600 }}>
+        {t('users.reportThreadLabel')}
+      </Typography>
+      {entries.map((e, i) => (
+        <Box key={i} sx={{
+          p: 1.25, borderRadius: '10px',
+          bgcolor: e.kind === 'reply' ? 'rgba(178,106,0,0.08)' : 'rgba(100,181,246,0.08)',
+          borderLeft: `3px solid ${e.kind === 'reply' ? '#B26A00' : '#64b5f6'}`,
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.4 }}>
+            <Typography sx={{ fontSize: '0.72rem', fontWeight: 700, color: T.TEXT_PRI }}>
+              {e.authorName || '—'}
+            </Typography>
+            <Chip size="small" label={e.kind === 'reply' ? t('users.replyChip') : t('users.followUpChip')}
+              sx={{ height: 16, fontSize: '0.58rem', fontWeight: 700,
+                bgcolor: e.kind === 'reply' ? '#B26A00' : '#64b5f6', color: '#fff', '& .MuiChip-label': { px: 0.6 } }} />
+            <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER, ml: 'auto' }}>
+              {fmtDateTime(e.date)}
+            </Typography>
+          </Box>
+          <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_SEC, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {e.body}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+  );
+};
+
+// Compact composer reused for both "add a follow-up" (report owner) and
+// "reply" (admin) — same shape, different verb/handler.
+const ThreadComposer = ({ label, buttonLabel, onSubmit, T, accent }) => {
+  const [value, setValue] = useState('');
+  const [sending, setSending] = useState(false);
+  const submit = async () => {
+    if (!value.trim()) return;
+    setSending(true);
+    try { await onSubmit(value.trim()); setValue(''); } finally { setSending(false); }
+  };
+  return (
+    <Box sx={{ mt: 1.5, display: 'flex', gap: 1, alignItems: 'flex-end' }}>
+      <TextField size="small" fullWidth multiline maxRows={4} placeholder={label} value={value}
+        onChange={(e) => setValue(e.target.value)}
+        sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '8px' },
+          '& textarea': { fontSize: '0.8rem', color: T.TEXT_PRI } }} />
+      <Button size="small" variant="contained" onClick={submit} disabled={sending || !value.trim()}
+        sx={{ flexShrink: 0, textTransform: 'none', fontSize: '0.75rem', borderRadius: '8px',
+          bgcolor: accent, color: '#fff', '&:hover': { bgcolor: accent, opacity: 0.9 } }}>
+        {sending ? <CircularProgress size={13} sx={{ color: 'inherit' }} /> : buttonLabel}
+      </Button>
+    </Box>
+  );
+};
+
 // ── Report Details — a paper-like single-record view (bold date header,
 // full body, attachments, and the "any possible information" footer).
-const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, onOpenAttachment }) => {
+// onAddFollowUp: provided only when the viewer OWNS the report.
+// onReply: provided only when the viewer holds jobReports:reply (admin mode).
+const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, onOpenAttachment,
+  onAddFollowUp, onReply, authorName }) => {
   const { t } = useTranslation();
   if (!report) return null;
   return (
@@ -117,6 +190,11 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
               color: T.TEXT_PRI, lineHeight: 1.15 }}>
               {fmtDate(report.reportDate)}
             </Typography>
+            {authorName && (
+              <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC, mt: 0.5 }}>
+                {t('users.reportByAuthor', { name: authorName })}
+              </Typography>
+            )}
           </Box>
           <IconButton onClick={onClose} size="small" sx={{ color: T.TEXT_SEC, flexShrink: 0 }}>
             <CloseIcon sx={{ fontSize: 18 }} />
@@ -152,6 +230,17 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
               <ReportAttachments files={report.files} T={T} isDark={isDark} axiosGlobal={axiosGlobal}
                 onOpen={onOpenAttachment} size={84} />
             </Box>
+          )}
+
+          <ReportThread report={report} T={T} />
+
+          {onAddFollowUp && (
+            <ThreadComposer label={t('users.followUpPlaceholder')} buttonLabel={t('users.addFollowUp')}
+              onSubmit={onAddFollowUp} T={T} accent="#64b5f6" />
+          )}
+          {onReply && (
+            <ThreadComposer label={t('users.replyPlaceholder')} buttonLabel={t('users.sendReply')}
+              onSubmit={onReply} T={T} accent="#B26A00" />
           )}
 
           <Divider sx={{ my: 2.5, borderColor: T.DIVIDER }} />
@@ -436,6 +525,21 @@ const JobReportSection = ({ userId, isSelf }) => {
     } catch (_) { /* non-fatal */ }
   };
 
+  // Follow-ups are additive (never overwrite the original entry — see
+  // touchLastActivity on the backend), so the response already carries the
+  // full updated report; just swap it into both the list and the open detail
+  // view rather than re-fetching.
+  const addFollowUp = async (reportId, body) => {
+    const res = await authCtx.jwtInst({
+      method: 'post',
+      url: `${axiosGlobal.defaultTargetApi}/users/me/jobReports/${reportId}/followUp`,
+      data: { body },
+    });
+    const updated = res.data;
+    setReports((prev) => prev.map((r) => (r._id === reportId ? updated : r)));
+    setViewingReport((prev) => (prev && prev._id === reportId ? updated : prev));
+  };
+
   const openAttachment = (f) => {
     const url = `${axiosGlobal.defaultTargetApi}/uploads/${f.diskName}`;
     if (f.kind === 'document') { downloadFile(url, f.name); return; }
@@ -451,7 +555,8 @@ const JobReportSection = ({ userId, isSelf }) => {
         userId={userId} editingReport={editingReport} T={T} isXs={isXs} isDark={isDark} />
       <JobReportDetail open={!!viewingReport} onClose={() => setViewingReport(null)}
         report={viewingReport} T={T} isXs={isXs} isDark={isDark} axiosGlobal={axiosGlobal}
-        onOpenAttachment={openAttachment} />
+        onOpenAttachment={openAttachment}
+        onAddFollowUp={isSelf ? (body) => addFollowUp(viewingReport._id, body) : undefined} />
       <ConfirmDialog
         open={!!confirmDeleteId}
         onClose={() => setConfirmDeleteId(null)}
@@ -584,4 +689,9 @@ const JobReportSection = ({ userId, isSelf }) => {
   );
 };
 
+// Named exports — reused by jobReportsAdminList.js so the admin-mode list
+// (rendered inside the new top-level jobReportsMainSection.js) shares the
+// exact same detail dialog, attachment gallery and date formatting instead of
+// forking a second copy.
+export { JobReportDetail, ReportAttachments, fmtDate, fmtDateTime, todayStr };
 export default JobReportSection;
