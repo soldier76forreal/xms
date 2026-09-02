@@ -42,6 +42,8 @@ import InvoiceForm          from './invoiceForm';
 import SendToDialog         from './sendToDialog';
 import DeleteInvoiceDialog  from './deleteInvoiceDialog';
 import CompanyProfileDrawer from './settings/companyProfile';
+import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import SidebarResizer from '../../tools/navs/sidebarResizer';
 import ConfirmDialog        from '../../tools/modal/confirmDialog';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect        from '../../tools/inputs/pageSizeSelect';
@@ -114,6 +116,17 @@ export default function Mis() {
   const [hasMore, setHasMore]         = useState(false);
   const [creators, setCreators]       = useState([]);
   const [mobileDetail, setMobileDetail] = useState(false);
+
+  // Resizable master list, persisted per user (see useSidebarWidth).
+  const { width: listWidth, setWidth: setListWidth, resetWidth: resetListWidth } =
+    useSidebarWidth('misList', 400, { min: 260, max: 720 });
+  const [listResizing, setListResizing] = useState(false);
+  useEffect(() => {
+    if (!listResizing) return;
+    const stop = () => setListResizing(false);
+    window.addEventListener('pointerup', stop);
+    return () => window.removeEventListener('pointerup', stop);
+  }, [listResizing]);
   const [confirmDelete, setConfirmDelete]   = useState(null);   // doc pending delete
   const [confirmConvert, setConfirmConvert] = useState(null);   // doc pending convert
   const [assignDoc, setAssignDoc]           = useState(null);   // doc pending "Send to"
@@ -356,14 +369,21 @@ export default function Mis() {
         {/* ── List panel ── */}
         {(!isMob || !mobileDetail) && (
           <Box sx={{
-            width: isMob ? '100%' : (selectedDoc ? 400 : '100%'),
+            width: isMob ? '100%' : (selectedDoc ? listWidth : '100%'),
             flexShrink: 0,
             display: 'flex', flexDirection: 'column',
             borderRight: (!isMob && selectedDoc) ? `1px solid ${T.BD}` : 'none',
             bgcolor: T.PANEL_BG,
             overflow: 'hidden',
-            transition: 'width 0.2s',
+            position: 'relative',
+            transition: listResizing ? 'none' : 'width 0.2s',
           }}>
+
+            {!isMob && selectedDoc && (
+              <SidebarResizer width={listWidth} side="right"
+                onResize={(w) => { setListResizing(true); setListWidth(w); }}
+                onDoubleClick={resetListWidth} />
+            )}
 
             {/* List header row */}
             <Box sx={{ px: 2, py: 0.75, display: 'flex', alignItems: 'center', gap: 1,

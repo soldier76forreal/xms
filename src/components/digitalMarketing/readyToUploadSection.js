@@ -19,6 +19,8 @@ import { fetchReadyToUploadList } from '../../store/store';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
 import ReadyToUploadDetail from './readyToUploadDetail';
+import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import SidebarResizer from '../../tools/navs/sidebarResizer';
 import ReadyToUploadForm from './readyToUploadForm';
 
 const fmtDate = (d) => {
@@ -51,6 +53,17 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
   const [hasMore, setHasMore] = useState(false);
   const [selected, setSelected] = useState(null);
   const [mobileDetail, setMobileDetail] = useState(false);
+
+  // Resizable master list, persisted per user (see useSidebarWidth).
+  const { width: listWidth, setWidth: setListWidth, resetWidth: resetListWidth } =
+    useSidebarWidth('dmReadyToUploadList', 380, { min: 260, max: 720 });
+  const [listResizing, setListResizing] = useState(false);
+  useEffect(() => {
+    if (!listResizing) return;
+    const stop = () => setListResizing(false);
+    window.addEventListener('pointerup', stop);
+    return () => window.removeEventListener('pointerup', stop);
+  }, [listResizing]);
 
   const T = {
     PANEL_BG: isDark ? '#0d0d0d' : theme.palette.background.paper,
@@ -95,9 +108,15 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
     <Box sx={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
 
       {(!isMob || !mobileDetail) && (
-        <Box sx={{ width: isMob ? '100%' : (selected ? 380 : '100%'), flexShrink: 0,
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
-          borderRight: (!isMob && selected) ? `1px solid ${T.BD}` : 'none' }}>
+        <Box sx={{ width: isMob ? '100%' : (selected ? listWidth : '100%'), flexShrink: 0,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative',
+          borderRight: (!isMob && selected) ? `1px solid ${T.BD}` : 'none',
+          transition: listResizing ? 'none' : undefined }}>
+          {!isMob && selected && (
+            <SidebarResizer width={listWidth} side="right"
+              onResize={(w) => { setListResizing(true); setListWidth(w); }}
+              onDoubleClick={resetListWidth} />
+          )}
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25 }}>
             <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>

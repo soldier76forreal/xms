@@ -31,6 +31,8 @@ import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
 import SectionTutorials from '../tutorials/sectionTutorials';
 import ProductCard from './productCard';
 import ShowProduct from './showProduct';
+import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import SidebarResizer from '../../tools/navs/sidebarResizer';
 import ProductForm from './productForm';
 import ImportExportDialog from './importExportDialog';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
@@ -130,6 +132,19 @@ const Inventory = () => {
 
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [fullView, setFullView] = useState(false);
+
+  // Resizable detail panel, persisted per user (see useSidebarWidth). Not
+  // meaningful in fullView (width is forced to 100% there) — the resizer only
+  // renders otherwise.
+  const { width: detailWidth, setWidth: setDetailWidth, resetWidth: resetDetailWidth } =
+    useSidebarWidth('inventoryDetail', 480, { min: 320, max: 800 });
+  const [detailResizing, setDetailResizing] = useState(false);
+  useEffect(() => {
+    if (!detailResizing) return;
+    const stop = () => setDetailResizing(false);
+    window.addEventListener('pointerup', stop);
+    return () => window.removeEventListener('pointerup', stop);
+  }, [detailResizing]);
   const [search,      setSearch]     = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -495,7 +510,7 @@ const Inventory = () => {
       {/* ── Detail pane (sidebar, or full view when toggled) ── */}
       {selectedProductId && (
         <Box sx={{
-          width: { xs: '100%', md: fullView ? '100%' : 480 },
+          width: { xs: '100%', md: fullView ? '100%' : detailWidth },
           flexShrink: 0,
           borderLeft: { md: fullView ? 'none' : '1px solid' },
           borderColor: { md: 'divider' },
@@ -504,7 +519,13 @@ const Inventory = () => {
           maxHeight: { md: '100vh' },
           overflowY: { md: 'auto' },
           bgcolor: 'background.default',
+          transition: detailResizing ? 'none' : undefined,
         }}>
+          {!fullView && (
+            <SidebarResizer width={detailWidth} side="left"
+              onResize={(w) => { setDetailResizing(true); setDetailWidth(w); }}
+              onDoubleClick={resetDetailWidth} />
+          )}
           <ShowProduct
             productId={selectedProductId}
             onBack={() => { setSelectedProductId(null); setFullView(false); }}
