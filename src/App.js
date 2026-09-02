@@ -16,7 +16,7 @@ import { useContext, useEffect, useState, useMemo } from 'react';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import AxiosGlobal from './components/authAndConnections/axiosGlobalUrl';
-import { fetchData, getAllTags, getContacts, getFilter, userProfileData, fetchUserDirectory } from './store/store';
+import { fetchData, getAllTags, getContacts, getFilter, userProfileData, fetchUserDirectory, actions } from './store/store';
 import { useDispatch, useSelector } from 'react-redux';
 import ShortLinkResolver from './components/main/shortLinkResolver';
 import PublicLinkPage from './components/digitalMarketing/publicLinkPage';
@@ -27,6 +27,7 @@ import GhostBanner from './components/main/ghostBanner';
 import PwaInstallPrompt from './tools/navs/pwaInstallPrompt';
 import EnableNotificationsPrompt from './tools/navs/enableNotificationsPrompt';
 import { pushSupported, subscribeToPush } from './tools/pushNotifications';
+import { onUploadCompleted } from './tools/uploadCenter/uploadManager';
 
 // Inner component so it can consume ThemeCtx after the provider mounts
 const ThemedApp = () => {
@@ -80,6 +81,14 @@ const ThemedApp = () => {
   useEffect(() => {
     dispatch(userProfileData({ authCtx, axiosGlobal }));
   }, [userProfileRefresh]);
+
+  // A self-avatar upload (myProfileModal.js) finishes in the background via
+  // the Upload Center, possibly well after that modal has closed — subscribe
+  // here (always mounted) rather than in the modal, so the profile refresh
+  // this used to fire synchronously still happens once the upload actually lands.
+  useEffect(() => onUploadCompleted(({ purpose }) => {
+    if (purpose === 'avatar') dispatch(actions.setUserProfileRefresh());
+  }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep the push subscription alive: if the user already granted permission,
   // (re)subscribe on every load and re-save it server-side. Subscriptions can

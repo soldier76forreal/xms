@@ -13,7 +13,6 @@ import Drawer from '@mui/material/Drawer';
 import Divider from '@mui/material/Divider';
 import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
-import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -22,6 +21,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { createTutorial, updateTutorial, fetchTutorialActionTags } from '../../store/store';
+import { enqueueUpload } from '../../tools/uploadCenter/uploadManager';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { resolveMediaKind } from '../digitalMarketing/mediaViewer';
 import { SECTIONS, sectionLabel } from './sectionLabels';
@@ -69,7 +69,6 @@ export default function TutorialForm({ open, onClose, initialSection = 'general'
   const [existingFiles, setExistingFiles] = useState([]); // edit mode: files already saved
   const [removedFileIds, setRemovedFileIds] = useState([]);
   const [saving, setSaving]           = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError]             = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [viewerMedia, setViewerMedia] = useState(null);
@@ -149,29 +148,31 @@ export default function TutorialForm({ open, onClose, initialSection = 'general'
 
     setSaving(true); setError('');
     try {
-      const formData = new FormData();
-      formData.append('title', title.trim());
-      formData.append('description', description);
-      formData.append('language', language);
-      formData.append('section', section);
-      formData.append('tags', JSON.stringify(tags));
-      pendingFiles.forEach((f) => formData.append('files', f.file));
-      if (isEdit && removedFileIds.length) formData.append('removeFileIds', JSON.stringify(removedFileIds));
+      const metadata = {
+        title: title.trim(), description, language, section, tags,
+        ...(isEdit && removedFileIds.length ? { removeFileIds: removedFileIds } : {}),
+      };
 
-      setUploadProgress(0);
-      const onProgress = (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null);
-
+      let targetId = tutorial?._id;
       if (isEdit) {
-        await dispatch(updateTutorial({ authCtx, axiosGlobal, id: tutorial._id, formData, onProgress })).unwrap();
+        await dispatch(updateTutorial({ authCtx, axiosGlobal, id: tutorial._id, formData: metadata })).unwrap();
       } else {
-        await dispatch(createTutorial({ authCtx, axiosGlobal, formData, onProgress })).unwrap();
+        const created = await dispatch(createTutorial({ authCtx, axiosGlobal, formData: metadata })).unwrap();
+        targetId = created._id;
       }
+
+      // Files are handed to the Upload Center and land in the background —
+      // the record already exists by the time any of them completes, so this
+      // doesn't block the Drawer closing.
+      pendingFiles.forEach(({ file }) => {
+        enqueueUpload({ purpose: 'tutorial', targetId, file, sectionLabel: t('nav.tutorials') });
+      });
+
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || t('tutorials.failedToSave'));
     } finally {
       setSaving(false);
-      setUploadProgress(null);
     }
   };
 
@@ -298,14 +299,6 @@ export default function TutorialForm({ open, onClose, initialSection = 'general'
       </Box>
 
       <Box sx={{ px: 3, pb: 2.5, pt: 1.5, borderTop: `1px solid ${T.DIVIDER}` }}>
-        {uploadProgress !== null && (
-          <Box sx={{ mb: 1.25 }}>
-            <LinearProgress variant="determinate" value={uploadProgress} sx={{ borderRadius: 2, height: 6 }} />
-            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.5 }}>
-              {t('tutorials.uploadingPercent', { percent: uploadProgress })}
-            </Typography>
-          </Box>
-        )}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>{t('common.cancel')}</Button>
           <Box sx={{ flexGrow: 1 }} />

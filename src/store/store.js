@@ -1204,35 +1204,6 @@ export const updatePrice = createAsyncThunk('inventory/updatePrice', async (theD
   return response.data.data;
 });
 
-export const uploadInventoryMedia = createAsyncThunk('inventory/uploadMedia', async (theData, { dispatch }) => {
-  const url = theData.subjectType === 'variant'
-    ? `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.subjectId}/media`
-    : `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.subjectId}/media`;
-
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url,
-    data: theData.formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  toast(dispatch, 'Media uploaded');
-  return response.data.data;
-});
-
-export const uploadVariantMediaBatch = createAsyncThunk('inventory/uploadVariantMediaBatch', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.variantId}/media-batch`,
-    data: theData.formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: theData.onUploadProgress,
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  toast(dispatch, 'Media batch uploaded');
-  return response.data.data;
-});
-
 export const downloadInventoryMediaFile = createAsyncThunk('inventory/downloadMediaFile', async (theData, { dispatch }) => {
   try {
     const response = await theData.authCtx.jwtInst({
@@ -1280,23 +1251,6 @@ export const deleteInventoryMedia = createAsyncThunk('inventory/deleteMedia', as
   });
   dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
   toast(dispatch, 'Media deleted');
-});
-
-// Product-level media as a real batch (single XHR, real onUploadProgress) —
-// PURELY ADDITIVE, mirrors uploadVariantMediaBatch but with none of that
-// route's delete-and-replace semantics (product media accumulates, it isn't
-// a versioned set like a variant's batch).
-export const uploadProductMediaBatch = createAsyncThunk('inventory/uploadProductMediaBatch', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.productId}/media-batch`,
-    data: theData.formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: theData.onUploadProgress,
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  toast(dispatch, 'Media uploaded');
-  return response.data.data;
 });
 
 export const bulkDeleteInventoryMedia = createAsyncThunk('inventory/bulkDeleteMedia', async (theData, { dispatch }) => {

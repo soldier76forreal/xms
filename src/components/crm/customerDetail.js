@@ -43,6 +43,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { Can, usePermissions } from '../../contextApi/PermissionContext';
 import { useDispatch } from 'react-redux';
 import { deleteCrmCustomer } from '../../store/store';
+import { enqueueUpload, onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import RequestsTab from './tabs/requestsTab';
 import CopyLinkButton from '../main/copyLinkButton';
@@ -568,22 +569,44 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
     setHasMore(activities.length < total);
   }, [activities, total]);
 
+  // Kept alongside `activities` state purely so the upload-completion
+  // subscription below (a stable callback, not re-subscribed on every
+  // render) can check the CURRENT list without becoming stale.
+  const activitiesRef = useRef(activities);
+  useEffect(() => { activitiesRef.current = activities; }, [activities]);
+
+  // An attachment logged here (voice note, image, video) is handed to the
+  // Upload Center and lands in the background — reload the first page once
+  // one finishes, so the activity's media shows up without a manual refresh.
+  // Scoped to activities this tab actually has loaded, so a completion for
+  // some other customer's communication log (open in another tab) is a no-op.
+  useEffect(() => onUploadCompleted(({ purpose, targetId }) => {
+    if (purpose !== 'crmCommunication') return;
+    if (!activitiesRef.current.some((a) => String(a._id) === String(targetId))) return;
+    load(1);
+  }), [load]);
+
   const submitLog = async () => {
     if (!logBody.trim() && pendingFiles.length === 0 && logType === 'note') return;
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('type', logType);
-      formData.append('body', logBody.trim());
-      pendingFiles.forEach((f) => formData.append('files', f));
       const res = await authCtx.jwtInst({
         method: 'post',
         url: `${axiosGlobal.defaultTargetApi}/crm/customers/${customerId}/communication`,
-        data: formData,
-        headers: { 'Content-Type': 'multipart/form-data' },
+        data: { type: logType, body: logBody.trim() },
       });
-      setActivities(prev => [res.data, ...prev]);
+      const activity = res.data;
+      setActivities(prev => [activity, ...prev]);
       setTotal(prevTotal => prevTotal + 1);
+
+      // Attachments (voice note, image, video) are handed to the Upload
+      // Center and land in the background — the activity row already
+      // exists by the time any of them completes (see the
+      // onUploadCompleted subscription above).
+      pendingFiles.forEach((file) => {
+        enqueueUpload({ purpose: 'crmCommunication', targetId: activity._id, file, sectionLabel: t('nav.customers') });
+      });
+
       setPendingFiles([]);
       setLogBody('');
     } catch (_) {}
