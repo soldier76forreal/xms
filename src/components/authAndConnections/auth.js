@@ -199,7 +199,13 @@ export const AuthContextProvider = (props) => {
     if (token && socket) {
       const tokenData = safeJwtDecode(token);
       if (tokenData?.id) {
-        socket.emit('newUser', tokenData.id);
+        // ghostSessionId (present only on a ghost token — see tools/ghost.js)
+        // tells the backend to skip presence writes for this connection: a
+        // ghost session must never mark the impersonated user online, flip
+        // their real lastSeen, or steal a ref-count slot from a real
+        // concurrent session of that same account. See the 'newUser' handler
+        // in api/routes/socket/xmsNotifications.js.
+        socket.emit('newUser', { userId: tokenData.id, ghostSessionId: tokenData.ghostSessionId || null });
       }
     }
   }, [socket, token]);
