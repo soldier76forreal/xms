@@ -32,6 +32,8 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import SectionTutorials from '../tutorials/sectionTutorials';
 import { actions, startDownload } from '../../store/store';
 import { enqueueUpload, onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
+import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import SidebarResizer from '../../tools/navs/sidebarResizer';
 
 import FileCard from './fileCard';
 import FileDetailPanel from './fileDetailPanel';
@@ -107,6 +109,17 @@ export default function FileMain() {
   const [storageOpen, setStorageOpen] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  // Resizable detail panel, persisted per user (see useSidebarWidth).
+  const { width: detailWidth, setWidth: setDetailWidth, resetWidth: resetDetailWidth } =
+    useSidebarWidth('filesDetail', 380, { min: 260, max: 720 });
+  const [detailResizing, setDetailResizing] = useState(false);
+  useEffect(() => {
+    if (!detailResizing) return;
+    const stop = () => setDetailResizing(false);
+    window.addEventListener('pointerup', stop);
+    return () => window.removeEventListener('pointerup', stop);
+  }, [detailResizing]);
 
   // ── Navigation resync — the load-bearing effect from the legacy component.
   // Every route change (folder descend, breadcrumb jump, back button) re-reads
@@ -460,8 +473,14 @@ export default function FileMain() {
 
           {/* Detail panel (desktop) / drill-down (mobile) */}
           {desktopSplit ? (
-            <Box sx={{ width: selectedEntry ? 380 : 0, flexShrink: 0, borderLeft: selectedEntry ? `1px solid ${T.BD}` : 'none',
-              overflow: 'hidden', transition: 'width 0.15s' }}>
+            <Box sx={{ width: selectedEntry ? detailWidth : 0, flexShrink: 0, borderLeft: selectedEntry ? `1px solid ${T.BD}` : 'none',
+              overflow: 'hidden', position: 'relative',
+              transition: detailResizing ? 'none' : 'width 0.15s' }}>
+              {selectedEntry && (
+                <SidebarResizer width={detailWidth} side="left"
+                  onResize={(w) => { setDetailResizing(true); setDetailWidth(w); }}
+                  onDoubleClick={resetDetailWidth} />
+              )}
               {selectedEntry && (
                 <FileDetailPanel entry={selectedEntry} pinned={isPinned(selectedEntry.file || selectedEntry.doc)}
                   onClose={closeDetail}

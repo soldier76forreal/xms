@@ -10,6 +10,7 @@ import { useTheme } from '@mui/material/styles';
 import MainNav    from '../../tools/navs/mainNav';
 import SideRail   from '../../tools/navs/sideRail';
 import { NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED, NAV_EXPANDED_KEY } from '../../tools/navs/navConfig';
+import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
 import Mis        from '../mis/mis';
 import Crm        from '../crm/crm';
 import FileMain   from '../fileManager/fileMain';
@@ -56,7 +57,10 @@ const Main = () => {
   // Collapses the rail after a section is picked — expanding is a deliberate
   // "show me labels for a moment" action, not a standing layout preference.
   const collapseNav = () => { setNavExpanded(false); localStorage.setItem(NAV_EXPANDED_KEY, '0'); };
-  const railWidth = navExpanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH_COLLAPSED;
+  // Same hook the rail itself uses, so the content offset tracks a resize
+  // live (the hook shares one module-level cache across both call sites).
+  const { width: expandedRailWidth } = useSidebarWidth('navRail', RAIL_WIDTH_EXPANDED, { min: 140, max: 420 });
+  const railWidth = navExpanded ? expandedRailWidth : RAIL_WIDTH_COLLAPSED;
 
   // Sync URL → selectedSection so direct navigation / page refresh works —
   // AND enforce access: a section the user has no view permission for is never

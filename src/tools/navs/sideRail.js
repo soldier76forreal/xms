@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
@@ -28,6 +28,8 @@ import { useBranch } from '../../contextApi/BranchContext';
 import NormalMenuForProfile from './normalMenuForProfile';
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import { NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED } from './navConfig';
+import { useSidebarWidth } from '../hooks/useSidebarWidth';
+import SidebarResizer from './sidebarResizer';
 
 // ── Phase 7 — desktop icon rail ───────────────────────────────────────────────
 // Layout (top → bottom): collapse toggle · section items · branch picker ·
@@ -45,6 +47,18 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
   const { t }       = useTranslation();
   const { can }     = usePermissions();
   const { branches, activeBranchId, activeBranch, setActiveBranchId } = useBranch();
+
+  // Resizable expanded rail — persisted per user (server-side, so it follows
+  // them to another machine) rather than being a fixed 208px.
+  const { width: railWidth, setWidth: setRailWidth, resetWidth: resetRailWidth } =
+    useSidebarWidth('navRail', RAIL_WIDTH_EXPANDED, { min: 140, max: 420 });
+  const [resizing, setResizing] = useState(false);
+  useEffect(() => {
+    if (!resizing) return;
+    const stop = () => setResizing(false);
+    window.addEventListener('pointerup', stop);
+    return () => window.removeEventListener('pointerup', stop);
+  }, [resizing]);
 
   const [anchorEl, setAnchorEl] = useState(null);
   const menuOpen = Boolean(anchorEl);
@@ -158,12 +172,22 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
         display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
         position: 'fixed', left: 0, top: '60px', bottom: 0, zIndex: 1100,
-        width: expanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH_COLLAPSED,
+        width: expanded ? railWidth : RAIL_WIDTH_COLLAPSED,
         bgcolor: T.BG,
         borderRight: `1px solid ${T.BD}`,
-        transition: 'width 0.18s ease',
+        // No width transition mid-drag — an eased transition fights the
+        // pointer and makes the handle feel like it is lagging behind.
+        transition: resizing ? 'none' : 'width 0.18s ease',
         overflow: 'hidden',
       }}>
+
+        {/* Drag to resize, double-click to reset. Only when expanded — there
+            is nothing to size in the 52px icon rail. */}
+        {expanded && (
+          <SidebarResizer width={railWidth} side="right"
+            onResize={(w) => { setResizing(true); setRailWidth(w); }}
+            onDoubleClick={resetRailWidth} />
+        )}
 
         {/* Collapse toggle — TOP of the rail, always visible */}
         <Box sx={{ pt: 0.75, pb: 0.5, display: 'flex', justifyContent: expanded ? 'flex-end' : 'center', px: expanded ? 1 : 0 }}>

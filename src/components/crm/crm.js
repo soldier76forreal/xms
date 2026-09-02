@@ -40,6 +40,8 @@ import { actions, fetchCrmCustomers } from '../../store/store';
 import CustomerCard          from './customerCard';
 import CustomerDetail        from './customerDetail';
 import CustomerForm          from './customerForm';
+import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import SidebarResizer from '../../tools/navs/sidebarResizer';
 import MyDesk                from './myDesk';
 import AssignCustomersDialog from './assignCustomersDialog';
 import ConfirmDialog         from '../../tools/modal/confirmDialog';
@@ -116,6 +118,17 @@ export default function Crm() {
   const [creators, setCreators]       = useState([]);
   const [mobileDetail, setMobileDetail] = useState(false);
   const [assignOpen, setAssignOpen]       = useState(false);
+
+  // Resizable master list, persisted per user (see useSidebarWidth).
+  const { width: listWidth, setWidth: setListWidth, resetWidth: resetListWidth } =
+    useSidebarWidth('crmList', 380, { min: 260, max: 720 });
+  const [listResizing, setListResizing] = useState(false);
+  useEffect(() => {
+    if (!listResizing) return;
+    const stop = () => setListResizing(false);
+    window.addEventListener('pointerup', stop);
+    return () => window.removeEventListener('pointerup', stop);
+  }, [listResizing]);
   const [addingToDesk, setAddingToDesk]   = useState(false);
   const [bulkDeleting, setBulkDeleting]   = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -458,14 +471,23 @@ export default function Crm() {
         {/* ── List panel ── */}
         {view === 'customers' && (!isMob || !mobileDetail) && (
           <Box sx={{
-            width: isMob ? '100%' : (selectedCustomer ? 380 : '100%'),
+            width: isMob ? '100%' : (selectedCustomer ? listWidth : '100%'),
             flexShrink: 0,
             display: 'flex', flexDirection: 'column',
             borderRight: (!isMob && selectedCustomer) ? `1px solid ${T.BD}` : 'none',
             bgcolor: T.PANEL_BG,
             overflow: 'hidden',
-            transition: 'width 0.2s',
+            position: 'relative',
+            transition: listResizing ? 'none' : 'width 0.2s',
           }}>
+
+            {/* Drag to resize the list against the detail panel; double-click
+                resets. Only meaningful once the split is actually showing. */}
+            {!isMob && selectedCustomer && (
+              <SidebarResizer width={listWidth} side="right"
+                onResize={(w) => { setListResizing(true); setListWidth(w); }}
+                onDoubleClick={resetListWidth} />
+            )}
 
             {/* List header row */}
             <Box sx={{ px: 2, py: 0.75, display: 'flex', alignItems: 'center', gap: 1,
