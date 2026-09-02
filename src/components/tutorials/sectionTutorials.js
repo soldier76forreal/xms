@@ -81,7 +81,19 @@ export default function SectionTutorials({ section, tag = null }) {
         PaperProps={{ sx: { bgcolor: T.DIALOG_BG, border: `1px solid ${T.BD}`, borderRadius: '14px', backgroundImage: 'none' } }}>
 
         {detailId ? (
-          <Box sx={{ maxHeight: '70vh', overflow: 'hidden' }}>
+          /* overflowY:auto, NOT overflow:hidden. TutorialDetail scrolls itself
+             via height:100% + overflowY:auto, but height:100% only resolves
+             against a DEFINITE height — and maxHeight is not one. So the
+             detail grew to its natural content height, overflowed this box,
+             and 'hidden' clipped the rest with no way to reach it: anything
+             below the fold (the video, the later steps) was simply unreachable
+             in every embedded section widget. Letting THIS box scroll fixes it
+             while keeping the dialog compact for short tutorials (a fixed
+             height would pad short ones with dead space). The main /tutorials
+             page is unaffected — its detail panel gets a definite height from
+             flexGrow inside a full-height flex parent, so TutorialDetail's own
+             scrolling works correctly there. */
+          <Box sx={{ maxHeight: '70vh', overflowY: 'auto' }}>
             <TutorialDetail id={detailId} onClose={() => setDetailId(null)} onDeleted={() => { setDetailId(null); load(); }} />
           </Box>
         ) : (
