@@ -1430,5 +1430,19 @@
     "grantLabel": "اجازه ورود شبح به این کاربر",
     "grantHelp": "فقط شما می‌توانید این دسترسی را بدهید. به او اجازه می‌دهد حساب‌های دیگر را برای تست ببیند.",
     "grantFailed": "به‌روزرسانی دسترسی شبح ناموفق بود"
+  },
+  "uploads": {
+    "centerTitle": "مرکز آپلود",
+    "clearFinished": "پاک کردن تکمیل‌شده‌ها",
+    "overallProgress": "{{count}} در حال آپلود — {{pct}}٪",
+    "statusDone": "آپلود شد",
+    "statusError": "آپلود ناموفق بود",
+    "statusOffline": "در انتظار اتصال…",
+    "statusPaused": "متوقف شده",
+    "statusQueued": "در صف",
+    "pause": "توقف",
+    "resume": "ادامه",
+    "cancel": "لغو",
+    "retry": "تلاش دوباره"
   }
 }
