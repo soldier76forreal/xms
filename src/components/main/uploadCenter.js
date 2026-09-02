@@ -167,21 +167,24 @@ export default function UploadCenter() {
                     {u.filename}
                   </Typography>
 
-                  {(u.status === 'uploading' || u.status === 'queued') && (
+                  {/* A remote-history row has no local file Blob behind it (this
+                      device may never have run the transfer at all) — it can
+                      only be viewed and dismissed, never paused/resumed/retried. */}
+                  {!u.isRemote && (u.status === 'uploading' || u.status === 'queued') && (
                     <Tooltip title={t('uploads.pause')}>
                       <IconButton size="small" onClick={() => pauseUpload(u.localId)} sx={{ color: T.TEXT_TER, width: 22, height: 22 }}>
                         <PauseIcon sx={{ fontSize: 14 }} />
                       </IconButton>
                     </Tooltip>
                   )}
-                  {u.status === 'paused' && (
+                  {!u.isRemote && u.status === 'paused' && (
                     <Tooltip title={t('uploads.resume')}>
                       <IconButton size="small" onClick={() => resumeUpload(u.localId)} sx={{ color: T.TEXT_TER, width: 22, height: 22 }}>
                         <PlayArrowIcon sx={{ fontSize: 14 }} />
                       </IconButton>
                     </Tooltip>
                   )}
-                  {u.status === 'error' && (
+                  {!u.isRemote && u.status === 'error' && (
                     <Tooltip title={t('uploads.retry')}>
                       <IconButton size="small" onClick={() => retryUpload(u.localId)} sx={{ color: T.TEXT_TER, width: 22, height: 22 }}>
                         <RefreshIcon sx={{ fontSize: 14 }} />

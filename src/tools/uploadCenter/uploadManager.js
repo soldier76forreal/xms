@@ -39,6 +39,7 @@ function rebuildSnapshot() {
     error: i.error || null,
     sectionLabel: i.sectionLabel || null,
     createdAt: i.createdAt,
+    isRemote: !!i.isRemote,
   }));
 }
 
@@ -191,10 +192,37 @@ export function onUploadCompleted(fn) {
   return () => completionListeners.delete(fn);
 }
 
+/**
+ * Resolves once the SPECIFIC upload identified by localId finishes — used
+ * wherever one upload's result has to feed the next one (e.g. a raw content
+ * voice note, which attaches to the main file's real fileId and so can only
+ * be enqueued once that fileId is known). Resolves null if the item is
+ * cancelled or removed before it completes, rather than hanging forever.
+ */
+export function waitForUploadResult(localId) {
+  return new Promise((resolve) => {
+    const already = findItem(localId);
+    if (already && already.status === 'done') { resolve(already.result); return; }
+
+    const stop = onUploadCompleted((evt) => {
+      if (evt.localId !== localId) return;
+      stop();
+      clearInterval(watchdog);
+      resolve(evt.result);
+    });
+    // The item can also disappear (cancelled) without ever firing a
+    // completion event — poll lightly for that so the caller isn't left
+    // waiting on a promise that will never settle.
+    const watchdog = setInterval(() => {
+      if (!findItem(localId)) { stop(); clearInterval(watchdog); resolve(null); }
+    }, 500);
+  });
+}
+
 function notifyCompleted(item) {
   if (!item) return;
   completionListeners.forEach((fn) => {
-    try { fn({ purpose: item.purpose, targetId: item.targetId, result: item.result, filename: item.filename }); }
+    try { fn({ localId: item.localId, purpose: item.purpose, targetId: item.targetId, result: item.result, filename: item.filename }); }
     catch (_) { /* one bad subscriber must not break the others */ }
   });
 }
@@ -268,11 +296,18 @@ export async function enqueueUpload({ purpose, targetId = null, extra = {}, file
   return localId;
 }
 
+// Remote-history rows (isRemote) have no local file Blob to act on — a
+// device that never held the file can't pause/resume/retry a transfer it
+// never ran. They can only be viewed and dismissed (cancelUpload below).
 export async function pauseUpload(localId) {
+  const item = findItem(localId);
+  if (!item || item.isRemote) return;
   await updateItem(localId, { status: 'paused' });
 }
 
 export async function resumeUpload(localId) {
+  const item = findItem(localId);
+  if (!item || item.isRemote) return;
   await updateItem(localId, { status: 'queued', error: null });
   pump();
 }
@@ -280,9 +315,11 @@ export async function resumeUpload(localId) {
 export async function cancelUpload(localId) {
   const item = findItem(localId);
   if (!item) return;
-  // Tell the server to reclaim the partial file. Best-effort — a failure here
-  // just means the sweep gets it later.
-  if (item.sessionId && ctx) {
+  // A remote-history row (already done/failed/cancelled on the server, no
+  // local file behind it) just gets dismissed from view — nothing to reclaim.
+  if (!item.isRemote && item.sessionId && ctx) {
+    // Tell the server to reclaim the partial file. Best-effort — a failure
+    // here just means the sweep gets it later.
     try { await ctx.authCtx.jwtInst({ method: 'delete', url: api(`/uploads/sessions/${item.sessionId}`) }); } catch (_) { /* swept later */ }
   }
   items = items.filter((i) => i.localId !== localId);
@@ -333,6 +370,46 @@ export async function initUploadManager({ authCtx, axiosGlobal }) {
   });
 
   pump();
+  loadRemoteHistory();
+}
+
+/**
+ * Pulls this account's upload history from the server (not just this
+ * device's IndexedDB) so the Upload Center shows the same history no matter
+ * which browser or machine the user is on. Entries the server has but this
+ * device doesn't (no matching sessionId locally) are added as READ-ONLY rows
+ * — there is no file Blob to resume with on a device that never held it, so
+ * they can be viewed and clicked through to their section, not paused or
+ * retried. A local row for the SAME session always wins (it's the live,
+ * interactive one); this only fills in what's missing.
+ */
+async function loadRemoteHistory() {
+  if (!ctx) return;
+  try {
+    const res = await ctx.authCtx.jwtInst({ method: 'get', url: api('/uploads/sessions/history?limit=100') });
+    const known = new Set(items.filter((i) => i.sessionId).map((i) => i.sessionId));
+    const remoteOnly = (res.data?.data || [])
+      .filter((s) => !known.has(s.sessionId))
+      .map((s) => ({
+        localId: `remote-${s.sessionId}`,
+        purpose: s.purpose,
+        targetId: s.targetId,
+        filename: s.filename,
+        mimetype: s.mimetype,
+        totalBytes: s.totalBytes,
+        sentBytes: s.receivedBytes,
+        sessionId: s.sessionId,
+        status: s.status === 'completed' ? 'done' : s.status === 'cancelled' ? 'cancelled' : s.status === 'failed' ? 'error' : 'offline',
+        error: s.error || null,
+        sectionLabel: null,
+        createdAt: new Date(s.insertDate).getTime(),
+        isRemote: true,   // no local Blob — view/click-through only
+      }));
+    if (remoteOnly.length) {
+      items = [...items, ...remoteOnly];
+      emit();
+    }
+  } catch (_) { /* history is a nice-to-have; the live queue works regardless */ }
 }
 
 export function isUploadManagerReady() {

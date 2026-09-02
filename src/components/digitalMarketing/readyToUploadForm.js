@@ -15,12 +15,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
-import LinearProgress from '@mui/material/LinearProgress';
-
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { submitReadyToUpload, createReadyToUpload } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
+import { enqueueUpload } from '../../tools/uploadCenter/uploadManager';
 
 // Freeform suggestions — the field is freeSolo (extensible), so these stay literal
 // English strings; translating them would split the stored `platform` value by UI language.
@@ -64,7 +63,6 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
   const [platform, setPlatform] = useState('');
   const [caption, setCaption]   = useState('');
   const [saving, setSaving]     = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError]       = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
@@ -79,30 +77,29 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
   const addFiles = (fileList) => setFiles((prev) => [...prev, ...Array.from(fileList)]);
   const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
 
+  // Same pattern as the raw content batch form: the record is created
+  // immediately with no files, and each file is handed to the Upload Center
+  // to finish in the background — this button only waits on the create call.
   const handleSave = async () => {
     if (!files.length) { setError(t('dm.addAtLeastOneFile')); return; }
     setSaving(true); setError('');
     try {
-      const fd = new FormData();
-      files.forEach((f) => fd.append('files', f));
-      fd.append('title', title);
-      fd.append('language', language);
-      fd.append('platform', platform);
-      fd.append('caption', caption);
-      setUploadProgress(0);
-      const onProgress = (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null);
-      if (isStandalone) {
-        await dispatch(createReadyToUpload({ authCtx, axiosGlobal, formData: fd, onProgress })).unwrap();
-      } else {
-        await dispatch(submitReadyToUpload({ authCtx, axiosGlobal, id: rawContentId, formData: fd, onProgress })).unwrap();
-      }
+      const metadata = { title, language, platform, caption };
+      const created = isStandalone
+        ? await dispatch(createReadyToUpload({ authCtx, axiosGlobal, formData: metadata })).unwrap()
+        : (await dispatch(submitReadyToUpload({ authCtx, axiosGlobal, id: rawContentId, formData: metadata })).unwrap()).readyToUpload;
+
+      const sectionLabel = t('nav.digitalMarketing');
+      files.forEach((file) => {
+        enqueueUpload({ purpose: 'dmReadyToUpload', targetId: created._id, file, sectionLabel });
+      });
+
       resetForm();
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || t('dm.failedToSubmit'));
     } finally {
       setSaving(false);
-      setUploadProgress(null);
     }
   };
 
@@ -167,14 +164,8 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
       </Box>
 
       <Box sx={{ px: 3, pb: 2.5, pt: 1.5, borderTop: `1px solid ${T.DIVIDER}` }}>
-        {uploadProgress !== null && (
-          <Box sx={{ mb: 1.25 }}>
-            <LinearProgress variant="determinate" value={uploadProgress} sx={{ borderRadius: 2, height: 6 }} />
-            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_SEC, mt: 0.5 }}>
-              {t('dm.uploadingPercent', { percent: uploadProgress })}
-            </Typography>
-          </Box>
-        )}
+        {/* Uploads finish in the background (Upload Center, beside the bell)
+            once the record is created. */}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>{t('common.cancel')}</Button>
           <Box sx={{ flexGrow: 1 }} />

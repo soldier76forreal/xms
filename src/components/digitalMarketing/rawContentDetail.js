@@ -9,7 +9,6 @@ import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Skeleton from '@mui/material/Skeleton';
-import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
@@ -33,6 +32,7 @@ import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
+import { enqueueUpload, onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
 
 // A stored file `name` may have had its extension stripped (friendly name),
 // so append the real extension from the disk filename for the download.
@@ -81,7 +81,6 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   const [confirmRemoveFile, setConfirmRemoveFile] = useState(null);   // fileId pending removal
   const [confirmDeleteBatch, setConfirmDeleteBatch] = useState(false);
   const [viewerMedia, setViewerMedia] = useState(null);   // { url, name, kind }
-  const [addProgress, setAddProgress] = useState(null);   // 0-100 while "Add files" uploads
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,20 +102,25 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
     await dispatch(updateRawContent({ authCtx, axiosGlobal, id, formData: fd }));
   };
 
-  const addFiles = async (fileList) => {
-    const files = Array.from(fileList || []);
-    if (!files.length) return;
-    const fd = new FormData();
-    files.forEach((f) => fd.append('files', f));
-    fd.append('descriptions', JSON.stringify(files.map(() => '')));
-    fd.append('voiceDescriptionFlags', JSON.stringify(files.map(() => false)));
-    setAddProgress(0);
-    await dispatch(updateRawContent({
-      authCtx, axiosGlobal, id, formData: fd,
-      onProgress: (e) => setAddProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
-    }));
-    setAddProgress(null);
+  // Handed to the Upload Center — each file finishes in the background and
+  // the record refreshes as each one lands (see the onUploadCompleted
+  // subscription below), rather than blocking this button on the transfer.
+  const addFiles = (fileList) => {
+    Array.from(fileList || []).forEach((file) => {
+      enqueueUpload({
+        purpose: 'dmRawContent', targetId: id, extra: { description: '' },
+        file, sectionLabel: t('nav.digitalMarketing'),
+      });
+    });
   };
+
+  // Re-fetch when one of THIS record's uploads (a new file, a replace, a
+  // voice note) completes — the detail view otherwise never learns a
+  // background upload finished while it was open.
+  useEffect(() => onUploadCompleted(({ purpose, targetId }) => {
+    if (String(targetId) !== String(id)) return;
+    if (['dmRawContent', 'dmRawContentReplace', 'dmRawContentVoice'].includes(purpose)) load();
+  }), [id, load]);
 
   const saveDescription = async (fileId) => {
     const fd = new FormData();
@@ -341,22 +345,11 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
           </Box>
 
           {can('digitalMarketing:rawContent:edit') && (
-            <>
-              <Button component="label" size="small" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
-                disabled={addProgress !== null}
-                sx={{ mt: 1.25, fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>
-                {t('dm.addFiles')}
-                <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
-              </Button>
-              {addProgress !== null && (
-                <Box sx={{ mt: 0.75 }}>
-                  <LinearProgress variant="determinate" value={addProgress} sx={{ borderRadius: 2, height: 5 }} />
-                  <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, mt: 0.25 }}>
-                    {t('dm.uploadingPercent', { percent: addProgress })}
-                  </Typography>
-                </Box>
-              )}
-            </>
+            <Button component="label" size="small" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
+              sx={{ mt: 1.25, fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>
+              {t('dm.addFiles')}
+              <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
+            </Button>
           )}
         </Box>
 
