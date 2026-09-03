@@ -147,16 +147,18 @@ const ThreadComposer = ({ label, buttonLabel, onSubmit, T, accent }) => {
     try { await onSubmit(value.trim()); setValue(''); } finally { setSending(false); }
   };
   return (
-    <Box sx={{ mt: 1.5, display: 'flex', gap: 1, alignItems: 'flex-end' }}>
-      <TextField size="small" fullWidth multiline maxRows={4} placeholder={label} value={value}
+    <Box sx={{ mt: 1.5 }}>
+      <TextField size="small" fullWidth multiline minRows={4} placeholder={label} value={value}
         onChange={(e) => setValue(e.target.value)}
-        sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '8px' },
+        sx={{ mb: 1, '& .MuiOutlinedInput-root': { bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '8px' },
           '& textarea': { fontSize: '0.8rem', color: T.TEXT_PRI } }} />
-      <Button size="small" variant="contained" onClick={submit} disabled={sending || !value.trim()}
-        sx={{ flexShrink: 0, textTransform: 'none', fontSize: '0.75rem', borderRadius: '8px',
-          bgcolor: accent, color: '#fff', '&:hover': { bgcolor: accent, opacity: 0.9 } }}>
-        {sending ? <CircularProgress size={13} sx={{ color: 'inherit' }} /> : buttonLabel}
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <Button size="small" variant="contained" onClick={submit} disabled={sending || !value.trim()}
+          sx={{ textTransform: 'none', fontSize: '0.75rem', borderRadius: '8px',
+            bgcolor: accent, color: '#fff', '&:hover': { bgcolor: accent, opacity: 0.9 } }}>
+          {sending ? <CircularProgress size={13} sx={{ color: 'inherit' }} /> : buttonLabel}
+        </Button>
+      </Box>
     </Box>
   );
 };
