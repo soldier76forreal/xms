@@ -10,6 +10,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
 import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
@@ -17,32 +18,27 @@ import { useDispatch, useSelector } from 'react-redux';
 import AuthContext from '../../authAndConnections/auth';
 import AxiosGlobal from '../../authAndConnections/axiosGlobalUrl';
 import {
-  downloadVariantMediaBatchZip,
+  uploadVariantMediaBatch, downloadVariantMediaBatchZip,
   deleteInventoryMedia, bulkDeleteInventoryMedia, bulkDownloadInventoryMediaZip, updateProduct,
 } from '../../../store/store';
-import { enqueueUpload, onUploadCompleted } from '../../../tools/uploadCenter/uploadManager';
 import InventoryGallery from './inventoryGallery';
 
 function pad(n) { return String(n).padStart(2, '0'); }
 function toDateInputValue(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
-// ── upload / replace dialog ─────────────────────────────────────────────────
-// The "delete the variant's current batch" step is a real, immediate,
-// synchronous action (it has to run exactly once, not once per file) — this
-// dialog still awaits that. The files themselves are then handed to the
-// Upload Center and land in the background, which is why the dialog can
-// close right after instead of blocking on however long they take.
+// ── upload / replace dialog — unchanged, already has real progress ────────────
 function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onDone }) {
   const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const dispatch    = useDispatch();
   const fileInput   = useRef(null);
 
   const [files,          setFiles]          = useState([]);
   const [uploadDate,     setUploadDate]     = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [busy,           setBusy]           = useState(false);
-  const [error,          setError]          = useState('');
+  const [progress,       setProgress]       = useState(0);
 
   useEffect(() => {
     if (!open) return;
@@ -51,7 +47,7 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
     setUploadDate(toDateInputValue(now));
     setExpirationDate(toDateInputValue(weekLater));
     setFiles([]);
-    setError('');
+    setProgress(0);
   }, [open]);
 
   const handlePick = (e) => {
@@ -62,27 +58,23 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
 
   const handleSubmit = async () => {
     if (!files.length) return;
-    setBusy(true); setError('');
+    setBusy(true);
+    setProgress(0);
     try {
-      const res = await authCtx.jwtInst({
-        method: 'post',
-        url: `${axiosGlobal.defaultTargetApi}/inventory/variants/${variantId}/media-batch/start`,
-        data: { uploadDate, expirationDate },
-      });
-      const { batchId, uploadDate: startedUploadDate, expirationDate: startedExpirationDate } = res.data;
-
-      files.forEach((file) => {
-        enqueueUpload({
-          purpose: 'inventoryVariantMediaBatch', targetId: variantId,
-          extra: { batchId, uploadDate: startedUploadDate, expirationDate: startedExpirationDate },
-          file, sectionLabel: t('nav.inventory'),
-        });
-      });
-
+      const formData = new FormData();
+      files.forEach((f) => formData.append('files', f));
+      formData.append('uploadDate', uploadDate);
+      formData.append('expirationDate', expirationDate);
+      await dispatch(uploadVariantMediaBatch({
+        authCtx, axiosGlobal, variantId, productId, formData,
+        onUploadProgress: (evt) => {
+          if (evt.total) setProgress(Math.round((evt.loaded / evt.total) * 100));
+        },
+      })).unwrap();
       onDone();
       onClose();
-    } catch (err) {
-      setError(err?.response?.data?.message || t('dm.failedToUpload'));
+    } catch {
+      // snackBar handled inside thunk
     } finally {
       setBusy(false);
     }
@@ -144,8 +136,13 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
           </Box>
         )}
 
-        {error && (
-          <Typography variant="caption" sx={{ color: 'error.main' }}>{error}</Typography>
+        {busy && (
+          <Box>
+            <LinearProgress variant="determinate" value={progress} sx={{ borderRadius: 4, height: 6 }} />
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5, textAlign: 'right' }}>
+              {t('inventory.uploadingProgress', { percent: progress })}
+            </Typography>
+          </Box>
         )}
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -209,13 +206,6 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
     const timer = setTimeout(() => fetchBatch(true), 4000);
     return () => clearTimeout(timer);
   }, [batch, fetchBatch]);
-
-  // Each file in a batch lands independently via the Upload Center — refresh
-  // (silently, so the loading skeleton doesn't flash on every arrival) as
-  // each one completes for THIS variant.
-  useEffect(() => onUploadCompleted(({ purpose, targetId }) => {
-    if (purpose === 'inventoryVariantMediaBatch' && String(targetId) === String(variantId)) fetchBatch(true);
-  }), [variantId, fetchBatch]);
 
   const meta = batch[0];
   const isExpired = meta?.expirationDate && new Date(meta.expirationDate) < new Date();

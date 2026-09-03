@@ -30,7 +30,6 @@ import MediaViewer, { resolveMediaKind, downloadFile } from '../digitalMarketing
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
 import { sectionLabel } from './sectionLabels';
-import { onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
 
 const kindIcon = (kind, sx) => {
   if (kind === 'image') return <ImageIcon sx={sx} />;
@@ -78,13 +77,6 @@ export default function TutorialDetail({ id, onClose, onDeleted }) {
   }, [id, authCtx, axiosGlobal, dispatch]);
 
   useEffect(() => { load(); }, [load]);
-
-  // A file added in the background (via the "New" form, or a later edit)
-  // lands via the Upload Center — refresh once one finishes, same pattern
-  // as raw content / ready-to-upload.
-  useEffect(() => onUploadCompleted(({ purpose, targetId }) => {
-    if (purpose === 'tutorial' && String(targetId) === String(id)) load();
-  }), [id, load]);
 
   // Reset to the content tab whenever a different tutorial is opened, so the
   // panel never lands on a stale Views list from the previous record.

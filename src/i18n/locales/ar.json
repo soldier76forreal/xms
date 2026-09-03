@@ -1483,19 +1483,5 @@
     "grantLabel": "السماح لهذا المستخدم بالدخول كشبح",
     "grantHelp": "أنت وحدك من يمنح هذا. يتيح له عرض حسابات أخرى للاختبار.",
     "grantFailed": "تعذر تحديث صلاحية الشبح"
-  },
-  "uploads": {
-    "centerTitle": "مركز الرفع",
-    "clearFinished": "مسح المكتملة",
-    "overallProgress": "{{count}} قيد الرفع — {{pct}}٪",
-    "statusDone": "تم الرفع",
-    "statusError": "فشل الرفع",
-    "statusOffline": "في انتظار الاتصال…",
-    "statusPaused": "متوقف",
-    "statusQueued": "في الانتظار",
-    "pause": "إيقاف مؤقت",
-    "resume": "استئناف",
-    "cancel": "إلغاء",
-    "retry": "إعادة المحاولة"
   }
 }

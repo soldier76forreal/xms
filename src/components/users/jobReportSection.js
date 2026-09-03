@@ -31,7 +31,6 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { downloadFile } from '../digitalMarketing/mediaViewer';
-import { enqueueUpload, onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmtDate = (d) => {
@@ -338,31 +337,25 @@ const JobReportForm = ({ open, onClose, onSaved, userId, editingReport, T, isXs,
     if (!title.trim() && !body.trim() && pendingFiles.length === 0 && existingFiles.length === 0) return;
     setSaving(true);
     try {
-      const metadata = { reportDate, title: title.trim(), body: body.trim() };
-      let targetId = editingReport?._id;
+      const fd = new FormData();
+      fd.append('reportDate', reportDate);
+      fd.append('title', title.trim());
+      fd.append('body', body.trim());
+      pendingFiles.forEach((f) => fd.append('files', f));
       if (editingReport) {
-        if (removedFileIds.length) metadata.removeFileIds = removedFileIds;
+        fd.append('removeFileIds', JSON.stringify(removedFileIds));
         await authCtx.jwtInst({
           method: 'put',
           url: `${axiosGlobal.defaultTargetApi}/users/me/jobReports/${editingReport._id}`,
-          data: metadata,
+          data: fd, headers: { 'Content-Type': 'multipart/form-data' },
         });
       } else {
-        const res = await authCtx.jwtInst({
+        await authCtx.jwtInst({
           method: 'post',
           url: `${axiosGlobal.defaultTargetApi}/users/me/jobReports`,
-          data: metadata,
+          data: fd, headers: { 'Content-Type': 'multipart/form-data' },
         });
-        targetId = res.data._id;
       }
-
-      // Attachments are handed to the Upload Center and land in the
-      // background — the report already exists by the time any of them
-      // completes (see JobReportSection's onUploadCompleted subscription).
-      pendingFiles.forEach((file) => {
-        enqueueUpload({ purpose: 'jobReport', targetId, file, sectionLabel: t('users.jobReportsHeader') });
-      });
-
       onSaved();
       onClose();
     } catch (_) { /* keep the draft open on failure */ }
@@ -502,15 +495,6 @@ const JobReportSection = ({ userId, isSelf }) => {
   const [viewerMedia, setViewerMedia] = useState(null);
   const [viewingReport, setViewingReport] = useState(null);
 
-  // Keep an open detail dialog in sync whenever the list refreshes (e.g. a
-  // background-uploaded attachment landing) — `reports` is the source of
-  // truth, `viewingReport` is just a snapshot taken when the row was clicked.
-  useEffect(() => {
-    if (!viewingReport) return;
-    const fresh = reports.find((r) => r._id === viewingReport._id);
-    if (fresh && fresh !== viewingReport) setViewingReport(fresh);
-  }, [reports]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const load = useCallback(async (pg = 1) => {
     setLoading(true);
     try {
@@ -528,17 +512,6 @@ const JobReportSection = ({ userId, isSelf }) => {
 
   useEffect(() => { load(1); }, [load]);
   useEffect(() => { setHasMore(reports.length < total); }, [reports, total]);
-
-  // A report's attachment (voice note, image, video, document) lands in the
-  // background via the Upload Center — the `jobReport` purpose only ever
-  // touches the CALLER's own reports, so while this is the caller's own
-  // section (isSelf) any completion here is one of these reports.
-  useEffect(() => {
-    if (!isSelf) return undefined;
-    return onUploadCompleted(({ purpose }) => {
-      if (purpose === 'jobReport') load(1);
-    });
-  }, [isSelf, load]);
 
   const openAdd = () => { setEditingReport(null); setFormOpen(true); };
   const openEdit = (report) => { setEditingReport(report); setFormOpen(true); };

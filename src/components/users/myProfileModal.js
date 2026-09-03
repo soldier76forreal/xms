@@ -21,7 +21,6 @@ import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { pushSupported, enablePushNotifications } from '../../tools/pushNotifications';
-import { enqueueUpload } from '../../tools/uploadCenter/uploadManager';
 
 // Per-type push categories (must match the backend notificationPrefs keys).
 const NOTIF_TYPES = [
@@ -221,11 +220,14 @@ const MyProfileModal = ({ open, onClose }) => {
         url: `${axiosGlobal.defaultTargetApi}/users/me/notification-prefs`,
         data: notifPrefs,
       });
-      // Handed to the Upload Center — runs in the background (see App.js's
-      // onUploadCompleted subscription for the profile-refresh that follows),
-      // so this save doesn't block on the transfer.
       if (avatarFile) {
-        enqueueUpload({ purpose: 'avatar', file: avatarFile, sectionLabel: t('users.myProfile') });
+        const fd = new FormData();
+        fd.append('file', avatarFile);
+        await authCtx.jwtInst({
+          method: 'post',
+          url: `${axiosGlobal.defaultTargetApi}/users/me/avatar`,
+          data: fd,
+        });
       }
       dispatch(actions.setShowSnackBar({ status: true, msg: t('users.profileUpdated'), type: 'success' }));
       dispatch(actions.setUserProfileRefresh());

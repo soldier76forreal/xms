@@ -9,6 +9,7 @@ import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Skeleton from '@mui/material/Skeleton';
+import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
@@ -32,7 +33,6 @@ import RawContentChat from './rawContentChat';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
-import { enqueueUpload, onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
 
 // A stored file `name` may have had its extension stripped, so fall back to
 // the disk filename's extension for the download (same helper as raw content).
@@ -72,6 +72,7 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
   const [confirmRemoveFile, setConfirmRemoveFile] = useState(null);
   const [confirmDeleteRecord, setConfirmDeleteRecord] = useState(false);
   const [viewerMedia, setViewerMedia] = useState(null);
+  const [addProgress, setAddProgress] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,13 +82,6 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (doc && String(doc._id) === String(id)) { setCaption(doc.caption || ''); setCaptionDirty(false); } }, [doc, id]);
-
-  // Background files (added here, after the record already exists) land via
-  // the Upload Center — refresh once one finishes, same pattern as raw content.
-  useEffect(() => onUploadCompleted(({ purpose, targetId }) => {
-    if (String(targetId) !== String(id)) return;
-    if (['dmReadyToUpload', 'dmReadyToUploadReplace'].includes(purpose)) load();
-  }), [id, load]);
 
   const saveCaption = async () => {
     if (!captionDirty) return;
@@ -120,16 +114,17 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
     await dispatch(updateReadyToUpload({ authCtx, axiosGlobal, id, formData: fd }));
   };
 
-  // Handed to the Upload Center — each file finishes in the background and
-  // the record refreshes as each one lands (see the onUploadCompleted
-  // subscription above), rather than blocking this button on the transfer.
-  const addFiles = (fileList) => {
-    Array.from(fileList || []).forEach((file) => {
-      enqueueUpload({
-        purpose: 'dmReadyToUpload', targetId: id,
-        file, sectionLabel: t('nav.digitalMarketing'),
-      });
-    });
+  const addFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const fd = new FormData();
+    files.forEach((f) => fd.append('files', f));
+    setAddProgress(0);
+    await dispatch(updateReadyToUpload({
+      authCtx, axiosGlobal, id, formData: fd,
+      onProgress: (e) => setAddProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
+    }));
+    setAddProgress(null);
   };
 
   const handleDelete = async () => {
@@ -274,10 +269,19 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
         {can('digitalMarketing:readyToUpload:edit') && (
           <Box sx={{ mb: 2 }}>
             <Button component="label" size="small" startIcon={<AddPhotoAlternateIcon sx={{ fontSize: 14 }} />}
+              disabled={addProgress !== null}
               sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>
               {t('dm.addFiles')}
               <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
             </Button>
+            {addProgress !== null && (
+              <Box sx={{ mt: 0.75 }}>
+                <LinearProgress variant="determinate" value={addProgress} sx={{ borderRadius: 2, height: 5 }} />
+                <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, mt: 0.25 }}>
+                  {t('dm.uploadingPercent', { percent: addProgress })}
+                </Typography>
+              </Box>
+            )}
           </Box>
         )}
 

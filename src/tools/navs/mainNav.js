@@ -19,7 +19,6 @@ import ThemeCtx from "../../contextApi/themeContext";
 import NormalMenuForProfile from './normalMenuForProfile';
 import LeftSideNav from "./leftSideNav";
 import NotificationCenter from "../../components/users/notificationCenter";
-import UploadCenter from "../../components/main/uploadCenter";
 
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 
@@ -145,11 +144,6 @@ const MainNavPortal = (props) => {
 
           {/* Right-side actions */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.5 } }}>
-
-            {/* Upload Center — sits beside the bell so every transfer in the
-                app is reachable from any section, not just File Manager.
-                Renders nothing at all when the queue is empty. */}
-            <UploadCenter />
 
             {/* Notifications — the single fixed element across all sections */}
             <Tooltip title="Notifications">

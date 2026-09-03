@@ -20,13 +20,13 @@ import MicIcon from '@mui/icons-material/Mic';
 import StopCircleIcon from '@mui/icons-material/StopCircle';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
 
+import LinearProgress from '@mui/material/LinearProgress';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { createRawContent } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer from './mediaViewer';
-import { enqueueUpload, waitForUploadResult } from '../../tools/uploadCenter/uploadManager';
 
 // value stays the literal English word (stored on the record); only the displayed label translates.
 const USE_CASES = [
@@ -97,6 +97,7 @@ export default function RawContentForm({ open, onClose }) {
   const [platform, setPlatform] = useState('Anything');
   const [pendingFiles, setPendingFiles] = useState([]);   // [{ key, file, name, description, voiceFile }]
   const [saving, setSaving]     = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);   // 0-100 during submit
   const [error, setError]       = useState('');
   const [recordingKey, setRecordingKey] = useState(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -179,47 +180,42 @@ export default function RawContentForm({ open, onClose }) {
     setRecordingKey(null);
   };
 
-  // The record is created immediately (no files yet) and every file is
-  // handed to the Upload Center to finish IN THE BACKGROUND — the whole
-  // point is that the user doesn't sit here watching a batch upload. A voice
-  // note is sequenced to enqueue only once its main file's real fileId is
-  // known (see api/routes/uploads/purposes.js's dmRawContentVoice), so there
-  // is nothing to correlate or race — just "after", in order.
   const handleSave = async () => {
     if (!pendingFiles.length) { setError(t('dm.addAtLeastOneFileGeneric')); return; }
     setSaving(true); setError('');
     try {
-      const created = await dispatch(createRawContent({
-        authCtx, axiosGlobal,
-        formData: { title, language, useCase, platform },
-      })).unwrap();
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('language', language);
+      formData.append('useCase', useCase);
+      formData.append('platform', platform);
 
+      const descriptions = [];
+      const names         = [];
+      const voiceFlags    = [];
       pendingFiles.forEach((f) => {
-        (async () => {
-          const mainLocalId = await enqueueUpload({
-            purpose: 'dmRawContent', targetId: created._id,
-            extra: { description: f.description, name: f.name || baseName(f.file.name) },
-            file: f.file,
-            sectionLabel: t('nav.digitalMarketing'),
-          });
-          if (!f.voiceFile) return;
-          const mainResult = await waitForUploadResult(mainLocalId);
-          if (!mainResult?.fileId) return;   // main upload failed/cancelled — skip the orphaned voice note
-          await enqueueUpload({
-            purpose: 'dmRawContentVoice', targetId: created._id,
-            extra: { mainFileId: mainResult.fileId },
-            file: f.voiceFile,
-            sectionLabel: t('nav.digitalMarketing'),
-          });
-        })();
+        formData.append('files', f.file);
+        names.push(f.name || baseName(f.file.name));
+        descriptions.push(f.description || '');
+        voiceFlags.push(!!f.voiceFile);
       });
+      formData.append('names', JSON.stringify(names));
+      formData.append('descriptions', JSON.stringify(descriptions));
+      formData.append('voiceDescriptionFlags', JSON.stringify(voiceFlags));
+      pendingFiles.forEach((f) => { if (f.voiceFile) formData.append('voiceDescriptions', f.voiceFile); });
 
+      setUploadProgress(0);
+      await dispatch(createRawContent({
+        authCtx, axiosGlobal, formData,
+        onProgress: (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
+      })).unwrap();
       resetForm();
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || t('dm.failedToUpload'));
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -338,9 +334,14 @@ export default function RawContentForm({ open, onClose }) {
       </Box>
 
       <Box sx={{ px: 3, pb: 2.5, pt: 1.5, borderTop: `1px solid ${T.DIVIDER}` }}>
-        {/* Uploads finish in the background (Upload Center, beside the bell)
-            once the record is created — this button only waits on that
-            create call, not on any file transfer. */}
+        {uploadProgress !== null && (
+          <Box sx={{ mb: 1.25 }}>
+            <LinearProgress variant="determinate" value={uploadProgress} sx={{ borderRadius: 2, height: 6 }} />
+            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.5 }}>
+              {t('dm.uploadingBatchPercent', { percent: uploadProgress })}
+            </Typography>
+          </Box>
+        )}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>{t('common.cancel')}</Button>
           <Box sx={{ flexGrow: 1 }} />

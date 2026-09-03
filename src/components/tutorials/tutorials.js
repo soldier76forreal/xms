@@ -16,8 +16,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
-import { fetchTutorials, actions } from '../../store/store';
-import { onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
+import { fetchTutorials } from '../../store/store';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
 import TutorialCard from './tutorialCard';
@@ -97,13 +96,6 @@ export default function Tutorials() {
 
   useEffect(() => { load(1); }, [section, language, search, pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setHasMore(items.length < total); }, [items, total]);
-
-  // A new tutorial's files (or a later edit's files) can still be landing in
-  // the background via the Upload Center when this list is open — bump the
-  // same refresh key a normal create/edit already bumps.
-  useEffect(() => onUploadCompleted(({ purpose }) => {
-    if (purpose === 'tutorial') dispatch(actions.tutBumpRefresh());
-  }), [dispatch]);
 
   // Deep link from a "new tutorial" notification click or a short link:
   // /tutorials?open=<id> opens that tutorial's detail (tutorialDetail

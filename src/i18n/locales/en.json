@@ -1474,19 +1474,5 @@
     "grantLabel": "Allow this user to ghost in",
     "grantHelp": "Only you can grant this. It lets them view other accounts for testing.",
     "grantFailed": "Could not update ghost access"
-  },
-  "uploads": {
-    "centerTitle": "Upload Center",
-    "clearFinished": "Clear finished",
-    "overallProgress": "{{count}} uploading — {{pct}}%",
-    "statusDone": "Uploaded",
-    "statusError": "Upload failed",
-    "statusOffline": "Waiting for connection…",
-    "statusPaused": "Paused",
-    "statusQueued": "Queued",
-    "pause": "Pause",
-    "resume": "Resume",
-    "cancel": "Cancel",
-    "retry": "Retry"
   }
 }

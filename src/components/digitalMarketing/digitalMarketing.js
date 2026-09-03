@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -12,19 +11,10 @@ import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useHistory } from 'react-router-dom';
 import { usePermissions } from '../../contextApi/PermissionContext';
-import { actions } from '../../store/store';
-import { onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
 import RawContentSection from './rawContentSection';
 import ReadyToUploadSection from './readyToUploadSection';
 import LinkPageSection from './linkPageSection';
 import WhatsappShareSection from './whatsappShareSection';
-
-// Every DM purpose the Upload Center knows about — a completion of any of
-// these means some list or detail view in this section is now stale.
-const DM_UPLOAD_PURPOSES = new Set([
-  'dmRawContent', 'dmRawContentVoice', 'dmRawContentReplace',
-  'dmReadyToUpload', 'dmReadyToUploadReplace', 'dmLinkPageCover',
-]);
 
 const TABS = [
   { id: 'rawContent',    Icon: MovieIcon,       labelKey: 'dm.tabRawContents' },
@@ -45,18 +35,9 @@ export default function DigitalMarketing() {
   const location = useLocation();
   const history  = useHistory();
   const { can } = usePermissions();
-  const dispatch = useDispatch();
 
   const [tab, setTab] = useState('rawContent');   // 'rawContent' | 'readyToUpload'
   const [openId, setOpenId] = useState(null);     // record to auto-open (from a notification)
-
-  // One subscription for the whole section: any DM upload finishing in the
-  // background (a batch file, a replace, a voice note, a cover image) bumps
-  // the shared refresh key every list/detail view here already watches —
-  // cheaper and less error-prone than each component subscribing separately.
-  useEffect(() => onUploadCompleted(({ purpose }) => {
-    if (DM_UPLOAD_PURPOSES.has(purpose)) dispatch(actions.dmBumpRefresh());
-  }), [dispatch]);
 
   // Deep link from a notification: /digitalMarketing?dm=raw|ready&open=<id>
   // selects the tab and tells the section which record to open, then clears the

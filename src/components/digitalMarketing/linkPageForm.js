@@ -13,6 +13,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -31,7 +32,6 @@ import LinkIcon from '@mui/icons-material/Link';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { createLinkPage, updateLinkPage } from '../../store/store';
-import { enqueueUpload } from '../../tools/uploadCenter/uploadManager';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import { LANGUAGES } from '../../i18n';
 
@@ -84,6 +84,7 @@ export default function LinkPageForm({ open, onClose, linkPage = null }) {
   const [language, setLanguage] = useState('en');
   const [companyName, setCompanyName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError] = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
@@ -129,38 +130,34 @@ export default function LinkPageForm({ open, onClose, linkPage = null }) {
     return next;
   });
 
-  // Metadata saves immediately (JSON, no file). A newly picked cover is
-  // handed to the Upload Center separately and finishes in the background —
-  // dmLinkPageCover SETS the cover field (never appends; a page has exactly
-  // one), so this is correct whether the page was just created or already
-  // had a different cover.
   const handleSave = async () => {
     if (!companyName.trim()) { setError(t('dm.linkPageCompanyNameRequired')); return; }
     if (links.some((l) => !l.value.trim())) { setError(t('dm.linkPageValueRequired')); return; }
 
     setSaving(true); setError('');
     try {
-      const metadata = {
-        companyName: companyName.trim(),
-        links: links.map(({ type, label, value }) => ({ type, label, value: value.trim() })),
-        language,
-        status: active ? 'active' : 'inactive',
-        restrictToOwner,
-      };
+      const formData = new FormData();
+      formData.append('companyName', companyName.trim());
+      formData.append('links', JSON.stringify(links.map(({ type, label, value }) => ({ type, label, value: value.trim() }))));
+      formData.append('language', language);
+      formData.append('status', active ? 'active' : 'inactive');
+      formData.append('restrictToOwner', String(restrictToOwner));
+      if (coverFile) formData.append('cover', coverFile);
 
-      const saved = isEdit
-        ? await dispatch(updateLinkPage({ authCtx, axiosGlobal, id: linkPage._id, formData: metadata })).unwrap()
-        : await dispatch(createLinkPage({ authCtx, axiosGlobal, formData: metadata })).unwrap();
+      setUploadProgress(0);
+      const onProgress = (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null);
 
-      if (coverFile) {
-        enqueueUpload({ purpose: 'dmLinkPageCover', targetId: saved._id, file: coverFile, sectionLabel: t('nav.digitalMarketing') });
+      if (isEdit) {
+        await dispatch(updateLinkPage({ authCtx, axiosGlobal, id: linkPage._id, formData, onProgress })).unwrap();
+      } else {
+        await dispatch(createLinkPage({ authCtx, axiosGlobal, formData, onProgress })).unwrap();
       }
-
       onClose();
     } catch (err) {
       setError(err?.response?.data?.message || t('dm.linkPageFailedToSave'));
     } finally {
       setSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -297,6 +294,11 @@ export default function LinkPageForm({ open, onClose, linkPage = null }) {
       </Box>
 
       <Box sx={{ px: 3, pb: 2.5, pt: 1.5, borderTop: `1px solid ${T.DIVIDER}` }}>
+        {uploadProgress !== null && (
+          <Box sx={{ mb: 1.25 }}>
+            <LinearProgress variant="determinate" value={uploadProgress} sx={{ borderRadius: 2, height: 6 }} />
+          </Box>
+        )}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>{t('common.cancel')}</Button>
           <Box sx={{ flexGrow: 1 }} />

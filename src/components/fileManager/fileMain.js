@@ -30,8 +30,7 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import SectionTutorials from '../tutorials/sectionTutorials';
-import { actions, startDownload } from '../../store/store';
-import { enqueueUpload, onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
+import { actions, setFilesAsync, uploadFile, startDownload } from '../../store/store';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
 
@@ -73,6 +72,7 @@ export default function FileMain() {
   const currentDisplay = useSelector((s) => s.currentDisplay);
   const routeLink      = useSelector((s) => s.routeLink);
   const selectedItems  = useSelector((s) => s.selectedItems);
+  const uploadQueue    = useSelector((s) => s.uploadQueue);
   const loading        = useSelector((s) => s.loading);
 
   const T = {
@@ -204,31 +204,13 @@ export default function FileMain() {
   const isPinned = (doc) => (doc?.pinnedBy || []).map(String).includes(myId);
 
   // ── Upload ────────────────────────────────────────────────────────────────
-  // Handed to the app-wide Upload Center rather than awaited here: the
-  // transfer is chunked and resumable, survives leaving this section (or
-  // closing the browser), and is tracked by the icon next to the bell. The
-  // user is free to keep working the moment they pick files.
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files);
     e.target.value = '';
-    if (!files.length) return;
-
-    const supFolder = currentDisplay?._id || 'root';
-    for (const file of files) {
-      await enqueueUpload({
-        purpose: 'fileManager',
-        extra: { supFolder },
-        file,
-        sectionLabel: t('nav.files'),
-      });
-    }
+    dispatch(setFilesAsync({ files, uploadType: 'fileManager' })).then(() => {
+      dispatch(uploadFile({ authCtx, axiosGlobal, files: uploadQueue, currentDisplay }));
+    });
   };
-
-  // Refresh the listing as each upload lands, so files appear without the
-  // user having to navigate away and back.
-  useEffect(() => onUploadCompleted(({ purpose }) => {
-    if (purpose === 'fileManager') dispatch(actions.refresh());
-  }), [dispatch]);
 
   // ── Rename / Delete / Move / Copy / Share / Download ─────────────────────
   const openRename = (target, name) => { setFileFolderIdType(target); setRenameFolder(name); setOpenRenameModal(true); };

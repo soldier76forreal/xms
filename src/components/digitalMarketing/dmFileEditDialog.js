@@ -25,7 +25,6 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import AuthContext from '../authAndConnections/auth';
 import { updateRawContent, updateReadyToUpload } from '../../store/store';
 import MediaViewer, { resolveMediaKind } from './mediaViewer';
-import { enqueueUpload } from '../../tools/uploadCenter/uploadManager';
 
 // Full edit form for ONE file inside either a raw content batch OR a
 // ready-to-upload record: rename, replace the actual file, and (raw content
@@ -99,41 +98,21 @@ export default function DmFileEditDialog({ open, onClose, file, recordId, kind =
   };
   const stopRecording = () => { mediaRecorderRef.current?.stop(); setRecording(false); };
 
-  // Metadata (name/description/voice-removal) is a small JSON PUT, applied
-  // immediately — there's no file involved, so no reason to route it through
-  // the Upload Center. A replacement file or a new voice recording is handed
-  // to the Upload Center instead and finishes in the background; both target
-  // this entry by its EXISTING fileId (extra.editFileId / extra.mainFileId),
-  // which — unlike the create form — is already known, so there's no
-  // sequencing to do: both can enqueue immediately and independently.
   const handleSave = async () => {
     setSaving(true);
     try {
-      const metadata = { editFileId: String(file.fileId), editFileName: name };
+      const fd = new FormData();
+      fd.append('editFileId', String(file.fileId));
+      fd.append('editFileName', name);
       if (isRaw) {
-        metadata.editFileDescription = description;
-        if (voiceAction === 'remove') metadata.editFileRemoveVoice = 'true';
+        fd.append('editFileDescription', description);
+        if (voiceAction === 'remove') fd.append('editFileRemoveVoice', 'true');
+        if (voiceAction === 'new' && voiceFile) fd.append('editVoiceDescription', voiceFile);
       }
+      if (newFile) fd.append('replaceFile', newFile);
 
       const thunk = isRaw ? updateRawContent : updateReadyToUpload;
-      await dispatch(thunk({ authCtx, axiosGlobal, id: recordId, formData: metadata })).unwrap();
-
-      const sectionLabel = t('nav.digitalMarketing');
-      if (newFile) {
-        enqueueUpload({
-          purpose: isRaw ? 'dmRawContentReplace' : 'dmReadyToUploadReplace',
-          targetId: recordId, extra: { editFileId: String(file.fileId) },
-          file: newFile, sectionLabel,
-        });
-      }
-      if (isRaw && voiceAction === 'new' && voiceFile) {
-        enqueueUpload({
-          purpose: 'dmRawContentVoice',
-          targetId: recordId, extra: { mainFileId: String(file.fileId) },
-          file: voiceFile, sectionLabel,
-        });
-      }
-
+      await dispatch(thunk({ authCtx, axiosGlobal, id: recordId, formData: fd })).unwrap();
       onClose();
     } catch (_) { /* snackBar handled in the thunk */ }
     setSaving(false);

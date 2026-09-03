@@ -27,7 +27,6 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { resolveMediaKind, downloadFile } from '../digitalMarketing/mediaViewer';
-import { enqueueUpload, onUploadCompleted } from '../../tools/uploadCenter/uploadManager';
 
 function relativeDate(d, t) {
   if (!d) return '';
@@ -110,21 +109,6 @@ const MyNotesModal = ({ open, onClose }) => {
 
   useEffect(() => { setHasMore(notes.length < total); }, [notes, total]);
 
-  // Kept alongside `notes` state purely so the upload-completion subscription
-  // below (a stable callback, not re-subscribed on every render) can check
-  // the CURRENT list without becoming stale.
-  const notesRef = useRef(notes);
-  useEffect(() => { notesRef.current = notes; }, [notes]);
-
-  // An attachment (voice note, image, video, document) lands in the
-  // background via the Upload Center — reload the first page once one
-  // finishes, scoped to notes this modal actually has loaded.
-  useEffect(() => onUploadCompleted(({ purpose, targetId }) => {
-    if (purpose !== 'personalNote') return;
-    if (!notesRef.current.some((n) => String(n._id) === String(targetId))) return;
-    load(1);
-  }), [load]);
-
   const startRecording = async () => {
     setRecordError('');
     try {
@@ -161,22 +145,17 @@ const MyNotesModal = ({ open, onClose }) => {
     if (!body.trim() && pendingFiles.length === 0) return;
     setSubmitting(true);
     try {
+      const fd = new FormData();
+      fd.append('body', body.trim());
+      pendingFiles.forEach((f) => fd.append('files', f));
       const res = await authCtx.jwtInst({
         method: 'post',
         url: `${axiosGlobal.defaultTargetApi}/users/me/notes`,
-        data: { body: body.trim() },
+        data: fd,
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      const note = res.data;
-      setNotes((prev) => [note, ...prev]);
+      setNotes((prev) => [res.data, ...prev]);
       setTotal((prev) => prev + 1);
-
-      // Attachments are handed to the Upload Center and land in the
-      // background — the note row already exists by the time any of them
-      // completes (see the onUploadCompleted subscription above).
-      pendingFiles.forEach((file) => {
-        enqueueUpload({ purpose: 'personalNote', targetId: note._id, file, sectionLabel: t('users.myNotes') });
-      });
-
       setBody(''); setPendingFiles([]);
     } catch (_) { /* keep the draft on failure */ }
     setSubmitting(false);
