@@ -44,6 +44,7 @@ import { Can, usePermissions } from '../../contextApi/PermissionContext';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import UserAvatar from '../main/userAvatar';
 import { ISO_MAP, NAME_MAP } from './util/countryData';
+import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 
 // ── status config ─────────────────────────────────────────────────────────────
 
@@ -128,7 +129,7 @@ function resolveCountryDisplay(customer) {
 // ── CustomerCard ──────────────────────────────────────────────────────────────
 
 const CustomerCard = ({
-  customer, selected, checked, showCheckbox,
+  customer, selected, checked, showCheckbox, unread,
   onSelect, onCheck, expanded, onExpand,
   onEdit, onAddToMyDesk,
 }) => {
@@ -147,7 +148,8 @@ const CustomerCard = ({
   const [addingDesk,  setAddingDesk]  = useState(false);
 
   const T = {
-    CARD_BG: isDark ? (selected ? '#1c1c1c' : '#131313') : (selected ? 'rgba(0,0,0,0.04)' : theme.palette.background.paper),
+    CARD_BG: unread && !selected ? unreadRowTint(isDark)
+      : isDark ? (selected ? '#1c1c1c' : '#131313') : (selected ? 'rgba(0,0,0,0.04)' : theme.palette.background.paper),
     CARD_BD: isDark
       ? (selected ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.07)')
       : (selected ? 'rgba(0,0,0,0.3)' : theme.palette.divider),
@@ -242,6 +244,7 @@ const CustomerCard = ({
         onMouseEnter={() => setHovering(true)}
         onMouseLeave={() => setHovering(false)}
         sx={{
+          position: 'relative',
           mx: 1, mb: 0.5, borderRadius: '12px', cursor: 'pointer',
           border: `1px solid ${T.CARD_BD}`,
           bgcolor: T.CARD_BG,
@@ -249,6 +252,7 @@ const CustomerCard = ({
           '&:hover': { borderColor: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.2)' },
         }}
       >
+        {unread && <UnreadDot />}
         {/* ── Main row ── */}
         <Box sx={{ display: 'flex', alignItems: 'center', px: 1.5, py: 1.25, gap: 1 }}>
 

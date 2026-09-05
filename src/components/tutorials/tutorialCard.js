@@ -11,6 +11,7 @@ import UserAvatar from '../main/userAvatar';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { useContext } from 'react';
 import { sectionLabel } from './sectionLabels';
+import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -28,7 +29,7 @@ const kindIcon = (kind, sx) => {
 // Reused in both the full Tutorial Center list (tutorials.js) and the compact
 // per-section widget dialog (sectionTutorials.js) — `dense` trims it down to
 // thumbnail + title + file-type icon for the smaller surface.
-export default function TutorialCard({ tutorial, T, isDark, dense = false, selected = false, onClick }) {
+export default function TutorialCard({ tutorial, T, isDark, dense = false, selected = false, unread = false, onClick }) {
   const { t } = useTranslation();
   const axiosGlobal = useContext(AxiosGlobal);
 
@@ -37,10 +38,11 @@ export default function TutorialCard({ tutorial, T, isDark, dense = false, selec
 
   return (
     <Box onClick={onClick}
-      sx={{ display: 'flex', gap: 1.25, p: 1.25, borderRadius: '10px', cursor: 'pointer',
-        bgcolor: selected ? (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)') : 'transparent',
+      sx={{ position: 'relative', display: 'flex', gap: 1.25, p: 1.25, borderRadius: '10px', cursor: 'pointer',
+        bgcolor: selected ? (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)') : unread ? unreadRowTint(isDark) : 'transparent',
         border: `1px solid ${selected ? T.BD2 : 'transparent'}`,
         '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' } }}>
+      {unread && <UnreadDot />}
       <Box sx={{ width: dense ? 40 : 52, height: dense ? 40 : 52, borderRadius: '8px', flexShrink: 0,
         overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
         bgcolor: T.CTRL_BG, border: `1px solid ${T.BD}` }}>

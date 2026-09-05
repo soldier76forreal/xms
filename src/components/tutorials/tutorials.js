@@ -23,6 +23,7 @@ import TutorialCard from './tutorialCard';
 import TutorialForm from './tutorialForm';
 import TutorialDetail from './tutorialDetail';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
 import { SECTIONS, sectionLabel } from './sectionLabels';
 
@@ -49,6 +50,10 @@ export default function Tutorials() {
   const total      = useSelector((s) => s.tutorialsTotal);
   const loading    = useSelector((s) => s.tutorialsLoading);
   const refreshKey = useSelector((s) => s.tutorialRefreshKey);
+
+  // Flags a tutorial inserted by someone else since this user's last visit
+  // as unread (dot + tinted row) — see useUnreadRecords.js.
+  const { isUnread } = useUnreadRecords('tutorials');
 
   const [section, setSection]   = useState('all');
   const [language, setLanguage] = useState('all');
@@ -191,6 +196,7 @@ export default function Tutorials() {
                 {items.map((item) => (
                   <TutorialCard key={item._id} tutorial={item} T={T} isDark={isDark}
                     selected={selected && String(selected._id) === String(item._id)}
+                    unread={isUnread(item)}
                     onClick={() => handleSelect(item)} />
                 ))}
                 <InfiniteScrollSentinel onIntersect={loadMore} hasMore={hasMore} loading={loading} />

@@ -10,6 +10,7 @@ import PlayCircleFilledIcon from '@mui/icons-material/PlayCircleFilled';
 import { FileIcon, defaultStyles } from 'react-file-icon';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import { UNREAD_ACCENT, unreadRowTint } from '../../tools/unreadDot';
 
 const IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
 const VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v'];
@@ -17,7 +18,7 @@ const VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v'];
 // ── File / folder grid tile (Phase 9 shell) ───────────────────────────────────
 // One card renders either a folder entry ({doc, subs}) or a file entry
 // ({file}) — the exact same tree-entry shapes store.js has always used.
-const FileCard = ({ entry, apiBase, selected, checked, pinned, tags,
+const FileCard = ({ entry, apiBase, selected, checked, pinned, tags, unread,
   onOpen, onToggleCheck, onTogglePin }) => {
   const { t }  = useTranslation();
   const theme  = useTheme();
@@ -28,7 +29,7 @@ const FileCard = ({ entry, apiBase, selected, checked, pinned, tags,
     TEXT_PRI: isDark ? 'rgba(255,255,255,0.87)' : theme.palette.text.primary,
     TEXT_SEC: isDark ? 'rgba(255,255,255,0.45)' : theme.palette.text.secondary,
     TEXT_TER: isDark ? 'rgba(255,255,255,0.2)'  : 'rgba(0,0,0,0.3)',
-    CARD_BG:  isDark ? '#181818' : theme.palette.background.paper,
+    CARD_BG:  unread ? unreadRowTint(isDark) : (isDark ? '#181818' : theme.palette.background.paper),
     SEL_BG:   isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
   };
 
@@ -110,10 +111,16 @@ const FileCard = ({ entry, apiBase, selected, checked, pinned, tags,
         )}
       </Box>
 
-      {/* name */}
-      <Typography noWrap title={name} sx={{ fontSize: '0.78rem', fontWeight: 600, color: T.TEXT_PRI }}>
-        {name}
-      </Typography>
+      {/* name — an unread dot sits inline rather than in a corner, since both
+          top corners are already the checkbox/pin overlays */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+        {unread && (
+          <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: UNREAD_ACCENT, flexShrink: 0 }} />
+        )}
+        <Typography noWrap title={name} sx={{ fontSize: '0.78rem', fontWeight: 600, color: T.TEXT_PRI, minWidth: 0 }}>
+          {name}
+        </Typography>
+      </Box>
 
       {/* tag chips */}
       {tags?.length > 0 && (

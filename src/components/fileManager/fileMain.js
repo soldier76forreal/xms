@@ -32,6 +32,7 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import SectionTutorials from '../tutorials/sectionTutorials';
 import { actions, setFilesAsync, uploadFile, startDownload } from '../../store/store';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
 
 import FileCard from './fileCard';
@@ -74,6 +75,12 @@ export default function FileMain() {
   const selectedItems  = useSelector((s) => s.selectedItems);
   const uploadQueue    = useSelector((s) => s.uploadQueue);
   const loading        = useSelector((s) => s.loading);
+
+  // Flags a file/folder inserted by someone else since this user's last
+  // visit to File Manager as unread (dot + tinted tile) — File Manager uses
+  // `generatedBy` rather than the `createdBy` convention the rest of the
+  // app uses. See useUnreadRecords.js.
+  const { isUnread } = useUnreadRecords('files', { getCreatedBy: (r) => r.generatedBy });
 
   const T = {
     APP_BG:   isDark ? '#060606' : theme.palette.background.default,
@@ -271,6 +278,7 @@ export default function FileMain() {
           <FileCard key={doc._id} entry={e} apiBase={apiBase}
             selected={sel} checked={sel}
             pinned={isPinned(doc)} tags={[]}
+            unread={isUnread(doc)}
             onOpen={() => (isFolder ? openFolder(e, i) : openFileCard(doc))}
             onToggleCheck={() => toggleCheck(doc._id, isFolder ? 'folder' : 'file')}
             onTogglePin={() => togglePin(doc._id, isFolder ? 'folder' : 'file')}

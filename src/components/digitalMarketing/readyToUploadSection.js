@@ -21,6 +21,8 @@ import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
 import ReadyToUploadDetail from './readyToUploadDetail';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
+import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
+import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 import ReadyToUploadForm from './readyToUploadForm';
 
 const fmtDate = (d) => {
@@ -47,6 +49,10 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
   const total      = useSelector(s => s.dmReadyToUploadTotal);
   const loading    = useSelector(s => s.dmReadyToUploadLoading);
   const refreshKey = useSelector(s => s.dmRefreshKey);
+
+  // Flags a ready-to-upload record inserted by someone else since this
+  // user's last visit as unread (dot + tinted row) — see useUnreadRecords.js.
+  const { isUnread } = useUnreadRecords('dmReadyToUpload');
 
   const [page, setPage]       = useState(1);
   const [pageSize, setPageSize] = useState(40);
@@ -145,6 +151,7 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
               <Box sx={{ position: 'relative' }}>
                 {items.map((item, i) => {
                   const isSel = selected && String(selected._id) === String(item._id);
+                  const isUnr = isUnread(item);
                   return (
                     <Box key={item._id} onClick={() => handleSelect(item)}
                       sx={{ display: 'flex', gap: 1.25, cursor: 'pointer', position: 'relative',
@@ -157,10 +164,11 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
                         bgcolor: T.CTRL_BG, border: `1px solid #81c78455` }}>
                         <CloudUploadIcon sx={{ fontSize: 13, color: '#81c784' }} />
                       </Box>
-                      <Box sx={{ flexGrow: 1, minWidth: 0, p: 1.25, borderRadius: '10px',
-                        bgcolor: isSel ? (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)') : 'transparent',
+                      <Box sx={{ position: 'relative', flexGrow: 1, minWidth: 0, p: 1.25, borderRadius: '10px',
+                        bgcolor: isSel ? (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)') : isUnr ? unreadRowTint(isDark) : 'transparent',
                         border: `1px solid ${isSel ? T.BD2 : 'transparent'}`,
                         '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' } }}>
+                        {isUnr && <UnreadDot />}
                         <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: T.TEXT_PRI }} noWrap>
                           {item.title?.trim()
                             ? item.title

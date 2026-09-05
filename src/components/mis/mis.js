@@ -43,6 +43,7 @@ import SendToDialog         from './sendToDialog';
 import DeleteInvoiceDialog  from './deleteInvoiceDialog';
 import CompanyProfileDrawer from './settings/companyProfile';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
 import ConfirmDialog        from '../../tools/modal/confirmDialog';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
@@ -106,6 +107,10 @@ export default function Mis() {
   const total      = useSelector(s => s.misInvoicesTotal);
   const loading    = useSelector(s => s.misInvoicesLoading);
   const refreshKey = useSelector(s => s.misRefreshKey);
+
+  // Flags an invoice/pre-invoice inserted by someone else since this user's
+  // last visit to MIS as unread (dot + tinted row) — see useUnreadRecords.js.
+  const { isUnread } = useUnreadRecords('mis');
 
   const [tab, setTab]                 = useState('all');            // 'invoice' | 'pre_invoice' | 'all'
   const [filter, setFilter]           = useState(DEFAULT_FILTER);
@@ -443,6 +448,7 @@ export default function Mis() {
                 <>
                   {invoices.map(doc => (
                     <InvoiceCard key={doc._id} doc={doc}
+                      unread={isUnread(doc)}
                       selected={selectedDoc && String(doc._id) === String(selectedDoc._id)}
                       onSelect={handleSelect}
                       onEdit={openEditForm}

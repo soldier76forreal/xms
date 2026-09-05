@@ -32,6 +32,7 @@ import SectionTutorials from '../tutorials/sectionTutorials';
 import ProductCard from './productCard';
 import ShowProduct from './showProduct';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
+import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
 import ProductForm from './productForm';
 import ImportExportDialog from './importExportDialog';
@@ -126,6 +127,10 @@ const Inventory = () => {
   const invTotal      = useSelector((s) => s.invTotal);
   const invLoading    = useSelector((s) => s.invLoading);
   const invRefreshKey = useSelector((s) => s.invRefreshKey);
+
+  // Flags a product inserted by someone else since this user's last visit to
+  // Inventory as unread (dot + tinted card) — see useUnreadRecords.js.
+  const { isUnread } = useUnreadRecords('inventory');
   const invLookups    = useSelector((s) => s.invLookups);
   const invStats      = useSelector((s) => s.invStats);
   const invCategories = useSelector((s) => s.invCategories);
@@ -497,6 +502,7 @@ const Inventory = () => {
                 product={product}
                 apiBase={axiosGlobal.defaultTargetApi}
                 selected={product._id === selectedProductId}
+                unread={isUnread(product)}
                 onClick={() => setSelectedProductId(product._id)}
               />
             ))}

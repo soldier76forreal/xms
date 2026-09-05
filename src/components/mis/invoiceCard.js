@@ -20,6 +20,7 @@ import PaidIcon from '@mui/icons-material/Paid';
 import SendIcon from '@mui/icons-material/Send';
 
 import { usePermissions } from '../../contextApi/PermissionContext';
+import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 
 // status → chip colour (subtle alpha tints, dark/opacity language)
 const STATUS_META = {
@@ -41,7 +42,7 @@ const fmtDate  = (d) => {
   return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`;
 };
 
-export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, onConvert, onDelete, onAssign }) {
+export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, onPdf, onConvert, onDelete, onAssign }) {
   const { t } = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -52,7 +53,7 @@ export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, on
     TEXT_PRI: isDark ? 'rgba(255,255,255,0.87)' : theme.palette.text.primary,
     TEXT_SEC: isDark ? 'rgba(255,255,255,0.45)' : theme.palette.text.secondary,
     TEXT_TER: isDark ? 'rgba(255,255,255,0.2)'  : 'rgba(0,0,0,0.3)',
-    CARD_BG:  isDark ? '#181818' : theme.palette.background.paper,
+    CARD_BG:  unread ? unreadRowTint(isDark) : (isDark ? '#181818' : theme.palette.background.paper),
     SEL_BG:   isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
   };
 
@@ -76,6 +77,7 @@ export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, on
   return (
     <Box onClick={() => onSelect && onSelect(doc)}
       sx={{
+        position: 'relative',
         mx: 1, mb: 0.75, px: 1.5, py: 1.25, borderRadius: '12px', cursor: 'pointer',
         border: `1px solid ${selected ? (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.35)') : T.BD}`,
         bgcolor: selected ? T.SEL_BG : T.CARD_BG,
@@ -83,6 +85,7 @@ export default function InvoiceCard({ doc, selected, onSelect, onEdit, onPdf, on
         '&:hover': { borderColor: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.25)',
           '& .cardMenuBtn': { opacity: 1 } },
       }}>
+      {unread && <UnreadDot />}
 
       {/* row 1 — type icon + number + docType chip + status chip + menu */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>

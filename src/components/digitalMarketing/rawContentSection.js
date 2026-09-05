@@ -24,6 +24,8 @@ import RawContentDetail from './rawContentDetail';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
 import SectionTutorials from '../tutorials/sectionTutorials';
+import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
+import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 
 const STATUS_META = {
   working_on_it:   { labelKey: 'dm.statusWorkingOnIt', color: '#64b5f6' },
@@ -53,6 +55,10 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
   const total      = useSelector(s => s.dmRawContentsTotal);
   const loading    = useSelector(s => s.dmRawContentsLoading);
   const refreshKey = useSelector(s => s.dmRefreshKey);
+
+  // Flags a raw content batch inserted by someone else since this user's
+  // last visit as unread (dot + tinted row) — see useUnreadRecords.js.
+  const { isUnread } = useUnreadRecords('dmRawContent');
 
   const [status, setStatus]   = useState('all');
   const [page, setPage]       = useState(1);
@@ -184,6 +190,7 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
               <Box sx={{ position: 'relative' }}>
                 {items.map((item, i) => {
                   const isSel = selected && String(selected._id) === String(item._id);
+                  const isUnr = isUnread(item);
                   const st = STATUS_META[item.status] || STATUS_META.working_on_it;
                   return (
                     <Box key={item._id} onClick={() => handleSelect(item)}
@@ -197,10 +204,11 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
                         bgcolor: T.CTRL_BG, border: `1px solid ${st.color}55` }}>
                         {previewIcon(item) || <MovieIcon sx={{ fontSize: 13, color: st.color }} />}
                       </Box>
-                      <Box sx={{ flexGrow: 1, minWidth: 0, p: 1.25, borderRadius: '10px',
-                        bgcolor: isSel ? (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)') : 'transparent',
+                      <Box sx={{ position: 'relative', flexGrow: 1, minWidth: 0, p: 1.25, borderRadius: '10px',
+                        bgcolor: isSel ? (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)') : isUnr ? unreadRowTint(isDark) : 'transparent',
                         border: `1px solid ${isSel ? T.BD2 : 'transparent'}`,
                         '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' } }}>
+                        {isUnr && <UnreadDot />}
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.4 }}>
                           <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: T.TEXT_PRI, flexGrow: 1 }} noWrap>
                             {item.title?.trim()

@@ -18,6 +18,7 @@ import ImageIcon from '@mui/icons-material/Image';
 import EditIcon from '@mui/icons-material/Edit';
 import { useDispatch } from 'react-redux';
 import AuthContext from '../authAndConnections/auth';
+import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { actions, fetchVariants } from '../../store/store';
 
@@ -74,7 +75,7 @@ function MiniVariantRow({ variant }) {
   );
 }
 
-const ProductCard = ({ product, onClick, apiBase, selected }) => {
+const ProductCard = ({ product, onClick, apiBase, selected, unread }) => {
   const { t } = useTranslation();
   const theme    = useTheme();
   const isDark   = theme.palette.mode === 'dark';
@@ -124,12 +125,14 @@ const ProductCard = ({ product, onClick, apiBase, selected }) => {
   return (
     <Box
       sx={{
+        position: 'relative',
         border: '1.5px solid', borderColor: selected ? 'text.primary' : 'divider', borderRadius: '14px',
-        overflow: 'hidden', bgcolor: 'background.paper',
+        overflow: 'hidden', bgcolor: unread ? unreadRowTint(isDark) : 'background.paper',
         transition: 'border-color 0.15s',
         '&:hover': { borderColor: selected ? 'text.primary' : 'text.disabled' },
       }}
     >
+      {unread && <UnreadDot />}
       {/* Main card row */}
       <Box
         onClick={onClick}

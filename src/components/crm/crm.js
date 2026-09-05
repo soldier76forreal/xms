@@ -42,6 +42,7 @@ import CustomerDetail        from './customerDetail';
 import CustomerForm          from './customerForm';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
+import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
 import MyDesk                from './myDesk';
 import AssignCustomersDialog from './assignCustomersDialog';
 import ConfirmDialog         from '../../tools/modal/confirmDialog';
@@ -101,6 +102,10 @@ export default function Crm() {
   const total      = useSelector(s => s.crmTotal);
   const loading    = useSelector(s => s.crmLoading);
   const refreshKey = useSelector(s => s.crmRefreshKey);
+
+  // Flags a customer inserted by someone else since this user's last visit
+  // to CRM as unread (dot + tinted row) — see useUnreadRecords.js.
+  const { isUnread } = useUnreadRecords('crm');
 
   const [view, setView]               = useState('customers'); // 'customers' | 'myDesk'
   const [filter, setFilter]           = useState(DEFAULT_FILTER);
@@ -558,6 +563,7 @@ export default function Crm() {
                 <>
                   {customers.map(c => (
                     <CustomerCard key={c._id} customer={c}
+                      unread={isUnread(c)}
                       selected={selectedCustomer && String(c._id) === String(selectedCustomer._id)}
                       checked={checkedIds.has(c._id)}
                       showCheckbox={checkedIds.size > 0}
