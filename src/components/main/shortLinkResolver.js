@@ -6,18 +6,17 @@ import { useTranslation } from 'react-i18next';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import RestrictedAccessScreen from './restrictedAccessScreen';
-import FileShareView from '../fileManager/fileShareView';
 import { shortLinkPath } from '../../tools/pushNotifications';
 
 const POST_LOGIN_REDIRECT_KEY = 'xms_postLoginRedirect';
 
-// The /l/:code route target. Every "copy link" button across the app (and
-// File Manager's share links) points here. Access is NOT decided in this
-// component — a logged-out visitor is bounced to /logIn first, and once
-// logged in, non-file targets are handed off to that module's own already
-// permission/scope-gated detail route via a history.replace + `?open=`
-// (that route's own fetch is what actually enforces access, and shows
-// RestrictedAccessScreen itself on a 403 — see each section's detail view).
+// The /l/:code route target. Every "copy link" button across the app points
+// here. Access is NOT decided in this component — a logged-out visitor is
+// bounced to /logIn first, and once logged in, the target is handed off to
+// that module's own already permission/scope-gated detail route via a
+// history.replace + `?open=` (that route's own fetch is what actually
+// enforces access, and shows RestrictedAccessScreen itself on a 403 — see
+// each section's detail view).
 export default function ShortLinkResolver() {
   const { t }       = useTranslation();
   const { code }    = useParams();
@@ -43,11 +42,7 @@ export default function ShortLinkResolver() {
         });
         if (cancelled) return;
         const link = res.data;
-        if (link.module === 'files') {
-          setState({ status: 'files', link });
-        } else {
-          history.replace(shortLinkPath(link.module, link.entityType, link.entityId));
-        }
+        history.replace(shortLinkPath(link.module, link.entityType, link.entityId));
       } catch (err) {
         if (cancelled) return;
         setState({ status: err?.response?.status === 401 ? 'loggedOut' : 'notFound', link: null });
@@ -64,10 +59,6 @@ export default function ShortLinkResolver() {
 
   if (state.status === 'notFound') {
     return <RestrictedAccessScreen message={t('restricted.linkExpired')} />;
-  }
-
-  if (state.status === 'files') {
-    return <FileShareView code={code} />;
   }
 
   return (

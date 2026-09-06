@@ -6,10 +6,8 @@ import ThemeCtx from './contextApi/themeContext';
 import { LanguageContextProvider } from './contextApi/languageContext';
 import LanguageCtx from './contextApi/languageContext';
 import { PermissionProvider } from './contextApi/PermissionContext';
-import { BranchProvider } from './contextApi/BranchContext';
 
 import Main from './components/main/main';
-import Mis from './components/mis/mis';
 import LogIn from './components/authAndConnections/logIn';
 import AuthContext from './components/authAndConnections/auth';
 import { useContext, useEffect, useState, useMemo } from 'react';
@@ -39,7 +37,6 @@ const ThemedApp = () => {
   const dispatch = useDispatch();
   const refresh = useSelector((state) => state.refresh);
   const history = useHistory();
-  const misRefresh = useSelector((state) => state.misRefresh);
   const refreshTag = useSelector((state) => state.refreshTag);
   const userProfileRefresh = useSelector((state) => state.userProfileRefresh);
 
@@ -71,7 +68,7 @@ const ThemedApp = () => {
 
   useEffect(() => {
     dispatch(getFilter({ authCtx, axiosGlobal }));
-  }, [misRefresh]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     dispatch(getAllTags({ authCtx, axiosGlobal }));
@@ -110,7 +107,6 @@ const ThemedApp = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <PermissionProvider>
-      <BranchProvider>
         <SnackBar />
         {authCtx.isLoggedIn === true && <GhostBanner />}
         {authCtx.isLoggedIn === true && <PwaInstallPrompt />}
@@ -129,31 +125,7 @@ const ThemedApp = () => {
           )}
 
           {authCtx.isLoggedIn === true ? (
-            <Route path="/files">
-              <Main />
-            </Route>
-          ) : (
-            <Redirect to="/logIn" />
-          )}
-
-          {authCtx.isLoggedIn === true ? (
-            <Route path="/mis">
-              <Main />
-            </Route>
-          ) : (
-            <Redirect to="/logIn" />
-          )}
-
-          {authCtx.isLoggedIn === true ? (
             <Route path="/crm">
-              <Main />
-            </Route>
-          ) : (
-            <Redirect to="/logIn" />
-          )}
-
-          {authCtx.isLoggedIn === true ? (
-            <Route path="/inventory">
               <Main />
             </Route>
           ) : (
@@ -176,17 +148,6 @@ const ThemedApp = () => {
             <Redirect to="/logIn" />
           )}
 
-          {/* Job Reports — login-only, no permission gate for "my reports"
-              mode (same precedent as /myActivity below); "all reports" admin
-              mode is gated inside the component by jobReports:viewAll. */}
-          {authCtx.isLoggedIn === true ? (
-            <Route path="/jobReports">
-              <Main />
-            </Route>
-          ) : (
-            <Redirect to="/logIn" />
-          )}
-
           {authCtx.isLoggedIn === true ? (
             <Route path="/tutorials">
               <Main />
@@ -195,7 +156,7 @@ const ThemedApp = () => {
             <Redirect to="/logIn" />
           )}
 
-          {/* Self-service Activity Log + Job Reports — login-only, deliberately
+          {/* Self-service Activity Log — login-only, deliberately
               NOT gated by users:view (see main.js's isMyActivity branch). */}
           {authCtx.isLoggedIn === true ? (
             <Route path="/myActivity">
@@ -224,7 +185,6 @@ const ThemedApp = () => {
             <PublicLinkPage />
           </Route>
         </Switch>
-      </BranchProvider>
       </PermissionProvider>
     </ThemeProvider>
   );

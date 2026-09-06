@@ -9,7 +9,6 @@ import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import StoreIcon from '@mui/icons-material/Store';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import CheckIcon from '@mui/icons-material/Check';
@@ -24,7 +23,6 @@ import PageSection from '../../contextApi/pageSection';
 import ThemeCtx from '../../contextApi/themeContext';
 import LanguageCtx from '../../contextApi/languageContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
-import { useBranch } from '../../contextApi/BranchContext';
 import NormalMenuForProfile from './normalMenuForProfile';
 import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import { NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED } from './navConfig';
@@ -32,9 +30,9 @@ import { useSidebarWidth } from '../hooks/useSidebarWidth';
 import SidebarResizer from './sidebarResizer';
 
 // ── Phase 7 — desktop icon rail ───────────────────────────────────────────────
-// Layout (top → bottom): collapse toggle · section items · branch picker ·
-// theme toggle · profile avatar. Branch + theme moved here from the top bar
-// (2026-07-09). Desktop only — mobile keeps the drawer (leftSideNav.js).
+// Layout (top → bottom): collapse toggle · section items · theme toggle ·
+// profile avatar. Theme moved here from the top bar (2026-07-09). Desktop
+// only — mobile keeps the drawer (leftSideNav.js).
 const SideRail = ({ expanded, onToggle, onNavigate }) => {
   const theme       = useTheme();
   const isDark      = theme.palette.mode === 'dark';
@@ -46,7 +44,6 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
   const { language, setLanguage, languages } = useContext(LanguageCtx);
   const { t }       = useTranslation();
   const { can }     = usePermissions();
-  const { branches, activeBranchId, activeBranch, setActiveBranchId } = useBranch();
 
   // Resizable expanded rail — persisted per user (server-side, so it follows
   // them to another machine) rather than being a fixed 208px.
@@ -66,7 +63,6 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
   const closeProfileMenu = () => setAnchorEl(null);
   const logOut = () => { authCtx.logout(); setAnchorEl(null); };
 
-  const [branchAnchor, setBranchAnchor] = useState(null);
   const [langAnchor, setLangAnchor] = useState(null);
   const activeLanguage = languages.find((l) => l.code === language);
 
@@ -88,7 +84,7 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
     ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}`
     : ProfilePhoto;
 
-  // Shared row shell for the bottom utility rows (branch / theme)
+  // Shared row shell for the bottom utility rows (language / theme)
   const utilRow = (icon, label, onClick, tooltip) => {
     const row = (
       <Box onClick={onClick}
@@ -123,28 +119,6 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
         anchorEl={anchorEl}
         setAnchorEl={setAnchorEl}
       />
-
-      {/* Branch picker menu (works both collapsed + expanded) */}
-      <Menu
-        anchorEl={branchAnchor}
-        open={Boolean(branchAnchor)}
-        onClose={() => setBranchAnchor(null)}
-        anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
-        PaperProps={{ sx: { bgcolor: T.MENU_BG, border: `1px solid ${T.BD}`, borderRadius: '10px', minWidth: 180 } }}
-      >
-        {branches.map((b) => {
-          const active = String(b._id) === String(activeBranchId);
-          return (
-            <MenuItem key={b._id} dense
-              onClick={() => { setActiveBranchId(b._id); setBranchAnchor(null); }}
-              sx={{ fontSize: '0.82rem', gap: 1 }}>
-              <StoreIcon sx={{ fontSize: 15, color: T.ICON }} />
-              <Box sx={{ flexGrow: 1 }}>{b.name}</Box>
-              {active && <CheckIcon sx={{ fontSize: 15 }} />}
-            </MenuItem>
-          );
-        })}
-      </Menu>
 
       {/* Language picker menu */}
       <Menu
@@ -251,16 +225,9 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
           })}
         </Box>
 
-        {/* Bottom utilities: branch picker · theme toggle · profile */}
+        {/* Bottom utilities: theme toggle · profile */}
         <Box sx={{ pb: 1.5, display: 'flex', flexDirection: 'column', gap: '2px' }}>
           <Divider sx={{ borderColor: T.BD, mx: '8px', mb: 0.5 }} />
-
-          {branches.length > 1 && utilRow(
-            <StoreIcon />,
-            activeBranch?.name || 'Branch',
-            (e) => setBranchAnchor(e.currentTarget),
-            `Branch — ${activeBranch?.name || ''}`
-          )}
 
           {utilRow(
             <TranslateIcon />,

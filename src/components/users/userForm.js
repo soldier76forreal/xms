@@ -79,13 +79,11 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
   const [validation,     setValidation]     = useState(true);
   const [selectedRoles,    setSelectedRoles]    = useState([]);
   const [selectedGroups,   setSelectedGroups]   = useState([]);
-  const [selectedBranches, setSelectedBranches] = useState([]);
   const [avatarFile,     setAvatarFile]     = useState(null);
   const [avatarPreview,  setAvatarPreview]  = useState(null);
 
   const [roles,       setRoles]       = useState([]);
   const [groups,      setGroups]      = useState([]);
-  const [branches,    setBranches]    = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState('');
@@ -107,11 +105,10 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
       setAvatarPreview(thumb ? `${axiosGlobal.defaultTargetApi}${thumb}` : null);
       setSelectedRoles((userAccess?.roles  || []).map(String));
       setSelectedGroups((userAccess?.groups || []).map(String));
-      setSelectedBranches((userAccess?.branches || []).map(String));
     } else {
       setFirstName(''); setLastName(''); setPhoneNumber('');
       setCountryCode(DEFAULT_COUNTRY); setValidation(true);
-      setAvatarPreview(null); setSelectedRoles([]); setSelectedGroups([]); setSelectedBranches([]);
+      setAvatarPreview(null); setSelectedRoles([]); setSelectedGroups([]);
     }
 
     fetchMeta();
@@ -119,20 +116,16 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
 
   const fetchMeta = async () => {
     setLoadingMeta(true);
-    const [rolesRes, groupsRes, branchesRes] = await Promise.allSettled([
+    const [rolesRes, groupsRes] = await Promise.allSettled([
       isSuperAdmin
         ? authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/roles` })
         : Promise.resolve({ data: [] }),
       isSuperAdmin
         ? authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/groups` })
         : Promise.resolve({ data: [] }),
-      isSuperAdmin
-        ? authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/branches` })
-        : Promise.resolve({ data: [] }),
     ]);
     setRoles(rolesRes.status  === 'fulfilled' ? rolesRes.value.data  || [] : []);
     setGroups(groupsRes.status === 'fulfilled' ? groupsRes.value.data || [] : []);
-    setBranches(branchesRes.status === 'fulfilled' ? branchesRes.value.data || [] : []);
     setLoadingMeta(false);
   };
 
@@ -151,9 +144,6 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
   );
   const toggleGroup = (id) => setSelectedGroups(prev =>
     prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]
-  );
-  const toggleBranch = (id) => setSelectedBranches(prev =>
-    prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
   );
 
   const handleSave = async () => {
@@ -177,7 +167,6 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
             validation,
             roles:  selectedRoles,
             groups: selectedGroups,
-            ...(isSuperAdmin ? { branches: selectedBranches } : {}),
           },
         });
         savedId = res.data._id;
@@ -192,7 +181,6 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
             validation,
             roles:  selectedRoles,
             groups: selectedGroups,
-            ...(isSuperAdmin ? { branches: selectedBranches } : {}),
           },
         });
         savedId = user._id;
@@ -511,41 +499,6 @@ const UserForm = ({ mode = 'new', user, userAccess, open, onClose, onSave }) => 
                       color:   sel ? T.TEXT_PRI : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'),
                       border:  `1px solid ${sel ? (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)') : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)')}`,
                       '&:hover': { bgcolor: sel ? (isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)') },
-                      '& .MuiChip-label': { px: 1.25 },
-                      transition: 'all 0.12s',
-                    }}
-                  />
-                );
-              })}
-            </Box>
-          </Box>
-        )}
-
-        {/* Branches — superAdmin only. Each branch is an isolated Inventory + Invoice section. */}
-        {isSuperAdmin && branches.length > 0 && (
-          <Box>
-            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
-              {t('users.branchesLabel')}
-            </Typography>
-            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mb: 1 }}>
-              {t('users.branchesAccessHint')}
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-              {branches.map(b => {
-                const sel = selectedBranches.includes(String(b._id));
-                return (
-                  <Chip
-                    key={b._id}
-                    label={b.name}
-                    onClick={() => toggleBranch(String(b._id))}
-                    size="small"
-                    sx={{
-                      height: 26, fontSize: '0.75rem', fontWeight: sel ? 600 : 400,
-                      cursor: 'pointer', borderRadius: '6px',
-                      bgcolor: sel ? T.BTN_BG : (isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)'),
-                      color:   sel ? T.BTN_CLR : (isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)'),
-                      border:  sel ? 'none' : `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`,
-                      '&:hover': { bgcolor: sel ? (isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)') : (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.09)') },
                       '& .MuiChip-label': { px: 1.25 },
                       transition: 'all 0.12s',
                     }}

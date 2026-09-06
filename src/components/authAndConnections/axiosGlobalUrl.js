@@ -17,14 +17,15 @@ export const AxiosGlobalProvider = (props) =>{
     const host = window.location.hostname;
     const local = isLocalHost(host);
 
-    // Production (launched 2026-07-12): the app lives at xms.lazulitemarble.com
-    // and talks to the two HTTPS APIs below (reverse-proxied to local ports
-    // 7130/7256 on the server). Local dev keeps host-based URLs so the same
-    // build works via localhost or a LAN IP.
+    // Production (DamoonCars re-scope, 2026-09-06 — placeholder domains, update
+    // once the real DamoonCars domain is registered): the app lives at
+    // xms.damooncars.com and talks to the two HTTPS APIs below (reverse-proxied
+    // to local ports 8130/8256 on the server). Local dev keeps host-based URLs
+    // so the same build works via localhost or a LAN IP.
     const contextValue = {
-        defaultTargetApi: local ? `http://${host}:4789` : 'https://api.lazulitemarble.com',
-        authTargetApi:    local ? `http://${host}:2681` : 'https://auth.lazulitemarble.com',
-        externalLink:'https://xms.lazulitemarble.com',
+        defaultTargetApi: local ? `http://${host}:8130` : 'https://api.damooncars.com',
+        authTargetApi:    local ? `http://${host}:8256` : 'https://auth.damooncars.com',
+        externalLink:'https://xms.damooncars.com',
         originLink:window.location.origin
     }
     return <AxiosGlobal.Provider value={contextValue}>{props.children}</AxiosGlobal.Provider>

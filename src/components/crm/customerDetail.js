@@ -6,7 +6,6 @@ import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Skeleton from '@mui/material/Skeleton';
 import Tooltip from '@mui/material/Tooltip';
@@ -27,7 +26,6 @@ import PersonAddIcon      from '@mui/icons-material/PersonAdd';
 import PersonIcon         from '@mui/icons-material/Person';
 import FlagIcon           from '@mui/icons-material/Flag';
 import SwapHorizIcon      from '@mui/icons-material/SwapHoriz';
-import StarIcon           from '@mui/icons-material/Star';
 import SendIcon           from '@mui/icons-material/Send';
 import ChatIcon           from '@mui/icons-material/Chat';
 import DeleteOutlineIcon  from '@mui/icons-material/DeleteOutline';
@@ -40,11 +38,10 @@ import Dialog from '@mui/material/Dialog';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { Can, usePermissions } from '../../contextApi/PermissionContext';
+import { usePermissions } from '../../contextApi/PermissionContext';
 import { useDispatch } from 'react-redux';
 import { deleteCrmCustomer } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
-import RequestsTab from './tabs/requestsTab';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
@@ -78,11 +75,10 @@ const ACTIVITY_CFG = {
   note:           { labelKey: 'activityNoteAdded',       Icon: NoteAltIcon,     color: 'rgb(255,183,77)'  },
   assigned:       { labelKey: 'activityAssigned',        Icon: PersonIcon,      color: 'rgb(149,100,237)' },
   status_changed: { labelKey: 'activityStatusChanged',   Icon: FlagIcon,        color: 'rgb(255,100,130)' },
-  interest:       { labelKey: 'activityInterestUpdated', Icon: StarIcon,        color: 'rgb(100,200,200)' },
   follow_up_set:  { labelKey: 'activityFollowUpSet',     Icon: ScheduleIcon,    color: 'rgb(255,183,77)'  },
 };
 
-const TAB_KEYS = ['tabDetails', 'tabCommunication', 'tabRequests'];
+const TAB_KEYS = ['tabDetails', 'tabCommunication'];
 
 const STATUS_KEY = {
   new: 'statusNew', active: 'statusActive', follow_up: 'statusFollowUp', won: 'statusWon', lost: 'statusLost',
@@ -267,9 +263,6 @@ const CustomerDetail = ({ customer, onClose, onEdit, onDeleted, onLoaded, initia
         {activeTab === 1 && (
           <CommunicationTab customerId={customer._id} T={T} isDark={isDark} authCtx={authCtx} axiosGlobal={axiosGlobal} />
         )}
-        {activeTab === 2 && (
-          <RequestsTab customer={customer} />
-        )}
       </Box>
 
       {/* ── Delete confirm dialog ── */}
@@ -439,30 +432,6 @@ const DetailsTab = ({ customer, T, isDark, authCtx, axiosGlobal }) => {
           </Box>
         )}
       </InfoRow>
-
-      {/* ── Interested products ── */}
-      {(customer.interestedProducts || []).length > 0 && (
-        <>
-          <SectionLabel label={t('crm.sectionInterestedProducts')} T={T} mt={2} />
-          {customer.interestedProducts.map((ip, i) => (
-            <InfoRow key={i} label={t('crm.labelProductN', { n: i + 1 })} T={T}>
-              <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, fontWeight: 600 }}>
-                  {ip.productName || t('crm.unknownProduct')}
-                </Typography>
-                <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC, fontFamily: ip.variantCode ? 'monospace' : undefined }}>
-                  {ip.variantCode || t('crm.anyVariety')}
-                </Typography>
-                {ip.note && (
-                  <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>
-                    {ip.note}
-                  </Typography>
-                )}
-              </Box>
-            </InfoRow>
-          ))}
-        </>
-      )}
 
       {/* ── Meta ── */}
       <SectionLabel label={t('crm.sectionMeta')} T={T} mt={2} />

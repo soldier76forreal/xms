@@ -36,34 +36,28 @@ export async function subscribeToPush(authCtx, axiosGlobal) {
 export function notifPath(entityType, entityId) {
   const id = entityId ? String(entityId) : '';
   switch (entityType) {
-    case 'invoice':       return id ? `/mis?open=${id}` : '/mis';
     case 'rawContent':    return id ? `/digitalMarketing?dm=raw&open=${id}`   : '/digitalMarketing?dm=raw';
     case 'readyToUpload': return id ? `/digitalMarketing?dm=ready&open=${id}` : '/digitalMarketing?dm=ready';
     case 'task':          return '/crm';
     case 'customer':      return id ? `/crm?open=${id}` : '/crm';
     case 'user':          return id ? `/users?open=${id}` : '/users';
     case 'tutorial':      return id ? `/tutorials?open=${id}` : '/tutorials';
-    case 'jobReport':     return id ? `/jobReports?open=${id}` : '/jobReports';
     default:              return null;
   }
 }
 
 // Maps a resolved short link (module/entityType/entityId) to the in-app route
 // that shows the target record. Separate from notifPath (above) because short
-// links also cover entity types notifications never point at (product/variant).
-// Both funnel into the same `?open=<id>` convention each section listens for.
+// links cover entity types notifications never point at. Both funnel into the
+// same `?open=<id>` convention each section listens for.
 export function shortLinkPath(module, entityType, entityId) {
   const id = entityId ? String(entityId) : '';
   switch (entityType) {
     case 'customer':      return id ? `/crm?open=${id}` : '/crm';
-    case 'invoice':       return id ? `/mis?open=${id}` : '/mis';
-    case 'product':       return id ? `/inventory?open=${id}` : '/inventory';
-    case 'variant':       return id ? `/inventory?open=${id}&variant=1` : '/inventory';
     case 'rawContent':    return id ? `/digitalMarketing?dm=raw&open=${id}`   : '/digitalMarketing?dm=raw';
     case 'readyToUpload': return id ? `/digitalMarketing?dm=ready&open=${id}` : '/digitalMarketing?dm=ready';
     case 'user':          return id ? `/users?open=${id}` : '/users';
     case 'tutorial':      return id ? `/tutorials?open=${id}` : '/tutorials';
-    case 'jobReport':     return id ? `/jobReports?open=${id}` : '/jobReports';
     default:              return '/';
   }
 }

@@ -114,7 +114,7 @@ export default function Crm() {
   const [formMode, setFormMode]       = useState('new');
   const [formCustomer, setFormCustomer] = useState(null);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [focusTab, setFocusTab]       = useState(0);   // which CustomerDetail tab to open on (0=Details,1=Communication,2=Requests)
+  const [focusTab, setFocusTab]       = useState(0);   // which CustomerDetail tab to open on (0=Details,1=Communication)
   const [checkedIds, setCheckedIds]   = useState(new Set());
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [page, setPage]               = useState(1);

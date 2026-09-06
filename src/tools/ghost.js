@@ -2,7 +2,7 @@
 //
 // Entering and leaving ghost mode swaps the token in localStorage and then does
 // a FULL PAGE RELOAD, deliberately. The app caches identity in many places
-// (Redux slices, PermissionContext, BranchContext, per-section local state), so
+// (Redux slices, PermissionContext, per-section local state), so
 // hot-swapping who you are inside a live SPA would leave stale fragments of the
 // previous identity on screen — exactly the kind of bug that makes an
 // impersonation feature untrustworthy. A reload rebuilds everything from the

@@ -26,19 +26,18 @@ import { pushSupported, enablePushNotifications } from '../../tools/pushNotifica
 const NOTIF_TYPES = [
   { key: 'tasks',         labelKey: 'users.notifTypeTasks' },
   { key: 'assignments',   labelKey: 'users.notifTypeAssignments' },
-  { key: 'invoices',      labelKey: 'users.notifTypeInvoices' },
   { key: 'dmChat',        labelKey: 'users.notifTypeDmChat' },
   { key: 'readyToUpload', labelKey: 'users.notifTypeReadyToUpload' },
 ];
 // pushEnabled/telegramEnabled are CHANNEL-level toggles (whole channel
 // on/off) — distinct from the per-category keys above and from Telegram's
 // own linked/unlinked state.
-const DEFAULT_NOTIF_PREFS = { tasks: true, assignments: true, invoices: true, dmChat: true, readyToUpload: true, pushEnabled: true, telegramEnabled: true };
+const DEFAULT_NOTIF_PREFS = { tasks: true, assignments: true, dmChat: true, readyToUpload: true, pushEnabled: true, telegramEnabled: true };
 
 // ── My Profile modal ──────────────────────────────────────────────────────────
 // Self-service: any user edits their OWN name + profile picture (backend:
 // PUT /users/me/profile · POST /users/me/avatar — no permission key needed).
-// Admin-only fields (roles/branches/active) stay in the Users section forms.
+// Admin-only fields (roles/active) stay in the Users section forms.
 const MyProfileModal = ({ open, onClose }) => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);

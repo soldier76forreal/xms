@@ -96,7 +96,7 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
     const copied = await copyText(caption);
     dispatch(actions.setShowSnackBar({
       status: true,
-      msg: copied ? t('files.copied') : caption,
+      msg: copied ? t('common.copied') : caption,
       type: copied ? 'success' : 'info',
     }));
   };

@@ -7,13 +7,12 @@ import { useTranslation } from 'react-i18next';
 
 import AuthContext from '../authAndConnections/auth';
 import UserLogs from './userLogs';
-import JobReportSection from './jobReportSection';
 
 // ── My Activity — a self-service version of the Users-section "user logs"
-// view (Activity Log + Job Reports), reachable by ANY logged-in user via the
-// profile popup, even without users:view (see main.js's isMyActivity branch
-// + the self-bypass on GET /users/:id/logs and /:id/jobReports). Someone who
-// can't see the People section still needs to see their own history.
+// view (Activity Log), reachable by ANY logged-in user via the profile popup,
+// even without users:view (see main.js's isMyActivity branch + the self-bypass
+// on GET /users/:id/logs). Someone who can't see the People section still
+// needs to see their own history.
 const MyActivityPage = () => {
   const authCtx = useContext(AuthContext);
   const theme   = useTheme();
@@ -44,8 +43,6 @@ const MyActivityPage = () => {
         borderRadius: '14px', mb: 2.5 }}>
         <UserLogs userId={selfId} />
       </Box>
-
-      <JobReportSection userId={selfId} isSelf />
     </Box>
   );
 };

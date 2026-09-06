@@ -4,25 +4,15 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
-import InventoryIcon from '@mui/icons-material/Inventory2Outlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
-import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import MovieOutlinedIcon from '@mui/icons-material/MovieOutlined';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import SwapVertIcon from '@mui/icons-material/SwapVert';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import ImageIcon from '@mui/icons-material/Image';
-import TuneIcon from '@mui/icons-material/Tune';
 import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import PaidIcon from '@mui/icons-material/Paid';
-import Inventory2Icon from '@mui/icons-material/Inventory2';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import HistoryIcon from '@mui/icons-material/History';
 import { useTheme } from '@mui/material';
@@ -53,8 +43,6 @@ const useT = () => {
 const SECTIONS = [
   { id: 'all',              labelKey: 'users.logSectionAll' },
   { id: 'crm',              labelKey: 'users.logSectionCrm' },
-  { id: 'inventory',        labelKey: 'users.logSectionInventory' },
-  { id: 'mis',              labelKey: 'users.logSectionInvoices' },
   { id: 'digitalMarketing', labelKey: 'users.logSectionDm' },
 ];
 
@@ -72,13 +60,8 @@ const Pill = ({ active, onClick, children, T }) => (
   </Button>
 );
 
-// ── Change type config (shared across inventory/crm/mis — same visual language) ─
+// ── Change type config (shared across crm/digitalMarketing — same visual language) ─
 const CHANGE_TYPE = {
-  // inventory
-  quantity:          { icon: SwapVertIcon,             color: '#64B5F6', labelKey: 'users.ctQuantity'  },
-  price:             { icon: AttachMoneyIcon,          color: '#FFB74D', labelKey: 'users.ctPrice'     },
-  media:             { icon: ImageIcon,                color: '#BA68C8', labelKey: 'users.ctMedia'     },
-  spec:              { icon: TuneIcon,                 color: '#90CAF9', labelKey: 'users.ctSpec'      },
   // shared
   created:           { icon: AddCircleOutlineIcon,     color: '#81C784', labelKey: 'users.ctCreated'   },
   status:            { icon: ToggleOffIcon,            color: '#F06292', labelKey: 'users.ctStatus'    },
@@ -91,17 +74,10 @@ const CHANGE_TYPE = {
   status_changed:    { icon: ToggleOffIcon,            color: '#F06292', labelKey: 'users.ctStatus'    },
   interest:          { icon: FavoriteBorderIcon,       color: '#F48FB1', labelKey: 'users.ctInterest'  },
   follow_up_set:     { icon: EventAvailableIcon,       color: '#4DB6AC', labelKey: 'users.ctFollowUp'  },
-  // mis
-  converted:         { icon: SwapHorizIcon,            color: '#BA68C8', labelKey: 'users.ctConverted' },
-  pdf_generated:     { icon: PictureAsPdfIcon,         color: '#90A4AE', labelKey: 'users.ctPdf'       },
-  payment:           { icon: PaidIcon,                 color: '#81C784', labelKey: 'users.ctPayment'   },
-  stock_decremented: { icon: Inventory2Icon,           color: '#64B5F6', labelKey: 'users.ctStock'     },
 };
 
 const SECTION_ICON = {
-  inventory:        InventoryIcon,
   crm:              PeopleAltOutlinedIcon,
-  mis:              ReceiptLongOutlinedIcon,
   digitalMarketing: MovieOutlinedIcon,
 };
 
@@ -128,32 +104,18 @@ const relTime = (d, t) => {
 
 // ── Single log entry ──────────────────────────────────────────────────────────
 const LogEntry = ({ entry, isLast, T, t }) => {
-  const ct       = CHANGE_TYPE[entry.changeType] || CHANGE_TYPE.spec;
+  const ct       = CHANGE_TYPE[entry.changeType] || CHANGE_TYPE.updated;
   const Icon     = ct.icon;
-  const SectIcon = SECTION_ICON[entry.section] || InventoryIcon;
+  const SectIcon = SECTION_ICON[entry.section] || HistoryIcon;
 
   // Build description line
   let description = '';
-  if (entry.changeType === 'quantity') {
-    const sign   = entry.delta > 0 ? '+' : '';
-    description  = `${sign}${entry.delta} ${entry.unit || ''}`;
-    if (entry.reason) description += ` — ${entry.reason}`;
-  } else if (entry.changeType === 'price') {
-    description = `${entry.oldValue} → ${entry.newValue} ${entry.currency || 'AED'}`;
-  } else if (entry.changeType === 'media') {
-    const action = entry.mediaRef?.action || '';
-    const name   = entry.mediaRef?.name   || 'file';
-    description  = action === 'added' ? t('users.logMediaAdded', { name }) : t('users.logMediaRemoved', { name });
-  } else if (entry.changeType === 'created') {
+  if (entry.changeType === 'created') {
     if (entry.section === 'crm') description = t('users.logNewCustomer');
-    else if (entry.section === 'mis') description = entry.docType === 'invoice' ? t('users.logNewInvoice') : t('users.logNewQuote');
     else if (entry.section === 'digitalMarketing') {
       description = entry.subjectType === 'readyToUpload' ? t('users.logNewReadyToUpload') : t('users.logNewRawContent');
       if (entry.productName) description += ` — ${entry.productName}`;
     }
-    else description = entry.subjectType === 'product' ? t('users.logNewProduct') : t('users.logNewVariant');
-  } else if (entry.changeType === 'spec') {
-    description = entry.field ? `${entry.field}: ${entry.oldValue ?? '—'} → ${entry.newValue ?? '—'}` : t('users.logSpecUpdated');
   } else if (entry.changeType === 'status' || entry.changeType === 'status_changed') {
     description = t('users.logStatusPrefix', { old: entry.oldValue ?? '—', new: entry.newValue ?? '—' });
   } else if (entry.changeType === 'updated') {
@@ -168,14 +130,6 @@ const LogEntry = ({ entry, isLast, T, t }) => {
     description = entry.body || t('users.logInterestAdded');
   } else if (entry.changeType === 'follow_up_set') {
     description = entry.newValue ? t('users.logFollowUpFor', { date: formatDate(entry.newValue) }) : t('users.logFollowUpSet');
-  } else if (entry.changeType === 'converted') {
-    description = t('users.logConvertedToInvoice');
-  } else if (entry.changeType === 'pdf_generated') {
-    description = t('users.logPdfGenerated');
-  } else if (entry.changeType === 'payment') {
-    description = entry.body || t('users.logPaymentRecorded');
-  } else if (entry.changeType === 'stock_decremented') {
-    description = entry.body || t('users.logStockDecremented');
   }
 
   return (
@@ -217,17 +171,6 @@ const LogEntry = ({ entry, isLast, T, t }) => {
             '& .MuiChip-label': { px: 0.75 },
           }} />
 
-          {/* Product / doc reference */}
-          {entry.productCode && (
-            <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC, fontFamily: 'monospace' }}>
-              {entry.productCode}
-            </Typography>
-          )}
-          {entry.docNumber && (
-            <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC, fontFamily: 'monospace' }}>
-              {entry.docType === 'invoice' ? 'INV' : 'QT'} #{entry.docNumber}
-            </Typography>
-          )}
           {entry.productName && (
             <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC }}>
               {entry.productName}

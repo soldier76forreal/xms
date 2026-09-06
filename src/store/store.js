@@ -6,7 +6,6 @@ import thunk from 'redux-thunk'; // Import the redux-thunk middleware
 import { getImageSize  } from 'react-image-size';
 import fileDownload from 'js-file-download';
 import Fuse from 'fuse.js';
-import { printHtmlDocument } from '../tools/printDocument';
 
 const getRootFileEntries = (items = [], wrapAsFile = false) => {
   const rootEntry = items.find(e => e?.doc === 'root');
@@ -401,136 +400,6 @@ export const deleteCrmCustomer = createAsyncThunk('overallAssets/deleteCrmCustom
 
 
 
-//------------------------------MIS start (Phase 6 rebuild — Session 44)
-
-export const fetchMisInvoices = createAsyncThunk('overallAssets/fetchMisInvoices', async (theData, { dispatch }) => {
-  dispatch(actions.misInvSetLoading(true));
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices`,
-      params: theData.params || {},
-    });
-    const isFirstPage = !theData.params?.page || theData.params.page <= 1;
-    if (isFirstPage) {
-      dispatch(actions.misInvSetList({ data: response.data.data, total: response.data.total }));
-    } else {
-      dispatch(actions.misInvAppendList({ data: response.data.data, total: response.data.total }));
-    }
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load invoices', type: 'error' }));
-  } finally {
-    dispatch(actions.misInvSetLoading(false));
-  }
-});
-
-export const fetchMisInvoice = createAsyncThunk('overallAssets/fetchMisInvoice', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}`,
-    });
-    dispatch(actions.misInvSetSelected(response.data));
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load document', type: 'error' }));
-  }
-});
-
-export const deleteMisInvoice = createAsyncThunk('overallAssets/deleteMisInvoice', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'delete',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}`,
-      // restoreStock is only meaningful when the invoice actually decremented
-      // stock (server ignores it otherwise) — see stockDecremented on the doc.
-      params: theData.restoreStock ? { restoreStock: true } : undefined,
-    });
-    dispatch(actions.misInvRemove(theData.id));
-    dispatch(actions.setShowSnackBar({
-      status: true,
-      msg: response.data?.stockRestored ? 'Document deleted — stock restored' : 'Document deleted',
-      type: 'success',
-    }));
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete document', type: 'error' }));
-  }
-});
-
-export const convertMisPreInvoice = createAsyncThunk('overallAssets/convertMisPreInvoice', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'post',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}/convert`,
-    });
-    dispatch(actions.misInvBumpRefresh());
-    dispatch(actions.setShowSnackBar({ status: true, msg: `Converted — invoice #${response.data.docNumber}`, type: 'success' }));
-    return response.data;
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to convert pre-invoice', type: 'error' }));
-    throw err;
-  }
-});
-
-export const updateMisPayment = createAsyncThunk('overallAssets/updateMisPayment', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'put',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}/payment`,
-      data: theData.data,
-    });
-    dispatch(actions.misInvUpsert(response.data));
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Payment recorded', type: 'success' }));
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to record payment', type: 'error' }));
-  }
-});
-
-// downloads the rendered PDF as a blob → triggers the browser save
-// Invoice/quotation PDF — generated CLIENT-SIDE via the browser's print engine
-// (see tools/printDocument.js) instead of server Puppeteer. Fetches the same
-// HTML the preview uses, then opens the browser's "Save as PDF" dialog.
-export const downloadMisInvoicePdf = createAsyncThunk('overallAssets/downloadMisInvoicePdf', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}/html`,
-      params: theData.lang ? { lang: theData.lang } : {},
-      responseType: 'text',
-    });
-    printHtmlDocument(response.data);
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to open the document', type: 'error' }));
-  }
-});
-
-export const fetchMisCompanyProfile = createAsyncThunk('overallAssets/fetchMisCompanyProfile', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/company-profile`,
-    });
-    dispatch(actions.misSetCompanyProfile(response.data));
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load company settings', type: 'error' }));
-  }
-});
-
-export const saveMisCompanyProfile = createAsyncThunk('overallAssets/saveMisCompanyProfile', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'put',
-      url: `${theData.axiosGlobal.defaultTargetApi}/mis/company-profile`,
-      data: theData.data,
-    });
-    dispatch(actions.misSetCompanyProfile(response.data));
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Settings saved', type: 'success' }));
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to save settings', type: 'error' }));
-  }
-});
-
-//------------------------------MIS end
-
 //------------------------------Digital Marketing start (Phase 8)
 
 export const fetchRawContents = createAsyncThunk('overallAssets/fetchRawContents', async (theData, { dispatch }) => {
@@ -863,56 +732,6 @@ export const deleteLinkPage = createAsyncThunk('overallAssets/deleteLinkPage', a
   }
 });
 
-export const fetchWhatsappShares = createAsyncThunk('overallAssets/fetchWhatsappShares', async (theData, { dispatch }) => {
-  dispatch(actions.dmWhatsappSetLoading(true));
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/whatsapp-shares`,
-      params: theData.params || {},
-    });
-    const isFirstPage = !theData.params?.page || theData.params.page <= 1;
-    if (isFirstPage) {
-      dispatch(actions.dmWhatsappSetList({ data: response.data.data, total: response.data.total }));
-    } else {
-      dispatch(actions.dmWhatsappAppendList({ data: response.data.data, total: response.data.total }));
-    }
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load WhatsApp shares', type: 'error' }));
-  } finally {
-    dispatch(actions.dmWhatsappSetLoading(false));
-  }
-});
-
-export const fetchWhatsappShare = createAsyncThunk('overallAssets/fetchWhatsappShare', async (theData, { dispatch }) => {
-  dispatch(actions.dmWhatsappSetSelectedErrorStatus(null));
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/whatsapp-shares/${theData.id}`,
-    });
-    dispatch(actions.dmWhatsappSetSelected(response.data));
-  } catch (err) {
-    dispatch(actions.dmWhatsappSetSelectedErrorStatus(err?.response?.status || null));
-    if (err?.response?.status !== 403) {
-      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load WhatsApp share', type: 'error' }));
-    }
-  }
-});
-
-export const deleteWhatsappShare = createAsyncThunk('overallAssets/deleteWhatsappShare', async (theData, { dispatch }) => {
-  try {
-    await theData.authCtx.jwtInst({
-      method: 'delete',
-      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/whatsapp-shares/${theData.id}`,
-    });
-    dispatch(actions.dmWhatsappRemove(theData.id));
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'WhatsApp share deleted', type: 'success' }));
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete WhatsApp share', type: 'error' }));
-  }
-});
-
 //------------------------------Digital Marketing end
 
 //------------------------------Tutorial Center start
@@ -1065,360 +884,6 @@ export const fetchUserDirectory = createAsyncThunk('users/fetchUserDirectory', a
 //------------------------------user directory
 
 
-//------------------------------inventory start
-
-export const fetchProducts = createAsyncThunk('inventory/fetchProducts', async (theData, { dispatch }) => {
-  dispatch(actions.invSetLoading(true));
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products`,
-      params: theData.params || {},
-    });
-    const isFirstPage = !theData.params?.skip || theData.params.skip <= 0;
-    if (isFirstPage) {
-      dispatch(actions.invSetProducts({ data: response.data.data, total: response.data.total }));
-    } else {
-      dispatch(actions.invAppendProducts({ data: response.data.data, total: response.data.total }));
-    }
-  } catch (err) {
-    dispatch(actions.invSetError(err?.response?.data?.message || 'Failed to load products'));
-  } finally {
-    dispatch(actions.invSetLoading(false));
-  }
-});
-
-export const fetchProduct = createAsyncThunk('inventory/fetchProduct', async (theData, { dispatch }) => {
-  dispatch(actions.invSetCurrentProductLoading(true));
-  dispatch(actions.invSetCurrentProductErrorStatus(null));
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.id}`,
-    });
-    dispatch(actions.invSetCurrentProduct(response.data.data));
-  } catch (err) {
-    dispatch(actions.invSetCurrentProduct(null));
-    // A short-link/notification deep link can hand this a product the viewer
-    // isn't scoped/permitted to see — remember the status so showProduct.js
-    // can render the Restricted Access screen instead of a blank panel.
-    dispatch(actions.invSetCurrentProductErrorStatus(err?.response?.status || null));
-  } finally {
-    dispatch(actions.invSetCurrentProductLoading(false));
-  }
-});
-
-export const fetchVariants = createAsyncThunk('inventory/fetchVariants', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.productId}/variants`,
-    });
-    dispatch(actions.invSetVariants(response.data.data));
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-const toast = (dispatch, msg, type = 'success') =>
-  dispatch(actions.setShowSnackBar({ status: true, msg, type }));
-
-export const createProduct = createAsyncThunk('inventory/createProduct', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products`,
-    data: theData.data,
-  });
-  dispatch(actions.invRefresh());
-  toast(dispatch, 'Product created');
-  return response.data.data;
-});
-
-export const updateProduct = createAsyncThunk('inventory/updateProduct', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'put',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.id}`,
-    data: theData.data,
-  });
-  dispatch(actions.invRefresh());
-  if (!theData.silent) toast(dispatch, 'Product updated');
-  return response.data.data;
-});
-
-export const createVariant = createAsyncThunk('inventory/createVariant', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants`,
-    data: theData.data,
-  });
-  const pid = theData.data.productId;
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: pid }));
-  dispatch(fetchVariants({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, productId: pid }));
-  toast(dispatch, 'Variant added');
-  return response.data;
-});
-
-export const updateVariant = createAsyncThunk('inventory/updateVariant', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'put',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.id}`,
-    data: theData.data,
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  dispatch(fetchVariants({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, productId: theData.productId }));
-  toast(dispatch, 'Variant updated');
-  return response.data.data;
-});
-
-export const deleteVariant = createAsyncThunk('inventory/deleteVariant', async (theData, { dispatch }) => {
-  await theData.authCtx.jwtInst({
-    method: 'delete',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.id}`,
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  dispatch(fetchVariants({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, productId: theData.productId }));
-  toast(dispatch, 'Variant deleted');
-});
-
-export const adjustStock = createAsyncThunk('inventory/adjustStock', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.id}/adjust`,
-    data: { delta: theData.delta, reason: theData.reason },
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  dispatch(fetchVariants({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, productId: theData.productId }));
-  toast(dispatch, `Stock adjusted (${theData.delta > 0 ? '+' : ''}${theData.delta})`);
-  return response.data.data;
-});
-
-export const updatePrice = createAsyncThunk('inventory/updatePrice', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'put',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.id}/price`,
-    data: { price: theData.price, currency: theData.currency || 'AED' },
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  dispatch(fetchVariants({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, productId: theData.productId }));
-  toast(dispatch, `Price updated to ${theData.price} AED`);
-  return response.data.data;
-});
-
-export const uploadInventoryMedia = createAsyncThunk('inventory/uploadMedia', async (theData, { dispatch }) => {
-  const url = theData.subjectType === 'variant'
-    ? `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.subjectId}/media`
-    : `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.subjectId}/media`;
-
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url,
-    data: theData.formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  toast(dispatch, 'Media uploaded');
-  return response.data.data;
-});
-
-export const uploadVariantMediaBatch = createAsyncThunk('inventory/uploadVariantMediaBatch', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.variantId}/media-batch`,
-    data: theData.formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: theData.onUploadProgress,
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  toast(dispatch, 'Media batch uploaded');
-  return response.data.data;
-});
-
-export const downloadInventoryMediaFile = createAsyncThunk('inventory/downloadMediaFile', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: theData.fileUrl,
-      responseType: 'blob',
-    });
-    const url  = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = theData.fileName || 'file';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Could not download file', type: 'error' }));
-  }
-});
-
-export const downloadVariantMediaBatchZip = createAsyncThunk('inventory/downloadMediaBatchZip', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/variants/${theData.variantId}/media-batch/zip`,
-      responseType: 'blob',
-    });
-    const url  = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${theData.variantCode || 'variant'}-media-batch.zip`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Could not download media batch', type: 'error' }));
-  }
-});
-
-export const deleteInventoryMedia = createAsyncThunk('inventory/deleteMedia', async (theData, { dispatch }) => {
-  await theData.authCtx.jwtInst({
-    method: 'delete',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/media/${theData.fileId}`,
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  toast(dispatch, 'Media deleted');
-});
-
-// Product-level media as a real batch (single XHR, real onUploadProgress) —
-// PURELY ADDITIVE, mirrors uploadVariantMediaBatch but with none of that
-// route's delete-and-replace semantics (product media accumulates, it isn't
-// a versioned set like a variant's batch).
-export const uploadProductMediaBatch = createAsyncThunk('inventory/uploadProductMediaBatch', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.productId}/media-batch`,
-    data: theData.formData,
-    headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: theData.onUploadProgress,
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  toast(dispatch, 'Media uploaded');
-  return response.data.data;
-});
-
-export const bulkDeleteInventoryMedia = createAsyncThunk('inventory/bulkDeleteMedia', async (theData, { dispatch }) => {
-  await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/media/bulk`,
-    data: { fileIds: theData.fileIds, action: 'delete' },
-  });
-  dispatch(fetchProduct({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, id: theData.productId }));
-  toast(dispatch, 'Media deleted');
-});
-
-export const bulkDownloadInventoryMediaZip = createAsyncThunk('inventory/bulkDownloadMediaZip', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'post',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/media/bulk`,
-      data: { fileIds: theData.fileIds, action: 'zip' },
-      responseType: 'blob',
-    });
-    const url  = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'inventory-media.zip';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Could not download media', type: 'error' }));
-  }
-});
-
-export const fetchInventoryLogs = createAsyncThunk('inventory/fetchLogs', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.productId}/logs`,
-      params: theData.params || {},
-    });
-    dispatch(actions.invSetLogs({ data: response.data.data, total: response.data.total }));
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-export const parseInventoryCode = createAsyncThunk('inventory/parseCode', async (theData, { dispatch }) => {
-  dispatch(actions.invSetParsedCodeLoading(true));
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'post',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/parse-code`,
-      data: { code: theData.code },
-    });
-    dispatch(actions.invSetParsedCode(response.data.parsed));
-  } catch (err) {
-    dispatch(actions.invSetParsedCode(null));
-  } finally {
-    dispatch(actions.invSetParsedCodeLoading(false));
-  }
-});
-
-export const fetchInventoryLookups = createAsyncThunk('inventory/fetchLookups', async (theData, { dispatch, getState }) => {
-  if (getState().invLookupsLoaded) return;
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/lookups`,
-    });
-    dispatch(actions.invSetLookups(response.data));
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-export const fetchInvStats = createAsyncThunk('inventory/fetchStats', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/stats`,
-      params: theData.params || {},
-    });
-    dispatch(actions.invSetStats(response.data));
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-export const fetchCategories = createAsyncThunk('inventory/fetchCategories', async (theData, { dispatch }) => {
-  try {
-    const response = await theData.authCtx.jwtInst({
-      method: 'get',
-      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/categories`,
-    });
-    dispatch(actions.invSetCategories(response.data.data));
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-export const createCategory = createAsyncThunk('inventory/createCategory', async (theData, { dispatch }) => {
-  const response = await theData.authCtx.jwtInst({
-    method: 'post',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/categories`,
-    data: { name: theData.name, description: theData.description },
-  });
-  dispatch(fetchCategories({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal }));
-  toast(dispatch, `Category "${theData.name}" created`);
-  return response.data.data;
-});
-
-export const deleteCategory = createAsyncThunk('inventory/deleteCategory', async (theData, { dispatch }) => {
-  await theData.authCtx.jwtInst({
-    method: 'delete',
-    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/categories/${theData.id}`,
-  });
-  dispatch(fetchCategories({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal }));
-  toast(dispatch, 'Category deleted');
-});
-
-//------------------------------inventory end
-
 
 
 
@@ -1429,7 +894,6 @@ const dataSlice = createSlice({
     currentImageGallery:[], tagsToShow:[], downloadNavMenu:[], tagsForList:[] , refreshTag:0 ,data: [], routeLink:[] , selectedItems:[] , currentDisplay:{} , float:[] , loading: false, error: null , tempDoc:{} , uploadQueue:[] , downloadQueue:[] ,routeLinkFilePicker:[] ,currentDisplayFilePicker:{}, floatFilePicker:[] , allTags:[] , refresh:1 , lastQueueCount:0 , onGoingUpload:false , newLinkCreationLoading:false,
     //------------------------------overall assets
     filterCrm:{},
-    filterMis:{},
     userProfile:{},
     userProfileRefresh:2,
     showSnackBar:{status:false , msg:'' , type:''},
@@ -1444,13 +908,6 @@ const dataSlice = createSlice({
     crmLoading: false,
     crmSelectedCustomer: null,
     crmRefreshKey: 0,
-    //------------------------------mis (Phase 6 rebuild)
-    misInvoices: [],
-    misInvoicesTotal: 0,
-    misInvoicesLoading: false,
-    misSelectedInvoice: null,
-    misRefreshKey: 0,
-    misCompanyProfile: null,
     //------------------------------digital marketing (Phase 8)
     dmRawContents: [],
     dmRawContentsTotal: 0,
@@ -1469,11 +926,6 @@ const dataSlice = createSlice({
     dmLinkPagesLoading: false,
     dmSelectedLinkPage: null,
     dmSelectedLinkPageErrorStatus: null,
-    dmWhatsappShares: [],
-    dmWhatsappSharesTotal: 0,
-    dmWhatsappSharesLoading: false,
-    dmSelectedWhatsappShare: null,
-    dmSelectedWhatsappShareErrorStatus: null,
     dmRefreshKey: 0,
     //------------------------------tutorial center
     tutorials: [],
@@ -1483,39 +935,6 @@ const dataSlice = createSlice({
     selectedTutorial: null,
     selectedTutorialErrorStatus: null,
     tutorialRefreshKey: 0,
-    //------------------------------mis
-    misRefresh:'',
-    invoicesToShow:[],
-    misAllInvoices:[],
-    misLimit:20,
-    newInvoice:false,
-    editInvoice:false,
-    misHasMore:false,
-    misLoading:{loading:false , retry:false},
-    //------------------------------inventory
-    invProducts: [],
-    invTotal: 0,
-    invLoading: false,
-    invError: null,
-    invRefreshKey: '',
-    invCurrentProduct: null,
-    invCurrentProductLoading: false,
-    invCurrentProductErrorStatus: null,
-    invVariants: [],
-    invLogs: [],
-    invLogsTotal: 0,
-    invLookups: { stoneTypes: [], grades: [], units: [], quarries: [] },
-    invLookupsLoaded: false,
-    invParsedCode: null,
-    invParsedCodeLoading: false,
-    invShowNewProduct: false,
-    invEditProduct: null,
-    invShowNewVariant: false,
-    invEditVariant: null,
-    invCurrentVariant: null,
-    invShowVariantDetail: false,
-    invCategories: [],
-    invStats: null,
   },
   reducers: {
     //------------------------------file manager start
@@ -1873,7 +1292,6 @@ const dataSlice = createSlice({
     //------------------------------overall assets start
       setFilter(state , action){
         state.filterCrm = action.payload.filterMemory.crm
-        state.filterMis = action.payload.filterMemory.mis
       },
       setShowSnackBar(state , action){
         state.showSnackBar = {status:action.payload.status,msg:action.payload.msg,type:action.payload.type}
@@ -1932,42 +1350,6 @@ const dataSlice = createSlice({
         state.crmRefreshKey = state.crmRefreshKey + 1;
       },
     //------------------------------crm reducers end
-    //------------------------------mis reducers (Phase 6 rebuild)
-      misInvSetList(state, action) {
-        state.misInvoices      = action.payload.data;
-        state.misInvoicesTotal = action.payload.total;
-      },
-      misInvAppendList(state, action) {
-        state.misInvoices      = [...state.misInvoices, ...(action.payload.data || [])];
-        state.misInvoicesTotal = action.payload.total;
-      },
-      misInvSetLoading(state, action) {
-        state.misInvoicesLoading = action.payload;
-      },
-      misInvSetSelected(state, action) {
-        state.misSelectedInvoice = action.payload;
-      },
-      misInvRemove(state, action) {
-        state.misInvoices      = state.misInvoices.filter(d => String(d._id) !== String(action.payload));
-        state.misInvoicesTotal = Math.max(0, state.misInvoicesTotal - 1);
-        if (state.misSelectedInvoice && String(state.misSelectedInvoice._id) === String(action.payload)) {
-          state.misSelectedInvoice = null;
-        }
-      },
-      misInvUpsert(state, action) {
-        const idx = state.misInvoices.findIndex(d => String(d._id) === String(action.payload._id));
-        if (idx >= 0) state.misInvoices[idx] = action.payload;
-        if (state.misSelectedInvoice && String(state.misSelectedInvoice._id) === String(action.payload._id)) {
-          state.misSelectedInvoice = { ...state.misSelectedInvoice, ...action.payload };
-        }
-      },
-      misInvBumpRefresh(state) {
-        state.misRefreshKey = state.misRefreshKey + 1;
-      },
-      misSetCompanyProfile(state, action) {
-        state.misCompanyProfile = action.payload;
-      },
-    //------------------------------mis reducers end
     //------------------------------digital marketing reducers (Phase 8)
       dmRawSetList(state, action) {
         state.dmRawContents      = action.payload.data;
@@ -2071,30 +1453,6 @@ const dataSlice = createSlice({
           state.dmSelectedLinkPage = { ...state.dmSelectedLinkPage, ...action.payload };
         }
       },
-      dmWhatsappSetList(state, action) {
-        state.dmWhatsappShares      = action.payload.data;
-        state.dmWhatsappSharesTotal = action.payload.total;
-      },
-      dmWhatsappAppendList(state, action) {
-        state.dmWhatsappShares      = [...state.dmWhatsappShares, ...(action.payload.data || [])];
-        state.dmWhatsappSharesTotal = action.payload.total;
-      },
-      dmWhatsappSetLoading(state, action) {
-        state.dmWhatsappSharesLoading = action.payload;
-      },
-      dmWhatsappSetSelected(state, action) {
-        state.dmSelectedWhatsappShare = action.payload;
-      },
-      dmWhatsappSetSelectedErrorStatus(state, action) {
-        state.dmSelectedWhatsappShareErrorStatus = action.payload;
-      },
-      dmWhatsappRemove(state, action) {
-        state.dmWhatsappShares      = state.dmWhatsappShares.filter(d => String(d._id) !== String(action.payload));
-        state.dmWhatsappSharesTotal = Math.max(0, state.dmWhatsappSharesTotal - 1);
-        if (state.dmSelectedWhatsappShare && String(state.dmSelectedWhatsappShare._id) === String(action.payload)) {
-          state.dmSelectedWhatsappShare = null;
-        }
-      },
     //------------------------------digital marketing reducers end
     //------------------------------tutorial center reducers
       tutSetList(state, action) {
@@ -2171,112 +1529,6 @@ const dataSlice = createSlice({
         state.userDirectoryLoaded = true;
       },
     //------------------------------user directory
-
-    
-
-
-
-    //------------------------------Mis
-      misRefresh(state , action){
-        state.misRefresh = Math.random()
-      },
-      misLoadingStatus(state , action){
-        state.misLoading = {loading:action.payload.loading , retry:action.payload.retry}
-      },
-      misSetInvoices(state , action){
-        
-        var arr = action.payload.rs.filter(e=>{return e.doc !==null});
-        state.misAllInvoices = arr
-        var temp = [];
-        if(arr.length !==0){
-            if(state.misLimit>arr.length){
-                state.misLimit = arr.length;
-                temp.length = 0
-                for(var i = 0 ; i < state.misLimit; i++){
-                    if(arr !== undefined){
-                        temp.push(arr[i]);
-                    }
-                }
-                state.invoicesToShow = temp
-                state.misHasMore = false
-            }else if(state.misLimit <=arr.length){
-                state.misHasMore = true
-                state.misLimit = Math.min(state.misLimit + 20, arr.length);
-                temp.length =0
-                for(var j = 0 ; j < state.misLimit ; j++){
-                    if(arr[j] !== undefined){
-                        temp.push(arr[j]);
-                    }
-                }
-                state.invoicesToShow = temp
-            }
-        }else{
-          state.invoicesToShow = arr
-        }
-      
-      },
-      toggleNewInvoice(state , action){
-        state.newInvoice = !state.newInvoice
-      },
-      toggleEditInvoice(state , action){
-        state.editInvoice = !state.editInvoice
-      },
-      misNotfiMore(state , action){
-        var temp = [];
-        if(state.misAllInvoices.length !==0){
-            if(state.misLimit>state.misAllInvoices.length){
-                state.misLimit = state.misAllInvoices.length
-                temp.length =0
-                for(var i = 0 ; i < state.misLimit; i++){
-                    if(state.misAllInvoices[i] !== undefined){
-                        temp.push(state.misAllInvoices[i]);
-                    }
-                }
-                state.invoicesToShow = temp
-                state.misHasMore = false
-            }else if(state.misLimit<=state.misAllInvoices.length){
-              state.misHasMore = true                    
-              state.misLimit = state.misLimit+20
-                temp.length =0
-                for(var j = 0 ; j < state.misLimit; j++){
-                    if(state.misAllInvoices[j] !== undefined){
-                        temp.push(state.misAllInvoices[j]);
-                    }
-                    
-                }
-                state.invoicesToShow =temp
-
-            }
-        }else{
-          state.invoicesToShow = state.misAllInvoices
-        }
-    
-  },
-    //------------------------------Mis
-
-    //------------------------------inventory
-    invSetLoading(state, action)            { state.invLoading = action.payload; },
-    invSetError(state, action)              { state.invError = action.payload; },
-    invSetProducts(state, action)           { state.invProducts = action.payload.data; state.invTotal = action.payload.total; },
-    invAppendProducts(state, action)        { state.invProducts = [...state.invProducts, ...action.payload.data]; state.invTotal = action.payload.total; },
-    invRefresh(state)                       { state.invRefreshKey = Math.random().toString(); },
-    invSetCurrentProduct(state, action)     { state.invCurrentProduct = action.payload; },
-    invSetCurrentProductLoading(state, action) { state.invCurrentProductLoading = action.payload; },
-    invSetCurrentProductErrorStatus(state, action) { state.invCurrentProductErrorStatus = action.payload; },
-    invSetVariants(state, action)           { state.invVariants = action.payload; },
-    invSetLogs(state, action)               { state.invLogs = action.payload.data; state.invLogsTotal = action.payload.total; },
-    invSetLookups(state, action)            { state.invLookups = action.payload; state.invLookupsLoaded = true; },
-    invSetParsedCode(state, action)         { state.invParsedCode = action.payload; },
-    invSetParsedCodeLoading(state, action)  { state.invParsedCodeLoading = action.payload; },
-    invToggleNewProduct(state)              { state.invShowNewProduct = !state.invShowNewProduct; },
-    invSetEditProduct(state, action)        { state.invEditProduct = action.payload; },
-    invToggleNewVariant(state)              { state.invShowNewVariant = !state.invShowNewVariant; },
-    invSetEditVariant(state, action)        { state.invEditVariant = action.payload; },
-    invSetCurrentVariant(state, action)     { state.invCurrentVariant = action.payload; },
-    invToggleVariantDetail(state)           { state.invShowVariantDetail = !state.invShowVariantDetail; },
-    invSetCategories(state, action)         { state.invCategories = action.payload; },
-    invSetStats(state, action)              { state.invStats = action.payload; },
-    //------------------------------inventory
 
   },
   extraReducers:(builder) =>{

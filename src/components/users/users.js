@@ -12,7 +12,6 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import ShieldIcon from '@mui/icons-material/Shield';
 import GroupsIcon from '@mui/icons-material/Groups';
-import StoreIcon from '@mui/icons-material/Store';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import IconButton from '@mui/material/IconButton';
@@ -29,7 +28,6 @@ import ShowUser from './showUser';
 import UserForm from './userForm';
 import RolesManager from './rolesManager';
 import GroupsManager from './groupsManager';
-import BranchesManager from './branchesManager';
 import TaskList from './taskList';
 import RolePanel from './rolePanel';
 import GroupPanel from './groupPanel';
@@ -76,14 +74,12 @@ const EMPTY_ICONS = {
   users:    PeopleAltIcon,
   roles:    ShieldIcon,
   groups:   GroupsIcon,
-  branches: StoreIcon,
   tasks:    AssignmentIcon,
 };
 const EMPTY_LABEL_KEYS = {
   users:    'users.selectUserToViewDetails',
   roles:    'users.selectRoleToViewPerms',
   groups:   'users.selectGroupToViewMembers',
-  branches: 'users.branchesEmptyHint',
   tasks:    'users.selectTaskToViewDetails',
 };
 const EmptyPanel = ({ tab, T }) => {
@@ -368,13 +364,12 @@ const Users = () => {
   // Mobile: when something is selected, show detail full-screen
   const mobileDetail = !isMd && !!currentSelection;
 
-  // Roles / Groups / Branches are superAdmin-only (backend gates them with
+  // Roles / Groups are superAdmin-only (backend gates them with
   // requireSuperAdmin — never a permission key). Tasks stays permission-gated.
   const tabs = [
     { id: 'users',  labelKey: 'users.tabUsers'  },
     ...(isSuperAdmin ? [{ id: 'roles',    labelKey: 'users.tabRoles'    }] : []),
     ...(isSuperAdmin ? [{ id: 'groups',   labelKey: 'users.tabGroups'   }] : []),
-    ...(isSuperAdmin ? [{ id: 'branches', labelKey: 'users.tabBranches' }] : []),
     ...(can('tasks:view') ? [{ id: 'tasks', labelKey: 'users.tabTasks' }] : []),
   ];
 
@@ -461,9 +456,6 @@ const Users = () => {
               )}
               {tab === 'groups' && (
                 <GroupsManager onSelect={setSelectedGroup} selectedId={selectedGroup?._id} />
-              )}
-              {tab === 'branches' && (
-                <BranchesManager />
               )}
               {tab === 'tasks' && (
                 <TaskList onSelect={setSelectedTask} selectedId={selectedTask?._id} refreshKey={taskRefreshKey} />

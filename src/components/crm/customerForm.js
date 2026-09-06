@@ -14,13 +14,12 @@ import CircularProgress from '@mui/material/CircularProgress';
 import InputBase from '@mui/material/InputBase';
 import InputAdornment from '@mui/material/InputAdornment';
 import Autocomplete from '@mui/material/Autocomplete';
-import { useTheme, useMediaQuery } from '@mui/material';
+import { useTheme } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 
 import CloseIcon      from '@mui/icons-material/Close';
 import AddIcon        from '@mui/icons-material/Add';
-import SearchIcon     from '@mui/icons-material/Search';
 import BusinessIcon   from '@mui/icons-material/Business';
 import PersonIcon     from '@mui/icons-material/Person';
 import WhatsAppIcon   from '@mui/icons-material/WhatsApp';
@@ -28,8 +27,6 @@ import CallIcon       from '@mui/icons-material/Call';
 import EmailIcon      from '@mui/icons-material/Email';
 import TelegramIcon   from '@mui/icons-material/Telegram';
 import InstagramIcon  from '@mui/icons-material/Instagram';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -37,7 +34,6 @@ import { actions } from '../../store/store';
 import useForm, { required } from '../../tools/hooks/useForm';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import COUNTRIES from './util/countryData';
-import { useBranch } from '../../contextApi/BranchContext';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -97,7 +93,6 @@ const buildInitial = (customer) => {
       attractedBy: '',
       status: 'new',
       tags: [],
-      interestedProducts: [],
       explanations: '',
     };
   }
@@ -136,7 +131,6 @@ const buildInitial = (customer) => {
     attractedBy:  pi.attractedBy || '',
     status:       customer.status || 'new',
     tags:         customer.tags   || [],
-    interestedProducts: customer.interestedProducts || [],
     explanations: customer.explanations || '',
   };
 };
@@ -150,7 +144,6 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
-  const { activeBranchId } = useBranch();
 
   const T = {
     BG:       isDark ? '#0d0d0d' : theme.palette.background.paper,
@@ -177,9 +170,6 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   const [saving,       setSaving]       = useState(false);
   const [dupError,     setDupError]     = useState(null);
   const [tagInput,     setTagInput]     = useState('');
-  const [prodSearch,   setProdSearch]   = useState('');
-  const [prodResults,  setProdResults]  = useState([]);
-  const [prodLoading,  setProdLoading]  = useState(false);
   const [discardOpen,  setDiscardOpen]  = useState(false);
 
   // Live phone-number duplicate check — the phone field sits at the top of
@@ -197,8 +187,6 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
       form.setValues(buildInitial(customer));
       setDupError(null);
       setTagInput('');
-      setProdSearch('');
-      setProdResults([]);
       setPhoneCheck({ status: 'idle', match: null });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -234,26 +222,6 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   }, [form.values.phoneNumber, mode, customer?._id]);
 
   const phoneVerified = phoneCheck.status === 'clear' || phoneCheck.status === 'error';
-
-  // Product search (debounced) — scoped to the currently active branch, since
-  // Inventory is fully branch-isolated (interested products must come from the
-  // branch the user is actually working in, not every branch's catalog).
-  useEffect(() => {
-    if (!prodSearch.trim() || !activeBranchId) { setProdResults([]); return; }
-    const timer = setTimeout(async () => {
-      setProdLoading(true);
-      try {
-        const res = await authCtx.jwtInst({
-          method: 'get',
-          url: `${axiosGlobal.defaultTargetApi}/crm/products-lookup`,
-          params: { search: prodSearch, branchId: activeBranchId },
-        });
-        setProdResults(Array.isArray(res.data) ? res.data : []);
-      } catch (_) {}
-      setProdLoading(false);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [prodSearch, activeBranchId, authCtx, axiosGlobal]);
 
   // Cities for the selected country
   const cityOptions = useMemo(() => {
@@ -304,35 +272,6 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   };
 
   const removeTag = (t) => handleChange('tags', values.tags.filter(x => x !== t));
-
-  // variant = undefined → whole-product (any variety) interest, matches an existing
-  // entry by productId alone. variant given → a specific SKU, matches by variantId
-  // (several varieties of the same root product can coexist as separate entries).
-  const addProduct = (prod, variant) => {
-    const key = variant ? variant._id : prod._id;
-    const already = values.interestedProducts.some(ip =>
-      variant ? String(ip.variantId) === String(key) : (!ip.variantId && String(ip.productId) === String(key))
-    );
-    if (already) return;
-    handleChange('interestedProducts', [
-      ...values.interestedProducts,
-      {
-        productId: prod._id,
-        productCode: variant ? variant.code : prod.code,
-        productName: prod.name,
-        ...(variant ? { variantId: variant._id } : {}),
-        note: '',
-      },
-    ]);
-  };
-
-  const removeProduct = (ip) =>
-    handleChange('interestedProducts', values.interestedProducts.filter(x => x !== ip));
-
-  const updateProductNote = (ip, note) =>
-    handleChange('interestedProducts', values.interestedProducts.map(x => x === ip ? { ...x, note } : x));
-
-  const [expandedProdId, setExpandedProdId] = useState(null);
 
   // ── submit ─────────────────────────────────────────────────────────────────
 
@@ -388,11 +327,6 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
       commHandles:       values.commHandles,
       status:            values.status,
       tags:              values.tags,
-      interestedProducts: values.interestedProducts.map(ip => ({
-        productId: ip.productId,
-        ...(ip.variantId ? { variantId: ip.variantId } : {}),
-        note: ip.note || '',
-      })),
       explanations: values.explanations,
     };
 
@@ -729,118 +663,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
             onChange={e => handleChange('address', e.target.value)}
             sx={{ ...fieldSx, mb: 1.5 }} />
 
-          {/* ── 4. Interested products ── */}
-          <SectionHeader label={t('crm.sectionInterestedProducts')} T={T} />
-
-          {values.interestedProducts.length > 0 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
-              {values.interestedProducts.map((ip, idx) => (
-                <Box key={ip.variantId || `${ip.productId}-${idx}`} sx={{ p: 1, borderRadius: '9px',
-                  bgcolor: T.SURF, border: `1px solid ${T.BD}` }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, fontWeight: 600, fontFamily: ip.variantId ? 'monospace' : undefined }}>
-                      {ip.productCode || ip.productName || String(ip.productId).slice(-6)}
-                    </Typography>
-                    <IconButton size="small" onClick={() => removeProduct(ip)}
-                      sx={{ color: T.TEXT_TER, width: 22, height: 22, '&:hover': { color: T.ERR } }}>
-                      <CloseIcon sx={{ fontSize: 13 }} />
-                    </IconButton>
-                  </Box>
-                  {ip.productName && ip.productCode !== ip.productName && (
-                    <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 0.5 }}>
-                      {ip.productName}{ip.variantId ? t('crm.specificVarietySuffix') : t('crm.anyVarietySuffix')}
-                    </Typography>
-                  )}
-                  <TextField size="small" fullWidth placeholder={t('crm.notePlaceholderOptional')}
-                    value={ip.note || ''}
-                    onChange={e => updateProductNote(ip, e.target.value)}
-                    inputProps={{ style: { fontSize: '0.78rem', padding: '4px 8px' } }}
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '7px', bgcolor: T.CTRL_BG },
-                      '& fieldset': { borderColor: T.BD } }} />
-                </Box>
-              ))}
-            </Box>
-          )}
-
-          <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75,
-              bgcolor: T.CTRL_BG, borderRadius: '9px', px: 1.25, py: '6px',
-              border: `1px solid ${T.BD}`, mb: 0.75 }}>
-              <SearchIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />
-              <InputBase value={prodSearch} onChange={e => setProdSearch(e.target.value)}
-                placeholder={t('crm.searchInventoryPlaceholder')}
-                sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, flex: 1,
-                  '& input::placeholder': { color: T.TEXT_TER } }} />
-              {prodLoading && <CircularProgress size={12} sx={{ color: T.TEXT_TER }} />}
-            </Box>
-
-            {prodResults.length > 0 && (
-              <Box sx={{ borderRadius: '9px', border: `1px solid ${T.BD}`, overflow: 'hidden' }}>
-                {prodResults.map((prod, i) => {
-                  const wholeAdded = values.interestedProducts.some(ip => !ip.variantId && String(ip.productId) === String(prod._id));
-                  const hasVariants = prod.variants && prod.variants.length > 0;
-                  const expanded = expandedProdId === prod._id;
-                  return (
-                    <Box key={prod._id} sx={{ borderTop: i > 0 ? `1px solid ${T.BD}` : 'none' }}>
-                      <Box
-                        onClick={() => hasVariants ? setExpandedProdId(expanded ? null : prod._id) : addProduct(prod)}
-                        sx={{ px: 1.5, py: 1, display: 'flex', alignItems: 'center',
-                          justifyContent: 'space-between', cursor: 'pointer',
-                          '&:hover': { bgcolor: T.CTRL_BG } }}>
-                        <Box>
-                          <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>
-                            {prod.code}
-                          </Typography>
-                          {prod.name && (
-                            <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>{prod.name}</Typography>
-                          )}
-                        </Box>
-                        {hasVariants
-                          ? (expanded ? <ExpandLessIcon sx={{ fontSize: 16, color: T.TEXT_TER }} /> : <ExpandMoreIcon sx={{ fontSize: 16, color: T.TEXT_TER }} />)
-                          : (wholeAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>{t('crm.added')}</Typography>)}
-                      </Box>
-
-                      {expanded && hasVariants && (
-                        <Box sx={{ bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                          <Box onClick={() => !wholeAdded && addProduct(prod)}
-                            sx={{ px: 2.5, py: 0.75, display: 'flex', justifyContent: 'space-between',
-                              cursor: wholeAdded ? 'default' : 'pointer',
-                              '&:hover': { bgcolor: wholeAdded ? undefined : T.CTRL_BG } }}>
-                            <Typography sx={{ fontSize: '0.74rem', color: wholeAdded ? T.TEXT_TER : T.TEXT_PRI, fontStyle: 'italic' }}>
-                              {t('crm.anyVariety')}
-                            </Typography>
-                            {wholeAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>{t('crm.added')}</Typography>}
-                          </Box>
-                          {prod.variants.map((v) => {
-                            const variantAdded = values.interestedProducts.some(ip => String(ip.variantId) === String(v._id));
-                            return (
-                              <Box key={v._id} onClick={() => !variantAdded && addProduct(prod, v)}
-                                sx={{ px: 2.5, py: 0.75, display: 'flex', justifyContent: 'space-between',
-                                  alignItems: 'center', cursor: variantAdded ? 'default' : 'pointer',
-                                  '&:hover': { bgcolor: variantAdded ? undefined : T.CTRL_BG } }}>
-                                <Typography sx={{ fontSize: '0.74rem', fontFamily: 'monospace',
-                                  color: variantAdded ? T.TEXT_TER : T.TEXT_PRI }}>
-                                  {v.code}
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
-                                    {v.quantity != null ? `${v.quantity} ${v.unit}` : ''}{v.price != null ? ` · ${v.price} AED` : ''}
-                                  </Typography>
-                                  {variantAdded && <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER }}>{t('crm.added')}</Typography>}
-                                </Box>
-                              </Box>
-                            );
-                          })}
-                        </Box>
-                      )}
-                    </Box>
-                  );
-                })}
-              </Box>
-            )}
-          </Box>
-
-          {/* ── 5. Status & tags ── */}
+          {/* ── 4. Status & tags ── */}
           <SectionHeader label={t('crm.sectionStatusTags')} T={T} />
 
           <FormControl size="small" fullWidth sx={{ mb: 1.5 }}>
@@ -886,7 +709,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
             </IconButton>
           </Box>
 
-          {/* ── 6. Notes ── */}
+          {/* ── 5. Notes ── */}
           <SectionHeader label={t('crm.sectionNotes')} T={T} />
           <TextField label={t('crm.fieldExplanationsNotes')} size="small" fullWidth multiline minRows={3}
             value={values.explanations}

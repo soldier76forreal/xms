@@ -6,7 +6,6 @@ import Tooltip from '@mui/material/Tooltip';
 import MovieIcon from '@mui/icons-material/Movie';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LinkIcon from '@mui/icons-material/Link';
-import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useHistory } from 'react-router-dom';
@@ -14,13 +13,11 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import RawContentSection from './rawContentSection';
 import ReadyToUploadSection from './readyToUploadSection';
 import LinkPageSection from './linkPageSection';
-import WhatsappShareSection from './whatsappShareSection';
 
 const TABS = [
   { id: 'rawContent',    Icon: MovieIcon,       labelKey: 'dm.tabRawContents' },
   { id: 'readyToUpload', Icon: CloudUploadIcon, labelKey: 'dm.tabReadyToUpload' },
   { id: 'linkPages',     Icon: LinkIcon,        labelKey: 'dm.tabLinkPages' },
-  { id: 'whatsappShares', Icon: WhatsAppIcon,   labelKey: 'dm.tabWhatsappShares' },
 ];
 
 // Phase 8 — Digital Marketing. Two sub-sections: Raw Contents (batch upload +
@@ -111,9 +108,7 @@ export default function DigitalMarketing() {
           ? <RawContentSection openId={tab === 'rawContent' ? openId : null} onOpenHandled={() => setOpenId(null)} />
           : tab === 'readyToUpload'
           ? <ReadyToUploadSection openId={tab === 'readyToUpload' ? openId : null} onOpenHandled={() => setOpenId(null)} />
-          : tab === 'linkPages'
-          ? <LinkPageSection />
-          : <WhatsappShareSection />}
+          : <LinkPageSection />}
       </Box>
     </Box>
   );

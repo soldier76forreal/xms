@@ -16,8 +16,6 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
-import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import { useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
@@ -30,18 +28,15 @@ import { LANGUAGES } from '../../i18n';
 import UserForm from './userForm';
 import UserLogs from './userLogs';
 import AssignCustomersDialog from '../crm/assignCustomersDialog';
-import InvoiceDetailDialog from '../mis/invoiceDetailDialog';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import { enterGhost } from '../../tools/ghost';
-import JobReportSection from './jobReportSection';
 
 // Per-type push categories (must match backend notificationPrefs keys).
 const NOTIF_TYPES = [
   { key: 'tasks',         labelKey: 'users.notifTypeTasks' },
   { key: 'assignments',   labelKey: 'users.notifTypeAssignments' },
-  { key: 'invoices',      labelKey: 'users.notifTypeInvoicesShort' },
   { key: 'dmChat',        labelKey: 'users.notifTypeDmChat' },
   { key: 'readyToUpload', labelKey: 'users.notifTypeReadyToUpload' },
 ];
@@ -50,19 +45,6 @@ const TASK_STATUS_CFG = {
   open:    { labelKey: 'users.taskStatusOpen',    color: '#64B5F6', bg: 'rgba(100,181,246,0.1)' },
   claimed: { labelKey: 'users.taskStatusClaimed', color: '#FFB74D', bg: 'rgba(255,183,77,0.1)'  },
   done:    { labelKey: 'users.taskStatusDone',    color: '#81C784', bg: 'rgba(129,199,132,0.1)' },
-};
-
-// mirrors invoiceCard.js's STATUS_META (kept local — showUser only needs the label/color)
-const INVOICE_STATUS_CFG = {
-  draft:          { labelKey: 'mis.statusDraft',     color: '#9e9e9e' },
-  sent:           { labelKey: 'mis.statusSent',      color: '#64b5f6' },
-  accepted:       { labelKey: 'mis.statusAccepted',  color: '#81c784' },
-  converted:      { labelKey: 'mis.statusConverted', color: '#ba68c8' },
-  expired:        { labelKey: 'mis.statusExpired',   color: '#ffb74d' },
-  issued:         { labelKey: 'mis.statusIssued',    color: '#64b5f6' },
-  paid:           { labelKey: 'mis.statusPaid',      color: '#81c784' },
-  partially_paid: { labelKey: 'mis.statusPartial',   color: '#ffb74d' },
-  cancelled:      { labelKey: 'mis.statusCancelled', color: '#e57373' },
 };
 
 const getInitials = (user) => {
@@ -117,8 +99,6 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
     BTN_CLR:  isDark ? '#000000'                 : '#ffffff',
   };
 
-  const { can } = usePermissions();
-
   const [data,         setData]         = useState(null);
   const [loading,      setLoading]      = useState(true);
   const [errorStatus,  setErrorStatus]  = useState(null);
@@ -127,9 +107,6 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
   const [crmTasks,     setCrmTasks]     = useState([]);
   const [crmLoading,   setCrmLoading]   = useState(false);
   const [assignOpen,   setAssignOpen]   = useState(false);
-  const [assignedInvoices, setAssignedInvoices] = useState([]);
-  const [misLoading,       setMisLoading]       = useState(false);
-  const [viewInvoice,      setViewInvoice]      = useState(null);
   // Ghost capability of the CURRENT viewer (not of the user being viewed) —
   // decides whether the ghost controls render at all. Fetched rather than
   // derived from permissions because ghost rights are a separate access axis
@@ -197,24 +174,6 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
   }, [authCtx, axiosGlobal, userId]);
 
   useEffect(() => { fetchCrmTasks(); }, [fetchCrmTasks]);
-
-  // "Send to" reverse lookup — invoices/pre-invoices assigned to this user.
-  // Branch isolation applies to the VIEWER (see the backend route), so an
-  // admin only sees assigned docs in branches they themselves hold.
-  const fetchAssignedInvoices = useCallback(async () => {
-    if (!can('mis:view')) return;
-    setMisLoading(true);
-    try {
-      const res = await authCtx.jwtInst({
-        method: 'get',
-        url: `${axiosGlobal.defaultTargetApi}/mis/invoices/assigned/${userId}`,
-      });
-      setAssignedInvoices(res.data.data || []);
-    } catch (_) {}
-    setMisLoading(false);
-  }, [authCtx, axiosGlobal, userId]);   // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => { fetchAssignedInvoices(); }, [fetchAssignedInvoices]);
 
   // Ghost mode is disabled by default on the server (503 + ghostDisabled), so a
   // failure here simply means the controls stay hidden — never an error toast.
@@ -714,69 +673,10 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
             )}
           </Box>
 
-          {/* ── Assigned Invoices ("Send to") ───────────────────────────────── */}
-          {can('mis:view') && (
-            <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                <ReceiptLongIcon sx={{ fontSize: 14, color: T.TEXT_TER, mr: 0.75 }} />
-                <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase',
-                  letterSpacing: 1, flexGrow: 1 }}>
-                  {t('users.assignedInvoicesHeader')}
-                </Typography>
-              </Box>
-
-              {misLoading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-                  <CircularProgress size={18} sx={{ color: T.TEXT_TER }} />
-                </Box>
-              ) : assignedInvoices.length === 0 ? (
-                <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, textAlign: 'center', py: 2 }}>
-                  {t('users.noInvoicesAssigned')}
-                </Typography>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                  {assignedInvoices.map(inv => {
-                    const isInvoice = inv.docType === 'invoice';
-                    const st = INVOICE_STATUS_CFG[inv.status] || INVOICE_STATUS_CFG.draft;
-                    return (
-                      <Box key={inv._id} onClick={() => setViewInvoice(inv)}
-                        sx={{
-                          display: 'flex', alignItems: 'center', gap: 1.25,
-                          px: 1.5, py: 1, borderRadius: '10px', cursor: 'pointer',
-                          bgcolor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                          border: `1px solid ${T.CARD_BD}`,
-                          '&:hover': { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' },
-                        }}>
-                        {isInvoice
-                          ? <ReceiptLongIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />
-                          : <RequestQuoteIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />}
-                        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                          <Typography sx={{ fontSize: '0.82rem', fontWeight: 600, color: T.TEXT_PRI }} noWrap>
-                            #{inv.docNumber} · {inv.customerSnapshot?.name || '—'}
-                          </Typography>
-                          <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC, mt: 0.1 }}>
-                            {(Number(inv.grandTotal) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} AED
-                          </Typography>
-                        </Box>
-                        <Chip label={t(st.labelKey)} size="small"
-                          sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700, borderRadius: '4px',
-                            bgcolor: `${st.color}22`, color: st.color,
-                            '& .MuiChip-label': { px: 0.6 }, flexShrink: 0 }} />
-                      </Box>
-                    );
-                  })}
-                </Box>
-              )}
-            </Box>
-          )}
-
           {/* ── Activity log ─────────────────────────────────────────────── */}
           <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px', mb: 2.5 }}>
             <UserLogs userId={userId} />
           </Box>
-
-          {/* ── Job reports — self-authored, visible to anyone who can view this profile ── */}
-          <JobReportSection userId={userId} isSelf={String(authCtx.decode?.id) === String(userId)} />
 
         </Box>
       )}
@@ -804,13 +704,6 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
           prefilledUserName={`${data.user.firstName || ''} ${data.user.lastName || ''}`.trim()}
         />
       )}
-
-      {/* Read-only invoice/pre-invoice viewer for a clicked "Assigned Invoices" row */}
-      <InvoiceDetailDialog
-        doc={viewInvoice}
-        open={Boolean(viewInvoice)}
-        onClose={() => setViewInvoice(null)}
-      />
     </>
   );
 

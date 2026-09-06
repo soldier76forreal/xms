@@ -29,7 +29,6 @@ import EditIcon          from '@mui/icons-material/Edit';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddCommentIcon    from '@mui/icons-material/AddComment';
 import DashboardIcon     from '@mui/icons-material/Dashboard';
-import ReceiptLongIcon   from '@mui/icons-material/ReceiptLong';
 import ImageIcon         from '@mui/icons-material/Image';
 // Status icons
 import FiberNewIcon      from '@mui/icons-material/FiberNew';
@@ -227,14 +226,6 @@ const CustomerCard = ({
     setAddingDesk(false);
   };
 
-  // Requests tab (index 2) — the real "New invoice" / "New quote" buttons
-  // live there (requestsTab.js), each individually gated per doc type.
-  const handleMenuInvoice = (e) => {
-    e.stopPropagation();
-    closeMenu();
-    onSelect && onSelect(customer, 2);
-  };
-
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
@@ -424,11 +415,6 @@ const CustomerCard = ({
                   {t('crm.viaAttractedBy', { source: pi.attractedBy })}
                 </Typography>
               )}
-              {(customer.interestedProducts || []).length > 0 && (
-                <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>
-                  {t('crm.productInterest', { count: customer.interestedProducts.length })}
-                </Typography>
-              )}
             </Box>
           </Box>
         </Collapse>
@@ -485,15 +471,6 @@ const CustomerCard = ({
           </ListItemIcon>
           <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>{t('crm.addToMyDesk')}</Typography>
         </MenuItem>
-
-        {(can('mis:invoice:create') || can('mis:preinvoice:create')) && (
-          <MenuItem onClick={handleMenuInvoice}>
-            <ListItemIcon sx={{ minWidth: 28 }}>
-              <ReceiptLongIcon sx={{ fontSize: 15, color: T.TEXT_SEC }} />
-            </ListItemIcon>
-            <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>{t('crm.menuInvoicesQuotes')}</Typography>
-          </MenuItem>
-        )}
 
         {can('crm:communication:create') && (
           <MenuItem onClick={handleMenuCommunication}>

@@ -26,7 +26,7 @@ import AuthContext  from '../authAndConnections/auth';
 import AxiosGlobal  from '../authAndConnections/axiosGlobalUrl';
 import { actions }  from '../../store/store';
 
-const apiBase = process.env.REACT_APP_API_BASE_URL || 'https://api.lazulitemarble.com';
+const apiBase = process.env.REACT_APP_API_BASE_URL || 'https://api.damooncars.com';
 
 /**
  * Props:
