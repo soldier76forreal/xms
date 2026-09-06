@@ -116,6 +116,27 @@ const ThemedApp = () => {
         {authCtx.isLoggedIn === true && <PwaInstallPrompt />}
         {authCtx.isLoggedIn === true && <EnableNotificationsPrompt />}
         <Switch>
+          {/* ── PUBLIC ROUTES MUST STAY AT THE TOP OF THIS SWITCH ──────────
+              Every auth-gated block below renders a bare <Redirect to="/logIn" />
+              when logged out, and a <Redirect> with no `from` prop matches EVERY
+              location inside a <Switch>. So the first one wins and nothing after
+              it is reachable while logged out. These two have to be matched
+              before that happens — moving them back down silently breaks public
+              access again (which is exactly what happened before). */}
+
+          {/* Genuinely public, no login at all — a customer with no XMS
+              account opens this. See publicLinkPage.js + the unauthenticated
+              GET /digitalMarketing/public/link-pages/:code backend route. */}
+          <Route path="/p/:code" exact>
+            <PublicLinkPage />
+          </Route>
+
+          {/* Outside the auth gate on purpose — the resolver handles the
+              logged-out case itself (redirect to /logIn + return here after). */}
+          <Route path="/l/:code" exact>
+            <ShortLinkResolver />
+          </Route>
+
           <Route path="/logIn" exact>
             {authCtx.isLoggedIn === true ? <Redirect to="/" /> : <LogIn />}
           </Route>
@@ -211,18 +232,6 @@ const ThemedApp = () => {
             </Route>
           )}
 
-          {/* Outside the auth gate on purpose — the resolver handles the
-              logged-out case itself (redirect to /logIn + return here after). */}
-          <Route path="/l/:code" exact>
-            <ShortLinkResolver />
-          </Route>
-
-          {/* Genuinely public, no login at all — a customer with no XMS
-              account opens this. See publicLinkPage.js + the unauthenticated
-              GET /digitalMarketing/public/link-pages/:code backend route. */}
-          <Route path="/p/:code" exact>
-            <PublicLinkPage />
-          </Route>
         </Switch>
       </BranchProvider>
       </PermissionProvider>
