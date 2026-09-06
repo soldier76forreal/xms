@@ -1,8 +1,7 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import CircularProgress from '@mui/material/CircularProgress';
 import FolderIcon from '@mui/icons-material/Folder';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
@@ -10,27 +9,33 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
 import moment from 'jalali-moment';
-import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import MediaViewer, { resolveMediaKind, downloadFile } from '../digitalMarketing/mediaViewer';
 import UserAvatar from '../main/userAvatar';
 
 const IMG_FORMATS = ['jpg', 'JPG', 'png', 'PNG', 'svg', 'SVG', 'jpeg', 'JPGE', 'webp'];
 
-// The internal-only replacement for the legacy public /showLink page — rendered
-// by shortLinkResolver.js when a resolved short link's module is 'files'.
-// Requires login (enforced by the resolver before this ever mounts) and
-// requires files:view (enforced server-side by GET /files/shortlinks/:code).
-export default function FileShareView({ code }) {
+// The public share page — rendered by shortLinkResolver.js when /l/:code turns
+// out to be a File Manager share. PURELY PRESENTATIONAL: the resolver has
+// already fetched `data` from the unauthenticated GET /files/public/share/:code,
+// so nothing here touches AuthContext, jwtInst, or a permission check. That is
+// the point — the audience for a share link is someone with no XMS account, and
+// every asset it renders (/uploads static, /download/:diskName) is public too.
+export default function FileShareView({ data }) {
   const { t }       = useTranslation();
-  const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
 
-  const [loading, setLoading] = useState(true);
-  const [errorStatus, setErrorStatus] = useState(null);
-  const [payload, setPayload] = useState(null);
-  const [stack, setStack] = useState([]);
+  const payload = data;
+  const [stack, setStack] = useState(() => {
+    const finalArr  = Array.isArray(data?.finalArr) ? data.finalArr : [];
+    const documents = Array.isArray(data?.linkDoc?.document) ? data.linkDoc.document : [];
+    const rootDocs  = [];
+    for (const d of documents) {
+      const found = finalArr.find((e) => String(e?.doc?._id) === String(d.id));
+      if (found) rootDocs.push(found);
+    }
+    return [{ name: 'XFILE', id: 'root', docs: rootDocs }];
+  });
   const [viewerMedia, setViewerMedia] = useState(null);
 
   const T = {
@@ -38,46 +43,6 @@ export default function FileShareView({ code }) {
     TEXT_PRI: '#ffffff', TEXT_SEC: 'rgba(255,255,255,0.45)', TEXT_TER: 'rgba(255,255,255,0.2)',
     ROW_BD: 'rgba(255,255,255,0.06)', ROW_HVR: 'rgba(255,255,255,0.04)',
   };
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true); setErrorStatus(null);
-      try {
-        const res = await authCtx.jwtInst({
-          method: 'get',
-          url: `${axiosGlobal.defaultTargetApi}/files/shortlinks/${code}`,
-        });
-        if (cancelled) return;
-        const data = res.data;
-        const finalArr = Array.isArray(data?.finalArr) ? data.finalArr : [];
-        const documents = Array.isArray(data?.linkDoc?.document) ? data.linkDoc.document : [];
-        const rootDocs = [];
-        for (const d of documents) {
-          const found = finalArr.find((e) => String(e?.doc?._id) === String(d.id));
-          if (found) rootDocs.push(found);
-        }
-        setPayload(data);
-        setStack([{ name: 'XFILE', id: 'root', docs: rootDocs }]);
-      } catch (err) {
-        if (!cancelled) setErrorStatus(err?.response?.status || 500);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (loading) {
-    return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: T.BG }}>
-        <CircularProgress size={28} sx={{ color: T.TEXT_SEC }} />
-      </Box>
-    );
-  }
-
-  if (errorStatus === 403) return <RestrictedAccessScreen />;
-  if (errorStatus) return <RestrictedAccessScreen message={t('restricted.linkExpired')} />;
 
   const current = stack[stack.length - 1] || { name: 'XFILE', docs: [] };
   const finalArrSource = Array.isArray(payload?.finalArr) ? payload.finalArr : [];
