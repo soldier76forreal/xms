@@ -63,7 +63,13 @@ export default function FileShareView({ data }) {
 
   const openFile = (doc) => {
     const url = `${axiosGlobal.defaultTargetApi}/uploads/${doc.metaData.filename}`;
-    const kind = resolveMediaKind(doc.metaData?.mimetype || doc.format);
+    // Fall back to the DOTTED extension, not the bare format string —
+    // resolveMediaKind matches extensions with a leading dot, so a bare "mkv"
+    // never matched and the file was pushed down the download path instead of
+    // the player. Uploads whose mimetype arrives as application/octet-stream
+    // (common for the less usual containers) hit exactly this.
+    let kind = resolveMediaKind(doc.metaData?.mimetype || '');
+    if (kind === 'other' && doc.format) kind = resolveMediaKind(`.${doc.format}`);
     if (kind === 'other') {
       downloadFile(url, doc.metaData?.originalname || doc.name);
       return;

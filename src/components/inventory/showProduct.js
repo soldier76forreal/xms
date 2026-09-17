@@ -15,6 +15,9 @@ import ProductForm from './productForm';
 import VariantDetail from './variantDetail';
 import ChangeLog from './sections/changeLog';
 import ProductInvoices from './sections/productInvoices';
+import WebsitePanel from './sections/websitePanel';
+import ProductPriceRequests from './sections/productPriceRequests';
+import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
 
 const ShowProduct = ({ productId, onBack, fullView, onToggleFullView }) => {
   const authCtx     = useContext(AuthContext);
@@ -120,6 +123,10 @@ const ShowProduct = ({ productId, onBack, fullView, onToggleFullView }) => {
             />
 
             <ProductInvoices productId={product._id} productCode={product.code} />
+
+            {WEBSITE_FEATURES_ENABLED && <WebsitePanel product={product} media={media} />}
+
+            {WEBSITE_FEATURES_ENABLED && <ProductPriceRequests productId={product._id} />}
 
             <ChangeLog productId={product._id} />
           </>

@@ -390,6 +390,7 @@ export default function ShareWhatsAppDialog({ open, onClose, variantId: variantI
 
                 <TextField select size="small" fullWidth label={t('inventory.shareNameLanguage')} value={nameLanguage}
                   onChange={(e) => setNameLanguage(e.target.value)} SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}
                   disabled={!includeName || langs.length > 1}
                   helperText={langs.length > 1 ? t('inventory.shareNameLanguageMultiHint') : undefined}>
                   <option value="en">{t('inventory.shareNameLanguageEnglish')}</option>

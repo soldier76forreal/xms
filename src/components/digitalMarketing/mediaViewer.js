@@ -5,8 +5,10 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import DownloadIcon from '@mui/icons-material/Download';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import CircularProgress from '@mui/material/CircularProgress';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import { playbackUrl, diskNameFromUrl, useTranscodeStatus } from '../../tools/videoSource';
 
 // ── In-app media viewer (Digital Marketing) ───────────────────────────────────
 // Everything plays/renders INSIDE the app — no window.open, no browser tabs.
@@ -16,7 +18,9 @@ import { useTranslation } from 'react-i18next';
 export const resolveMediaKind = (nameOrMime = '') => {
   const s = String(nameOrMime).toLowerCase();
   if (/(^image\/)|\.(jpe?g|png|gif|webp|bmp|svg)$/.test(s)) return 'image';
-  if (/(^video\/)|\.(mp4|webm|mov|mkv|avi|m4v)$/.test(s))   return 'video';
+  // Deliberately wide: the app accepts whatever a phone or a camera produces,
+  // and the odd containers are exactly the ones that need the transcoded copy.
+  if (/(^video\/)|\.(mp4|webm|ogv|mov|mkv|avi|m4v|wmv|flv|3gp|3g2|mpe?g|ts|m2ts|mts|f4v|asf|divx|vob)$/.test(s)) return 'video';
   if (/(^audio\/)|\.(mp3|wav|ogg|m4a|aac|webm;codecs)$/.test(s)) return 'audio';
   if (/(^application\/pdf)|\.pdf$/.test(s))                 return 'pdf';
   return 'other';
@@ -52,9 +56,18 @@ const MediaViewer = ({ open, onClose, media, sx }) => {
   const { t }  = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  if (!media) return null;
 
-  const { url, name = '', kind = resolveMediaKind(name) } = media;
+  const { url, name = '' } = media || {};
+  const kind = media ? (media.kind || resolveMediaKind(name)) : 'other';
+
+  // Hooks must run on every render, so this sits above the `!media` bail-out.
+  // Only asked for while a video is actually on screen.
+  const transcodeStatus = useTranscodeStatus(
+    kind === 'video' ? diskNameFromUrl(url) : null,
+    Boolean(open && media && kind === 'video'),
+  );
+
+  if (!media) return null;
 
   const handleDownload = () => downloadFile(url, name);
 
@@ -90,9 +103,31 @@ const MediaViewer = ({ open, onClose, media, sx }) => {
           <Box component="img" src={url} alt={name}
             sx={{ maxWidth: '100%', maxHeight: '72vh', objectFit: 'contain', display: 'block' }} />
         )}
-        {kind === 'video' && (
-          <Box component="video" src={url} controls autoPlay
-            sx={{ maxWidth: '100%', maxHeight: '72vh', display: 'block', outline: 'none' }} />
+        {/* playbackUrl() points at the transcoded H.264/AAC copy when the
+            upload's own container/codec isn't one the browser can decode, and
+            at the original otherwise — see tools/videoSource.js. */}
+        {kind === 'video' && transcodeStatus !== 'pending' && (
+          <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Box component="video" src={playbackUrl(url)} controls autoPlay playsInline
+              sx={{ maxWidth: '100%', maxHeight: '72vh', display: 'block', outline: 'none' }} />
+            {transcodeStatus === 'failed' && (
+              <Typography sx={{ py: 1.25, px: 2, fontSize: '0.72rem', textAlign: 'center',
+                color: isDark ? 'rgba(255,255,255,0.45)' : 'text.secondary' }}>
+                {t('common.videoConvertFailed')}
+              </Typography>
+            )}
+          </Box>
+        )}
+        {/* A conversion still running would otherwise show as a black frame
+            with working controls and no picture — say so instead. */}
+        {kind === 'video' && transcodeStatus === 'pending' && (
+          <Box sx={{ py: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+            <CircularProgress size={26} thickness={4}
+              sx={{ color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)' }} />
+            <Typography sx={{ fontSize: '0.8rem', color: isDark ? 'rgba(255,255,255,0.45)' : 'text.secondary' }}>
+              {t('common.videoPreparing')}
+            </Typography>
+          </Box>
         )}
         {kind === 'audio' && (
           <Box sx={{ py: 5, px: 3, width: '100%', display: 'flex', justifyContent: 'center' }}>

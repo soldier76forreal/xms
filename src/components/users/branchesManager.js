@@ -17,8 +17,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import StoreIcon from '@mui/icons-material/Store';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
-import { actions } from '../../store/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { actions, fetchUserDirectory } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { useBranch } from '../../contextApi/BranchContext';
@@ -80,8 +80,21 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
   const [description, setDescription] = useState('');
   const [country,     setCountry]     = useState(null);
   const [status,      setStatus]      = useState('active');
+  const [notifyUsers, setNotifyUsers] = useState([]);   // priceRequestNotifyUsers — array of userIds
+  // Public-website footer/branches-directory display only — see branchModel.js.
+  const [address,         setAddress]         = useState('');
+  const [phone,           setPhone]           = useState('');
+  const [instagramHandle, setInstagramHandle] = useState('');
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState('');
+
+  const userDirectory = useSelector((s) => s.userDirectory) || {};
+  const directoryOptions = Object.keys(userDirectory);
+
+  useEffect(() => {
+    dispatch(fetchUserDirectory({ authCtx, axiosGlobal }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -91,8 +104,11 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
       setDescription(branch.description || '');
       setCountry(COUNTRIES.find((c) => c.code === branch.country) || null);
       setStatus(branch.status || 'active');
+      setNotifyUsers((branch.priceRequestNotifyUsers || []).map(String));
+      setAddress(branch.address || ''); setPhone(branch.phone || ''); setInstagramHandle(branch.instagramHandle || '');
     } else {
-      setName(''); setDescription(''); setCountry(null); setStatus('active');
+      setName(''); setDescription(''); setCountry(null); setStatus('active'); setNotifyUsers([]);
+      setAddress(''); setPhone(''); setInstagramHandle('');
     }
   }, [open, branch]);
 
@@ -100,7 +116,11 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
     if (!name.trim()) { setError(t('users.branchNameRequired')); return; }
     setSaving(true); setError('');
     try {
-      const data = { name: name.trim(), description: description.trim(), status, country: country?.code || null };
+      const data = {
+        name: name.trim(), description: description.trim(), status, country: country?.code || null,
+        priceRequestNotifyUsers: notifyUsers,
+        address: address.trim(), phone: phone.trim(), instagramHandle: instagramHandle.trim(),
+      };
       if (isNew) {
         await authCtx.jwtInst({ method: 'post', url: `${axiosGlobal.defaultTargetApi}/branches`, data });
       } else {
@@ -157,6 +177,43 @@ const BranchForm = ({ open, onClose, onSave, branch }) => {
               inputProps={{ ...params.inputProps, style: { fontSize: '0.85rem' } }} />
           )}
         />
+
+        <Box>
+          <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 1, mb: 1 }}>
+            {t('users.branchPublicSiteSection')}
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField label={t('users.branchAddressLabel')} size="small" fullWidth multiline rows={2} value={address}
+              onChange={e => setAddress(e.target.value)} sx={inputSx} />
+            <TextField label={t('users.branchPhoneLabel')} size="small" fullWidth value={phone}
+              onChange={e => setPhone(e.target.value)} sx={inputSx} />
+            <TextField label={t('users.branchInstagramLabel')} size="small" fullWidth value={instagramHandle}
+              onChange={e => setInstagramHandle(e.target.value)} sx={inputSx} placeholder="lmc.ksa" />
+          </Box>
+        </Box>
+
+        <Box>
+          <Autocomplete
+            multiple size="small"
+            options={directoryOptions}
+            getOptionLabel={(id) => {
+              const u = userDirectory[id];
+              return u ? `${u.firstName || ''} ${u.lastName || ''}`.trim() : '';
+            }}
+            value={notifyUsers}
+            onChange={(_, val) => setNotifyUsers(val)}
+            renderTags={(value, getTagProps) => value.map((id, i) => (
+              <Chip size="small" label={userDirectory[id] ? `${userDirectory[id].firstName || ''} ${userDirectory[id].lastName || ''}`.trim() : ''}
+                {...getTagProps({ index: i })} />
+            ))}
+            renderInput={(params) => (
+              <TextField {...params} label={t('users.branchNotifyUsersLabel')} sx={inputSx} />
+            )}
+          />
+          <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, mt: 0.5 }}>
+            {t('users.branchNotifyUsersHelper')}
+          </Typography>
+        </Box>
 
         {!isNew && (
           <Box>

@@ -208,7 +208,8 @@ export default function TutorialForm({ open, onClose, initialSection = 'general'
         <TextField select label={t('tutorials.languageLabel')} size="small" fullWidth value={language}
           onChange={(e) => setLanguage(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
-          SelectProps={{ native: true }}>
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
           <option value="">{t('tutorials.selectLanguageEllipsis')}</option>
           {LANGUAGES.map((l) => <option key={l} value={l}>{t(`tutorials.lang${l.toUpperCase()}`)}</option>)}
         </TextField>
@@ -216,7 +217,8 @@ export default function TutorialForm({ open, onClose, initialSection = 'general'
         <TextField select label={t('tutorials.sectionLabel')} size="small" fullWidth value={section}
           onChange={(e) => setSection(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
-          SelectProps={{ native: true }}>
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
           {SECTIONS.map((s) => <option key={s} value={s}>{sectionLabel(s, t)}</option>)}
         </TextField>
 

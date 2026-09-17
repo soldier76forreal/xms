@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
@@ -47,6 +48,7 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
+  const history     = useHistory();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { can }     = usePermissions();
@@ -206,13 +208,20 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
         </Box>
 
         {doc.rawContent && (
-          <Box sx={{ mt: 1, p: 1, borderRadius: '8px', bgcolor: T.CTRL_BG }}>
-            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              {t('dm.fromRawContentBatch')}
-            </Typography>
-            <Typography sx={{ fontSize: '0.76rem', color: T.TEXT_SEC, mt: 0.25 }}>
-              {doc.rawContent.language} · {doc.rawContent.useCase} · {doc.rawContent.platform}
-            </Typography>
+          <Box sx={{ mt: 1, p: 1, borderRadius: '8px', bgcolor: T.CTRL_BG, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+              <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {t('dm.fromRawContentBatch')}
+              </Typography>
+              <Typography sx={{ fontSize: '0.76rem', color: T.TEXT_SEC, mt: 0.25 }}>
+                {doc.rawContent.language} · {doc.rawContent.useCase} · {doc.rawContent.platform}
+              </Typography>
+            </Box>
+            <Button size="small" variant="text" startIcon={<OpenInNewIcon sx={{ fontSize: 13 }} />}
+              onClick={() => history.push(`/digitalMarketing?dm=raw&open=${doc.rawContentId}`)}
+              sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px', flexShrink: 0 }}>
+              {t('dm.openRawContent')}
+            </Button>
           </Box>
         )}
 

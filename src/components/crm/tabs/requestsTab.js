@@ -15,6 +15,10 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ReplyIcon from '@mui/icons-material/Reply';
+import Dialog from '@mui/material/Dialog';
+import TextField from '@mui/material/TextField';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import AuthContext from '../../authAndConnections/auth';
 import AxiosGlobal from '../../authAndConnections/axiosGlobalUrl';
@@ -22,6 +26,13 @@ import { usePermissions } from '../../../contextApi/PermissionContext';
 import { downloadMisInvoicePdf } from '../../../store/store';
 import InvoiceDetailDialog from '../../mis/invoiceDetailDialog';
 import InvoiceForm from '../../mis/invoiceForm';
+
+const PRICE_REQUEST_STATUS_META = {
+  new:       { labelKey: 'crm.priceRequestStatusNew',       color: '#64b5f6' },
+  seen:      { labelKey: 'crm.priceRequestStatusSeen',      color: '#ffb74d' },
+  responded: { labelKey: 'crm.priceRequestStatusResponded', color: '#81c784' },
+  closed:    { labelKey: 'crm.priceRequestStatusClosed',    color: '#9e9e9e' },
+};
 
 // Phase 6 (Session 46) — the CRM customer Requests tab, WIRED to MIS.
 // GET /crm/customers/:id/requests → this customer's invoices + pre-invoices
@@ -71,12 +82,16 @@ export default function RequestsTab({ customer }) {
   };
 
   const [docs, setDocs]       = useState([]);
+  const [priceRequests, setPriceRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewDoc, setViewDoc] = useState(null);
   const [typeFilter, setTypeFilter] = useState('all');
   const [order, setOrder]     = useState('desc');
   const [formOpen, setFormOpen] = useState(false);
   const [formDocType, setFormDocType] = useState('invoice');
+  const [replyTarget, setReplyTarget] = useState(null);
+  const [replyBody, setReplyBody] = useState('');
+  const [replying, setReplying] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,12 +100,29 @@ export default function RequestsTab({ customer }) {
         url: `${axiosGlobal.defaultTargetApi}/crm/customers/${customer._id}/requests`,
         params: { docType: typeFilter, order } });
       setDocs(res.data.data || []);
-    } catch (_) { setDocs([]); }
+      setPriceRequests(res.data.priceRequests || []);
+    } catch (_) { setDocs([]); setPriceRequests([]); }
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authCtx, axiosGlobal, customer._id, typeFilter, order]);
 
   useEffect(() => { load(); }, [load]);
+
+  const canRespond = can('crm:communication:create');
+  const submitReply = async () => {
+    if (!replyBody.trim()) return;
+    setReplying(true);
+    try {
+      await authCtx.jwtInst({
+        method: 'put', url: `${axiosGlobal.defaultTargetApi}/price-requests/${replyTarget._id}/respond`,
+        data: { body: replyBody.trim() },
+      });
+      setReplyTarget(null); setReplyBody('');
+      load();
+    } catch (_) { /* keep the dialog open on failure */ } finally {
+      setReplying(false);
+    }
+  };
 
   const handlePdf = (doc) =>
     dispatch(downloadMisInvoicePdf({ authCtx, axiosGlobal, id: doc._id, docType: doc.docType, docNumber: doc.docNumber }));
@@ -145,6 +177,80 @@ export default function RequestsTab({ customer }) {
     />
   );
 
+  const priceRequestsBlock = priceRequests.length > 0 && (
+    <Box sx={{ px: 2.5, pb: 1.5 }}>
+      <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
+        color: T.TEXT_TER, mb: 1 }}>
+        {t('crm.priceRequestsSectionTitle', { count: priceRequests.length })}
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        {priceRequests.map((pr) => {
+          const status = PRICE_REQUEST_STATUS_META[pr.status] || PRICE_REQUEST_STATUS_META.new;
+          return (
+            <Box key={pr._id} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5,
+              px: 1.5, py: 1, border: `1px solid ${T.BD}`, borderRadius: '10px' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Box sx={{ px: 0.6, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22`, flexShrink: 0 }}>
+                  <Typography sx={{ fontSize: '0.58rem', fontWeight: 700, color: status.color }}>
+                    {t(status.labelKey)}
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, flexGrow: 1 }}>
+                  {fmtDate(pr.insertDate)}
+                </Typography>
+                {canRespond && pr.status !== 'responded' && (
+                  <Button size="small" startIcon={<ReplyIcon sx={{ fontSize: 13 }} />}
+                    onClick={() => { setReplyTarget(pr); setReplyBody(''); }}
+                    sx={{ fontSize: '0.66rem', textTransform: 'none', minWidth: 0, px: 1 }}>
+                    {t('crm.priceRequestRespond')}
+                  </Button>
+                )}
+              </Box>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                {pr.items.map((it, i) => (
+                  <Box key={i} sx={{ px: 0.6, py: '1px', borderRadius: '4px', bgcolor: T.CTRL_BG }}>
+                    <Typography sx={{ fontSize: '0.62rem', fontFamily: 'monospace', fontWeight: 700, color: T.TEXT_SEC }}>
+                      {it.variantCode} · {it.quantity} {it.unit}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+              {(pr.city || pr.country || pr.phone) && (
+                <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC }}>
+                  {[pr.city, pr.country].filter(Boolean).join(', ')}{pr.phone ? ` · ${pr.phone}` : ''}
+                </Typography>
+              )}
+              {pr.response?.body && (
+                <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC, pl: 0.5, borderLeft: `2px solid ${T.BD}` }}>
+                  {pr.response.body}
+                </Typography>
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+
+  const replyDialog = (
+    <Dialog open={Boolean(replyTarget)} onClose={() => setReplyTarget(null)} maxWidth="xs" fullWidth>
+      <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }}>{t('crm.priceRequestRespond')}</Typography>
+        <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC }}>{replyTarget?.email}</Typography>
+        <TextField size="small" fullWidth multiline minRows={4} value={replyBody}
+          onChange={(e) => setReplyBody(e.target.value)}
+          placeholder={t('crm.priceRequestReplyPlaceholder')} autoFocus />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <Button size="small" onClick={() => setReplyTarget(null)}>{t('common.cancel')}</Button>
+          <Button size="small" variant="contained" disabled={!replyBody.trim() || replying} onClick={submitReply}
+            startIcon={replying ? <CircularProgress size={12} color="inherit" /> : null}>
+            {t('crm.priceRequestSendReply')}
+          </Button>
+        </Box>
+      </Box>
+    </Dialog>
+  );
+
   if (loading) {
     return (
       <Box>
@@ -169,7 +275,9 @@ export default function RequestsTab({ customer }) {
             {t('crm.noRequestsYet')}
           </Typography>
         </Box>
+        {priceRequestsBlock}
         {invoiceFormDialog}
+        {replyDialog}
       </Box>
     );
   }
@@ -244,7 +352,9 @@ export default function RequestsTab({ customer }) {
 
         <InvoiceDetailDialog doc={viewDoc} open={Boolean(viewDoc)} onClose={() => setViewDoc(null)} />
       </Box>
+      {priceRequestsBlock}
       {invoiceFormDialog}
+      {replyDialog}
     </Box>
   );
 }

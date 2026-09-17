@@ -7,7 +7,7 @@ import { Rotate as Hamburger } from 'hamburger-react'
 import PersonIcon from '@mui/icons-material/Person';
 import SearchIcon from '@mui/icons-material/Search';
 import axios from "axios";
-import Avatar from '@mui/material/Avatar';
+import UserAvatar from '../../components/main/userAvatar';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import NormalMenuForProfile from './normalMenuForProfile';
@@ -20,7 +20,6 @@ import { Search } from "@mui/icons-material";
 import { Badge, Button } from "@mui/material";
 import MenuIcon from '@mui/icons-material/Menu';
 import LeftSideNav from "./leftSideNav";
-import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import AuthContext from "../../components/authAndConnections/auth";
 import AxiosGlobal from "../../components/authAndConnections/axiosGlobalUrl";
 import NotificationCenter from "../../components/users/notificationCenter";
@@ -29,7 +28,6 @@ const FileManagerNav = (props) =>{
     const [notifCount , setNotifCount] = useState();
     const authContext = useContext(AuthContext);
     const axiosGlobal = useContext(AxiosGlobal);
-    const profileImage = authContext.decode?.profileImage;
     const [leftSideNav , setLeftSideNav] = useState({
         left: false,
       
@@ -115,11 +113,7 @@ const FileManagerNav = (props) =>{
                             aria-expanded={open ? 'true' : undefined}
                             onClick={handleClick}
                         className={Style.profImageDiv}>
-                            <Avatar
-                                alt="Remy Sharp"
-                                src={profileImage?.filename ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}` : ProfilePhoto}
-                                sx={{ width: 40, height: 40 }}
-                            />
+                            <UserAvatar userId={authContext.decode?.id} size={40} />
                         </div>
                     </div>
                     </Container>

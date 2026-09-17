@@ -177,6 +177,13 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
         bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`,
         borderRadius: isXs ? 0 : '16px', overflow: 'hidden',
         boxShadow: isDark ? '0 16px 48px rgba(0,0,0,0.55)' : '0 16px 40px rgba(0,0,0,0.14)',
+        // fullScreen (isXs) stretches the OUTER Dialog paper to 100vh, but this
+        // inner Paper is a second, nested element that otherwise sizes to its
+        // own content — leaving the bottom of the screen as bare backdrop
+        // (the "not properly filling the space" report). Stretching it to
+        // 100% + flex-column lets the scroll region below claim the rest.
+        height: isXs ? '100%' : 'auto',
+        display: 'flex', flexDirection: 'column',
       }}>
         {/* Paper accent edge */}
         <Box sx={{ height: 4, bgcolor: '#64b5f6' }} />
@@ -205,7 +212,8 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
 
         <Divider sx={{ borderColor: T.DIVIDER }} />
 
-        <Box sx={{ px: { xs: 2.5, sm: 4 }, py: 3, maxHeight: '60vh', overflowY: 'auto' }}>
+        <Box sx={{ px: { xs: 2.5, sm: 4 }, py: 3, overflowY: 'auto',
+          maxHeight: isXs ? 'none' : '60vh', flex: isXs ? 1 : 'unset', minHeight: 0 }}>
           {report.title && (
             <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, color: T.TEXT_PRI, mb: 1.5 }}>
               {report.title}

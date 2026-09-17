@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
-import Avatar from '@mui/material/Avatar';
+import UserAvatar from '../../components/main/userAvatar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
@@ -19,14 +19,12 @@ import { useHistory } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 import AuthContext from '../../components/authAndConnections/auth';
-import AxiosGlobal from '../../components/authAndConnections/axiosGlobalUrl';
 import PageSection from '../../contextApi/pageSection';
 import ThemeCtx from '../../contextApi/themeContext';
 import LanguageCtx from '../../contextApi/languageContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
 import NormalMenuForProfile from './normalMenuForProfile';
-import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 import { NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED } from './navConfig';
 import { useSidebarWidth } from '../hooks/useSidebarWidth';
 import SidebarResizer from './sidebarResizer';
@@ -41,7 +39,6 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
   const history     = useHistory();
   const pageSection = useContext(PageSection);
   const authCtx     = useContext(AuthContext);
-  const axiosGlobal = useContext(AxiosGlobal);
   const { themeMode, toggleTheme } = useContext(ThemeCtx);
   const { language, setLanguage, languages } = useContext(LanguageCtx);
   const { t }       = useTranslation();
@@ -82,11 +79,6 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
   };
 
   const visibleItems = NAV_ITEMS.filter(item => !item.permission || can(item.permission));
-
-  const profileImage = authCtx.decode?.profileImage;
-  const avatarSrc = profileImage?.filename
-    ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}`
-    : ProfilePhoto;
 
   // Shared row shell for the bottom utility rows (branch / theme)
   const utilRow = (icon, label, onClick, tooltip) => {
@@ -282,7 +274,7 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
                 borderRadius: '10px', p: '4px', mx: '6px', mt: 0.5,
                 '&:hover': { bgcolor: T.HVR_BG },
               }}>
-              <Avatar alt="Profile" src={avatarSrc} sx={{ width: 30, height: 30, flexShrink: 0 }} />
+              <UserAvatar userId={authCtx.decode?.id} size={30} sx={{ flexShrink: 0 }} />
               {expanded && (
                 <Typography noWrap sx={{ fontSize: '0.78rem', fontWeight: 600, color: T.LABEL }}>
                   {authCtx.decode?.firstName} {authCtx.decode?.lastName}

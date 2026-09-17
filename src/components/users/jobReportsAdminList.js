@@ -20,8 +20,6 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import MediaViewer, { downloadFile } from '../digitalMarketing/mediaViewer';
 import { JobReportDetail, ReportAttachments, fmtDate, fmtDateTime } from './jobReportSection';
-import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
-import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 
 // ── ADMIN MODE — every user's job reports, filterable by user + date range,
 // with reply capability. Mirrors jobReportSection.js's list/detail visuals
@@ -51,12 +49,6 @@ export default function JobReportsAdminList() {
   const [userFilter, setUserFilter] = useState(null);   // {_id, firstName, lastName}
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo]     = useState('');
-
-  // Flags a report inserted by someone else since this admin's last visit to
-  // this list as unread (dot + tinted row) — job reports key their author by
-  // `userId`, not the `createdBy` convention most other modules use. See
-  // useUnreadRecords.js.
-  const { isUnread } = useUnreadRecords('jobReportsAdmin', { getCreatedBy: (r) => r.userId });
 
   const [reports, setReports] = useState([]);
   const [total, setTotal]     = useState(0);
@@ -190,14 +182,12 @@ export default function JobReportsAdminList() {
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {reports.map((report) => {
-            const isUnr = isUnread(report);
             return (
             <Box key={report._id} onClick={() => setViewingReport(report)}
               sx={{ position: 'relative', p: 1.5, borderRadius: '10px',
-                bgcolor: isUnr ? unreadRowTint(isDark) : T.ROW_BG, border: `1px solid ${T.DIVIDER}`,
+                bgcolor: T.ROW_BG, border: `1px solid ${T.DIVIDER}`,
                 cursor: 'pointer', transition: 'border-color 0.15s',
                 '&:hover': { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)' } }}>
-              {isUnr && <UnreadDot />}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                 {/* The whole point of admin mode: WHO filed this and WHEN,
                     front and center — not buried in a detail click-through. */}

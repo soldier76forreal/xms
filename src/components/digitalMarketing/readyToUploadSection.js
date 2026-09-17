@@ -11,10 +11,21 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import AddIcon from '@mui/icons-material/Add';
 
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
+import Tooltip from '@mui/material/Tooltip';
+import Drawer from '@mui/material/Drawer';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import CloseIcon from '@mui/icons-material/Close';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import UserAvatar from '../main/userAvatar';
 import { usePermissions } from '../../contextApi/PermissionContext';
+import { useBranch } from '../../contextApi/BranchContext';
 import { fetchReadyToUploadList } from '../../store/store';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
@@ -30,6 +41,7 @@ const fmtDate = (d) => {
   const dt = new Date(d);
   return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 };
+const PLACE_OPTIONS = ['Post', 'Reels', 'Story', 'YouTube Short', 'TikTok post', 'Carousel', 'Live'];
 
 // Timeline list of ready-to-upload content — records arrive either via a raw
 // content record's status toggle (linked back via rawContentId) or via the
@@ -43,6 +55,7 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { can }     = usePermissions();
+  const { branches } = useBranch();
   const [formOpen, setFormOpen] = useState(false);
 
   const items      = useSelector(s => s.dmReadyToUpload);
@@ -54,6 +67,11 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
   // user's last visit as unread (dot + tinted row) — see useUnreadRecords.js.
   const { isUnread } = useUnreadRecords('dmReadyToUpload');
 
+  const [branchFilter, setBranchFilter] = useState('');
+  const [platformFilter, setPlatformFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo]     = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage]       = useState(1);
   const [pageSize, setPageSize] = useState(40);
   const [hasMore, setHasMore] = useState(false);
@@ -83,11 +101,22 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
   };
 
   const load = useCallback((pg = 1) => {
-    dispatch(fetchReadyToUploadList({ authCtx, axiosGlobal, params: { page: pg, limit: pageSize } }));
+    dispatch(fetchReadyToUploadList({
+      authCtx, axiosGlobal,
+      params: {
+        page: pg, limit: pageSize,
+        ...(branchFilter ? { branchId: branchFilter } : {}),
+        ...(platformFilter ? { platform: platformFilter } : {}),
+        ...(dateFrom ? { dateFrom } : {}),
+        ...(dateTo ? { dateTo } : {}),
+      },
+    }));
     setPage(pg);
-  }, [authCtx, axiosGlobal, pageSize, dispatch]);
+  }, [authCtx, axiosGlobal, pageSize, branchFilter, platformFilter, dateFrom, dateTo, dispatch]);
 
-  useEffect(() => { load(1); }, [pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(1); }, [pageSize, branchFilter, platformFilter, dateFrom, dateTo, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const clearFilters = () => { setBranchFilter(''); setPlatformFilter(''); setDateFrom(''); setDateTo(''); };
+  const activeFilterCount = [branchFilter, platformFilter, dateFrom, dateTo].filter(Boolean).length;
   useEffect(() => { setHasMore(items.length < total); }, [items, total]);
 
   // Deep link from a notification — open that record's detail (detail re-fetches by id).
@@ -128,6 +157,24 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
             <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
               {t('dm.readyToUploadCount', { count: total })}
             </Typography>
+            <Tooltip title={t('common.filters')}>
+              <IconButton size="small" onClick={() => setFilterOpen(!filterOpen)}
+                sx={{ color: activeFilterCount > 0 ? T.TEXT_PRI : T.TEXT_TER,
+                  bgcolor: filterOpen ? T.CTRL_BG : 'transparent',
+                  border: `1px solid ${activeFilterCount > 0 ? T.BD2 : T.BD}`,
+                  borderRadius: '8px', width: 28, height: 28, position: 'relative' }}>
+                <FilterListIcon sx={{ fontSize: 15 }} />
+                {activeFilterCount > 0 && (
+                  <Box sx={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14,
+                    borderRadius: '50%', bgcolor: 'text.primary', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography sx={{ fontSize: '0.55rem', color: isDark ? '#000' : '#fff', fontWeight: 700 }}>
+                      {activeFilterCount}
+                    </Typography>
+                  </Box>
+                )}
+              </IconButton>
+            </Tooltip>
             {can('digitalMarketing:readyToUpload:edit') && (
               <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
                 onClick={() => setFormOpen(true)}
@@ -221,6 +268,73 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
       )}
 
       <ReadyToUploadForm open={formOpen} onClose={() => setFormOpen(false)} />
+
+      {/* ── Filter Drawer — same sidebar pattern as CRM's / RawContentSection's ── */}
+      <Drawer anchor="right" open={filterOpen} onClose={() => setFilterOpen(false)}
+        PaperProps={{ sx: { width: { xs: '100vw', sm: 320 },
+          bgcolor: T.PANEL_BG, borderLeft: `1px solid ${T.BD}` } }}>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5,
+          borderBottom: `1px solid ${T.BD}` }}>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
+            {t('common.filters')}
+          </Typography>
+          <IconButton size="small" onClick={() => setFilterOpen(false)} sx={{ color: T.TEXT_TER }}>
+            <CloseIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Box>
+
+        <Box sx={{ px: 2, py: 2, display: 'flex', flexDirection: 'column', gap: 2.5, overflowY: 'auto' }}>
+
+          {branches.length > 1 && (
+            <FormControl size="small" fullWidth>
+              <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.branch')}</InputLabel>
+              <Select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} label={t('common.branch')}
+                sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
+                <MenuItem value=""><em>{t('dm.allBranchesOption')}</em></MenuItem>
+                {branches.map((b) => (
+                  <MenuItem key={b._id} value={b._id} sx={{ fontSize: '0.8rem' }}>{b.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          <Autocomplete freeSolo options={PLACE_OPTIONS} value={platformFilter}
+            onInputChange={(e, v) => setPlatformFilter(v || '')}
+            renderInput={(params) => (
+              <TextField {...params} size="small" label={t('dm.suggestedPlaceToUpload')}
+                inputProps={{ ...params.inputProps, style: { fontSize: '0.8rem' } }}
+                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }} />
+            )} />
+
+          <Box>
+            <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 1,
+              textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {t('dm.filterByDateRange')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField size="small" type="date" label={t('common.from')} value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
+                  '& input': { fontSize: '0.78rem' } }} />
+              <TextField size="small" type="date" label={t('common.to')} value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
+                  '& input': { fontSize: '0.78rem' } }} />
+            </Box>
+          </Box>
+        </Box>
+
+        <Box sx={{ px: 2, py: 1.5, borderTop: `1px solid ${T.BD}` }}>
+          <Button fullWidth size="small" onClick={clearFilters}
+            sx={{ fontSize: '0.75rem', textTransform: 'none', color: T.TEXT_SEC,
+              border: `1px solid ${T.BD}`, borderRadius: '8px' }}>
+            {t('common.clearAllFilters')}
+          </Button>
+        </Box>
+      </Drawer>
     </Box>
   );
 }

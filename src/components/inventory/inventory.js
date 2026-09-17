@@ -16,7 +16,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import { useDispatch, useSelector } from 'react-redux';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -37,25 +36,15 @@ import SidebarResizer from '../../tools/navs/sidebarResizer';
 import ProductForm from './productForm';
 import ImportExportDialog from './importExportDialog';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
+import WebsiteTools from './websiteTools';
+import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
+import LanguageIcon from '@mui/icons-material/Language';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
+import ChromeButton from '../../tools/chromeButton';
+import AnalyticsOverlay from '../analytics/analyticsOverlay';
+import { CHART_COLORS } from '../analytics/analyticsChart';
 
 const UNIT_LABELS = { M2: 'm²', ML: 'ml', PCS: 'pcs', SQFT: 'ft²', LNFT: 'lnft' };
-
-// Chrome breathing animation for Analytics
-const CHROME_SX = {
-  '@keyframes chromePulse': {
-    '0%, 100%': { backgroundPosition: '0% 50%' },
-    '50%':      { backgroundPosition: '100% 50%' },
-  },
-  background: 'linear-gradient(90deg, #9e9e9e, #ffffff, #bdbdbd, #e0e0e0, #9e9e9e)',
-  backgroundSize: '300% auto',
-  animation: 'chromePulse 3s ease infinite',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
-  fontWeight: 700,
-  display: 'inline',
-};
 
 // Filter section with expandable accordion list
 const FINISH_OPTIONS = [
@@ -119,6 +108,8 @@ const Inventory = () => {
   const { scopeFor, can } = usePermissions();
   const { activeBranchId } = useBranch();
   const [importExportOpen, setImportExportOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [websiteToolsOpen, setWebsiteToolsOpen] = useState(false);
   const [openRestricted, setOpenRestricted] = useState(false);
   const inventoryScope = scopeFor('inventory');
   const createdByDisabled = inventoryScope === 'mine';
@@ -290,6 +281,12 @@ const Inventory = () => {
               {t('inventory.importExportButton')}
             </Button>
           )}
+          {WEBSITE_FEATURES_ENABLED && can('inventory:website:manage') && (
+            <Button variant="outlined" startIcon={<LanguageIcon />} size="small"
+              onClick={() => setWebsiteToolsOpen(true)} sx={{ borderRadius: 2 }}>
+              {t('inventory.websiteToolsButton')}
+            </Button>
+          )}
           <Button variant="contained" startIcon={<AddIcon />} size="small"
             onClick={handleNewProduct} sx={{ borderRadius: 2 }}>
             {t('inventory.newProductButton')}
@@ -334,31 +331,14 @@ const Inventory = () => {
             </Box>
           ))}
 
-          {/* Full Analytics button */}
-          <Box sx={{ ml: { sm: 'auto' }, mt: { xs: 1, sm: 0 }, gridColumn: { xs: '1 / -1', sm: 'auto' },
-            pl: { sm: 2 }, borderLeft: { sm: '1px solid' }, borderColor: { sm: 'divider' } }}>
-            <Button
-              size="small" variant="outlined"
-              startIcon={<AutoGraphIcon sx={{ fontSize: 15 }} />}
-              sx={{
-                borderRadius: 2, border: '1px solid #9e9e9e',
-                color: 'text.primary', fontSize: '0.72rem',
-                position: 'relative', overflow: 'hidden',
-                '&::before': {
-                  content: '""', position: 'absolute', inset: 0,
-                  background: 'linear-gradient(90deg,#9e9e9e 0%,#ffffff 30%,#bdbdbd 50%,#ffffff 70%,#9e9e9e 100%)',
-                  backgroundSize: '300% auto', opacity: 0.15,
-                  animation: 'chromePulse 3s ease infinite',
-                },
-                '@keyframes chromePulse': {
-                  '0%,100%': { backgroundPosition: '0% 50%' },
-                  '50%': { backgroundPosition: '100% 50%' },
-                },
-              }}
-            >
-              <Box component="span" sx={CHROME_SX}>{t('inventory.fullAnalytics')}</Box>
-            </Button>
-          </Box>
+          {/* Full Analytics button — gated by its own key, separate from
+              inventory:view (see api/scripts/seedPermissions.js) */}
+          {can('inventory:analytics:view') && (
+            <Box sx={{ ml: { sm: 'auto' }, mt: { xs: 1, sm: 0 }, gridColumn: { xs: '1 / -1', sm: 'auto' },
+              pl: { sm: 2 }, borderLeft: { sm: '1px solid' }, borderColor: { sm: 'divider' } }}>
+              <ChromeButton label={t('inventory.fullAnalytics')} onClick={() => setAnalyticsOpen(true)} />
+            </Box>
+          )}
         </Box>
       </Box>
 
@@ -549,6 +529,26 @@ const Inventory = () => {
         onImportSuccess={() => dispatch(actions.invRefresh())}
         branchId={activeBranchId}
       />
+
+      <AnalyticsOverlay
+        open={analyticsOpen}
+        onClose={() => setAnalyticsOpen(false)}
+        title={t('inventory.fullAnalytics')}
+        endpoint="/inventory/analytics"
+        branchScoped
+        series={[
+          { key: 'added', label: t('inventory.analyticsAdded'), color: CHART_COLORS.series1 },
+          { key: 'sold',  label: t('inventory.analyticsSold'),  color: CHART_COLORS.series2 },
+        ]}
+        breakdowns={[
+          { key: 'stoneType',  title: t('inventory.analyticsByStoneType') },
+          { key: 'quarry',     title: t('inventory.analyticsByQuarry') },
+          { key: 'unit',       title: t('inventory.analyticsByUnit'), valueKey: 'quantity' },
+          { key: 'changeType', title: t('inventory.analyticsActivityMix') },
+        ]}
+      />
+
+      <WebsiteTools open={websiteToolsOpen} onClose={() => setWebsiteToolsOpen(false)} />
     </Box>
   );
 };

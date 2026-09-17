@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useTheme, useMediaQuery } from '@mui/material';
@@ -19,6 +19,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import { useBranch } from '../../contextApi/BranchContext';
 import { submitReadyToUpload, createReadyToUpload } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 
@@ -38,7 +39,7 @@ const LANGUAGES = [
 //    AND flips the source raw content's status server-side.
 //  - rawContentId absent — opened standalone (Ready to Upload list "New"
 //    button); submitting creates a readyToUpload record with no back-reference.
-export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
+export default function ReadyToUploadForm({ open, onClose, rawContentId, defaultBranchId = '' }) {
   const isStandalone = !rawContentId;
   const { t }  = useTranslation();
   const theme  = useTheme();
@@ -47,6 +48,7 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const { branches } = useBranch();
 
   const T = {
     DIALOG_BG: isDark ? '#0d0d0d'                : theme.palette.background.paper,
@@ -63,12 +65,19 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
   const [language, setLanguage] = useState('');
   const [platform, setPlatform] = useState('');
   const [caption, setCaption]   = useState('');
+  // Graduating a raw content batch inherits its branch tag by default (see
+  // the backend's POST .../ready-to-upload comment) — the field still opens
+  // editable here in case this record is FOR a different branch than the
+  // source batch was tagged with.
+  const [branchId, setBranchId] = useState(defaultBranchId || '');
   const [saving, setSaving]     = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError]       = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  const resetForm = () => { setTitle(''); setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setError(''); };
+  useEffect(() => { if (open) setBranchId(defaultBranchId || ''); }, [open, defaultBranchId]);
+
+  const resetForm = () => { setTitle(''); setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setBranchId(''); setError(''); };
   const handleClose = () => {
     if (files.length) { setConfirmDiscard(true); return; }
     resetForm();
@@ -89,6 +98,7 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
       fd.append('language', language);
       fd.append('platform', platform);
       fd.append('caption', caption);
+      fd.append('branchId', branchId);
       setUploadProgress(0);
       const onProgress = (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null);
       if (isStandalone) {
@@ -147,7 +157,8 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
         <TextField select label={t('dm.contentLanguageLabel')} size="small" fullWidth value={language}
           onChange={(e) => setLanguage(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
-          SelectProps={{ native: true }}>
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
           <option value="">{t('dm.selectLanguageEllipsis')}</option>
           {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{t(l.labelKey)}</option>)}
         </TextField>
@@ -162,6 +173,17 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId }) {
         <TextField label={t('dm.captionLabel')} size="small" fullWidth multiline minRows={3} value={caption}
           onChange={(e) => setCaption(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
+
+        {branches.length > 0 && (
+          <TextField select label={t('dm.branchLabel')} size="small" fullWidth value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
+            SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
+            <option value="">{t('dm.noBranchOption')}</option>
+            {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+          </TextField>
+        )}
 
         {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
       </Box>

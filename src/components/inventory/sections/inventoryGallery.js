@@ -32,6 +32,7 @@ import { actions } from '../../../store/store';
 import ConfirmDialog from '../../../tools/modal/confirmDialog';
 import AxiosGlobal from '../../authAndConnections/axiosGlobalUrl';
 import { downloadFile } from '../../digitalMarketing/mediaViewer';
+import { playbackUrl, isVideoFile } from '../../../tools/videoSource';
 
 // ── format resolution — thumbnail -> converted web preview (HEIC->JPEG /
 // HEVC->H.264) -> original. Never shows a broken-image icon for a format the
@@ -41,6 +42,10 @@ function resolveKind(file) {
   const mime = file.metaData?.mimetype || '';
   if (mime.startsWith('image/')) return 'image';
   if (mime.startsWith('video/')) return 'video';
+  // Phones and cameras hand up application/octet-stream for plenty of the
+  // less common containers, so the extension is the fallback signal — and it
+  // is exactly those files that need the transcoded copy to play at all.
+  if (isVideoFile({ mimetype: mime, name: file.name, format: file.format })) return 'video';
   return 'other';
 }
 function resolveThumbUrl(file, apiBase) {
@@ -50,9 +55,14 @@ function resolveThumbUrl(file, apiBase) {
 }
 function resolveFullUrl(file, apiBase) {
   const kind = resolveKind(file);
-  if (kind === 'video' && file.videoPreview) return `${apiBase}/uploads/${file.videoPreview}`;
+  const original = file.metaData?.filename ? `${apiBase}/uploads/${file.metaData.filename}` : null;
+  // Videos resolve server-side rather than off this (possibly stale) doc: the
+  // record is fetched when the gallery loads, so a transcode that finishes
+  // while the page is open would never show up in file.videoPreview here.
+  // /media/video/<diskName> always hands back whichever copy is playable now.
+  if (kind === 'video') return file.videoPreview ? `${apiBase}/uploads/${file.videoPreview}` : playbackUrl(original);
   if (kind === 'image' && file.webPreview) return `${apiBase}/uploads/${file.webPreview}`;
-  return file.metaData?.filename ? `${apiBase}/uploads/${file.metaData.filename}` : null;
+  return original;
 }
 function displayName(file) {
   return file.format ? `${file.name}.${file.format}` : file.name;
@@ -241,7 +251,7 @@ function ItemViewer({ files, index, apiBase, onClose, onIndexChange }) {
               sx={{ maxWidth: '92vw', maxHeight: '85vh', objectFit: 'contain' }} />
           )}
           {kind === 'video' && url && (
-            <Box component="video" src={url} controls autoPlay
+            <Box component="video" src={url} controls autoPlay playsInline
               sx={{ maxWidth: '92vw', maxHeight: '85vh' }} />
           )}
           {kind === 'other' && (

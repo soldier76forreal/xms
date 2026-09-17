@@ -7,6 +7,7 @@ import MovieIcon from '@mui/icons-material/Movie';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LinkIcon from '@mui/icons-material/Link';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import ArticleIcon from '@mui/icons-material/Article';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useHistory } from 'react-router-dom';
@@ -15,12 +16,19 @@ import RawContentSection from './rawContentSection';
 import ReadyToUploadSection from './readyToUploadSection';
 import LinkPageSection from './linkPageSection';
 import WhatsappShareSection from './whatsappShareSection';
+import BlogSection from './blogSection';
+import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
 
+// The Blog tab only exists to author content for the public website's
+// /blog route — hidden while that site isn't live (see featureFlags.js).
+// Link Pages/WhatsApp Share are unrelated standalone features, not part of
+// the website project, and stay on regardless.
 const TABS = [
   { id: 'rawContent',    Icon: MovieIcon,       labelKey: 'dm.tabRawContents' },
   { id: 'readyToUpload', Icon: CloudUploadIcon, labelKey: 'dm.tabReadyToUpload' },
   { id: 'linkPages',     Icon: LinkIcon,        labelKey: 'dm.tabLinkPages' },
   { id: 'whatsappShares', Icon: WhatsAppIcon,   labelKey: 'dm.tabWhatsappShares' },
+  ...(WEBSITE_FEATURES_ENABLED ? [{ id: 'blog', Icon: ArticleIcon, labelKey: 'dm.tabBlog' }] : []),
 ];
 
 // Phase 8 — Digital Marketing. Two sub-sections: Raw Contents (batch upload +
@@ -113,7 +121,9 @@ export default function DigitalMarketing() {
           ? <ReadyToUploadSection openId={tab === 'readyToUpload' ? openId : null} onOpenHandled={() => setOpenId(null)} />
           : tab === 'linkPages'
           ? <LinkPageSection />
-          : <WhatsappShareSection />}
+          : tab === 'whatsappShares'
+          ? <WhatsappShareSection />
+          : <BlogSection />}
       </Box>
     </Box>
   );

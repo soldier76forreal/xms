@@ -3,7 +3,8 @@ const AxiosGlobal = React.createContext({
     defaultTargetApi:'',
     authTargetApi:'',
     externalLink:'',
-    originLink:''
+    originLink:'',
+    publicWebsiteUrl:''
 });
 
 // A host is "local development" when the page is served from localhost or a
@@ -25,9 +26,13 @@ export const AxiosGlobalProvider = (props) =>{
         defaultTargetApi: local ? `http://${host}:4789` : 'https://api.lazulitemarble.com',
         authTargetApi:    local ? `http://${host}:2681` : 'https://auth.lazulitemarble.com',
         externalLink:'https://xms.lazulitemarble.com',
-        originLink:window.location.origin
+        originLink:window.location.origin,
+        // The SEPARATE public Next.js site (website/, Phase D) — not xms itself.
+        // Local dev runs it on :3001 (xms's own CRA dev server owns :3000).
+        publicWebsiteUrl: local ? `http://${host}:3001` : 'https://lazulitemarble.com'
     }
     return <AxiosGlobal.Provider value={contextValue}>{props.children}</AxiosGlobal.Provider>
 }
 
 export default AxiosGlobal;
+

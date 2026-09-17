@@ -51,6 +51,7 @@ const ProductForm = () => {
   const [quarryName,   setQuarryName]   = useState('');
   const [name,         setName]         = useState('');
   const [nameAr,       setNameAr]       = useState('');
+  const [nameFa,       setNameFa]       = useState('');
   const [description,  setDescription]  = useState('');
   const [defaultUnit,  setDefaultUnit]  = useState('M2');
   const [category,     setCategory]     = useState('');
@@ -67,6 +68,7 @@ const ProductForm = () => {
       setQuarryName(editProd.quarryName  || '');
       setName(editProd.name              || '');
       setNameAr(editProd.nameAr          || '');
+      setNameFa(editProd.nameFa          || '');
       setDescription(editProd.description || '');
       setDefaultUnit(editProd.defaultUnit || 'M2');
       setCategory(editProd.category      || '');
@@ -77,6 +79,7 @@ const ProductForm = () => {
       setQuarryName('');
       setName('');
       setNameAr('');
+      setNameFa('');
       setDescription('');
       setDefaultUnit('M2');
       setCategory('');
@@ -100,6 +103,7 @@ const ProductForm = () => {
       quarryName: quarryName.trim() || undefined,
       name:        name.trim()        || undefined,
       nameAr:      nameAr.trim()      || undefined,
+      nameFa:      nameFa.trim()      || undefined,
       description: description.trim() || undefined,
       defaultUnit,
       category:    category.trim()    || undefined,
@@ -230,6 +234,15 @@ const ProductForm = () => {
             inputProps={{ dir: 'rtl' }}
           />
         </Box>
+
+        <TextField
+          label={t('inventory.farsiNameLabel')}
+          size="small"
+          fullWidth
+          value={nameFa}
+          onChange={(e) => setNameFa(e.target.value)}
+          inputProps={{ dir: 'rtl' }}
+        />
 
         {/* Description */}
         <TextField

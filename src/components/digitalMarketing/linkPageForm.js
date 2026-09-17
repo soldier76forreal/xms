@@ -182,7 +182,8 @@ export default function LinkPageForm({ open, onClose, linkPage = null }) {
         <TextField select size="small" label={t('dm.linkPageLanguageLabel')} value={language}
           onChange={(e) => setLanguage(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
-          SelectProps={{ native: true }}>
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
           {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.nativeLabel}</option>)}
         </TextField>
 
@@ -226,6 +227,7 @@ export default function LinkPageForm({ open, onClose, linkPage = null }) {
                     <meta.Icon sx={{ fontSize: 18, color: meta.color, flexShrink: 0 }} />
                     <TextField select size="small" value={l.type} onChange={(e) => updateLink(l.key, 'type', e.target.value)}
                       SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}
                       sx={{ flex: '1 1 100px', minWidth: 0, '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '8px', fontSize: '0.78rem' } }}>
                       {LINK_TYPES.map((lt) => <option key={lt.value} value={lt.value}>{t(lt.labelKey)}</option>)}
                     </TextField>

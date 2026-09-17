@@ -647,6 +647,26 @@ export const submitReadyToUpload = createAsyncThunk('overallAssets/submitReadyTo
   }
 });
 
+// theData.id (rawContentId), theData.readyToUploadId — attaches an EXISTING
+// ready-to-upload record instead of creating a new one (the alternative
+// "mark ready to upload" path — see markReadyToUploadMenu.js).
+export const linkReadyToUpload = createAsyncThunk('overallAssets/linkReadyToUpload', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'put',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/raw-contents/${theData.id}/link-ready-to-upload`,
+      data: { readyToUploadId: theData.readyToUploadId },
+    });
+    dispatch(actions.dmRawUpsert(response.data.rawContent));
+    dispatch(actions.dmBumpRefresh());
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Linked to the ready-to-upload record', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to link the ready-to-upload record', type: 'error' }));
+    throw err;
+  }
+});
+
 // theData.kind — 'rawContent' (default) or 'readyToUpload'; picks which thread
 // the shared RawContentChat component/model is reading (see rawContentChatModel.js —
 // a message belongs to exactly one of rawContentId/readyToUploadId).
@@ -660,7 +680,7 @@ export const fetchRawContentChat = createAsyncThunk('overallAssets/fetchRawConte
     });
     const isFirstPage = !theData.params?.page || theData.params.page <= 1;
     if (isFirstPage) {
-      dispatch(actions.dmRawChatSetList({ data: response.data.data, total: response.data.total }));
+      dispatch(actions.dmRawChatSetList({ data: response.data.data, total: response.data.total, ownerId: response.data.ownerId }));
     } else {
       dispatch(actions.dmRawChatPrepend(response.data.data));
     }
@@ -668,6 +688,54 @@ export const fetchRawContentChat = createAsyncThunk('overallAssets/fetchRawConte
   } catch (err) {
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load chat history', type: 'error' }));
   }
+});
+
+// theData.messageId, theData.body — edit a text message's body. Own message
+// only (enforced server-side); the real-time echo to OTHER open viewers
+// arrives via the dm:chat:edit socket event, handled in rawContentChat.js.
+export const editRawContentChatMessage = createAsyncThunk('overallAssets/editRawContentChatMessage', async (theData, { dispatch }) => {
+  try {
+    const base = theData.kind === 'readyToUpload' ? 'ready-to-upload' : 'raw-contents';
+    const response = await theData.authCtx.jwtInst({
+      method: 'put',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/${base}/${theData.id}/chat/${theData.messageId}`,
+      data: { body: theData.body },
+    });
+    dispatch(actions.dmRawChatEdit(response.data));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to edit message', type: 'error' }));
+    throw err;
+  }
+});
+
+// theData.messageId — soft-delete a message (own message only, server-enforced).
+export const deleteRawContentChatMessage = createAsyncThunk('overallAssets/deleteRawContentChatMessage', async (theData, { dispatch }) => {
+  try {
+    const base = theData.kind === 'readyToUpload' ? 'ready-to-upload' : 'raw-contents';
+    await theData.authCtx.jwtInst({
+      method: 'delete',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/${base}/${theData.id}/chat/${theData.messageId}`,
+    });
+    dispatch(actions.dmRawChatSoftDelete({ _id: theData.messageId }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete message', type: 'error' }));
+    throw err;
+  }
+});
+
+// Marks every message in this thread not sent by the caller as seen-by-caller.
+// Fire-and-forget from the UI's point of view (called on chat open + on each
+// new incoming message while the panel stays mounted) — no snackbar on
+// failure, since a missed read-receipt isn't worth interrupting the user over.
+export const markRawContentChatSeen = createAsyncThunk('overallAssets/markRawContentChatSeen', async (theData) => {
+  try {
+    const base = theData.kind === 'readyToUpload' ? 'ready-to-upload' : 'raw-contents';
+    await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/${base}/${theData.id}/chat/seen`,
+    });
+  } catch (_) { /* best-effort */ }
 });
 
 // theData.formData — body (text) and/or a single file (voice/attachment).
@@ -860,6 +928,101 @@ export const deleteLinkPage = createAsyncThunk('overallAssets/deleteLinkPage', a
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Link page deleted', type: 'success' }));
   } catch (err) {
     dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete link page', type: 'error' }));
+  }
+});
+
+export const fetchBlogPosts = createAsyncThunk('overallAssets/fetchBlogPosts', async (theData, { dispatch }) => {
+  dispatch(actions.dmBlogSetLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/blog`,
+    });
+    dispatch(actions.dmBlogSetList(response.data.data));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load blog posts', type: 'error' }));
+  } finally {
+    dispatch(actions.dmBlogSetLoading(false));
+  }
+});
+
+export const fetchBlogPost = createAsyncThunk('overallAssets/fetchBlogPost', async (theData, { dispatch }) => {
+  dispatch(actions.dmBlogSetSelectedErrorStatus(null));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/blog/${theData.id}`,
+    });
+    dispatch(actions.dmBlogSetSelected(response.data));
+  } catch (err) {
+    dispatch(actions.dmBlogSetSelectedErrorStatus(err?.response?.status || null));
+    if (err?.response?.status !== 403) {
+      dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load blog post', type: 'error' }));
+    }
+  }
+});
+
+// theData.formData — title/titleAr/titleFa/excerpt.../body.../seo(JSON string)/slug/status/cover(file, optional).
+export const createBlogPost = createAsyncThunk('overallAssets/createBlogPost', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/blog`,
+      data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
+    });
+    dispatch(actions.dmBlogUpsert(response.data));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Blog post created', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to create blog post', type: 'error' }));
+    throw err;
+  }
+});
+
+export const updateBlogPost = createAsyncThunk('overallAssets/updateBlogPost', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'put',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/blog/${theData.id}`,
+      data: theData.formData,
+      ...(theData.onProgress ? { onUploadProgress: theData.onProgress } : {}),
+    });
+    dispatch(actions.dmBlogUpsert(response.data));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Blog post updated', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to update blog post', type: 'error' }));
+    throw err;
+  }
+});
+
+export const deleteBlogPost = createAsyncThunk('overallAssets/deleteBlogPost', async (theData, { dispatch }) => {
+  try {
+    await theData.authCtx.jwtInst({
+      method: 'delete',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/blog/${theData.id}`,
+    });
+    dispatch(actions.dmBlogRemove(theData.id));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Blog post deleted', type: 'success' }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete blog post', type: 'error' }));
+  }
+});
+
+// theData.formData — { image: File }. Used by the TipTap editor to insert an
+// inline image mid-edit, before the post itself is saved.
+export const uploadBlogInlineImage = createAsyncThunk('overallAssets/uploadBlogInlineImage', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/blog/upload-image`,
+      data: theData.formData,
+    });
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to upload image', type: 'error' }));
+    throw err;
   }
 });
 
@@ -1145,6 +1308,17 @@ export const updateProduct = createAsyncThunk('inventory/updateProduct', async (
   return response.data.data;
 });
 
+export const updateProductWebsite = createAsyncThunk('inventory/updateProductWebsite', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/products/${theData.id}/website`,
+    data: theData.data,
+  });
+  dispatch(actions.invRefresh());
+  toast(dispatch, 'Website details updated');
+  return response.data.data;
+});
+
 export const createVariant = createAsyncThunk('inventory/createVariant', async (theData, { dispatch }) => {
   const response = await theData.authCtx.jwtInst({
     method: 'post',
@@ -1417,6 +1591,62 @@ export const deleteCategory = createAsyncThunk('inventory/deleteCategory', async
   toast(dispatch, 'Category deleted');
 });
 
+export const updateCategory = createAsyncThunk('inventory/updateCategory', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/categories/${theData.id}`,
+    data: { name: theData.name, description: theData.description },
+  });
+  dispatch(fetchCategories({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal }));
+  toast(dispatch, 'Category updated');
+  return response.data.data;
+});
+
+// Tags — byte-for-byte the same shape as categories above (see
+// inventoryTagModel.js for why they're a separate collection).
+export const fetchInvTags = createAsyncThunk('inventory/fetchTags', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/inventory/tags`,
+    });
+    dispatch(actions.invSetTags(response.data.data));
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+export const createInvTag = createAsyncThunk('inventory/createTag', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/tags`,
+    data: { name: theData.name, description: theData.description },
+  });
+  dispatch(fetchInvTags({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal }));
+  toast(dispatch, `Tag "${theData.name}" created`);
+  return response.data.data;
+});
+
+export const updateInvTag = createAsyncThunk('inventory/updateTag', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/tags/${theData.id}`,
+    data: { name: theData.name, description: theData.description },
+  });
+  dispatch(fetchInvTags({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal }));
+  toast(dispatch, 'Tag updated');
+  return response.data.data;
+});
+
+export const deleteInvTag = createAsyncThunk('inventory/deleteTag', async (theData, { dispatch }) => {
+  await theData.authCtx.jwtInst({
+    method: 'delete',
+    url: `${theData.axiosGlobal.defaultTargetApi}/inventory/tags/${theData.id}`,
+  });
+  dispatch(fetchInvTags({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal }));
+  toast(dispatch, 'Tag deleted');
+});
+
 //------------------------------inventory end
 
 
@@ -1459,6 +1689,14 @@ const dataSlice = createSlice({
     dmSelectedRawContentErrorStatus: null,
     dmRawContentChat: [],
     dmRawContentChatTotal: 0,
+    // Owner of the thread's underlying record (rawContent.owner, or the
+    // standalone readyToUpload's own owner) — set by the GET .../chat
+    // response. rawContentChat.js derives its seen-tick direction from this
+    // rather than a prop, so it stays correct even for a graduated
+    // ready-to-upload record (whose chat is the SOURCE raw content's thread —
+    // see loadRawContentForChat's comment — and therefore has a different
+    // owner than the readyToUpload doc itself).
+    dmRawContentChatOwnerId: null,
     dmReadyToUpload: [],
     dmReadyToUploadTotal: 0,
     dmReadyToUploadLoading: false,
@@ -1474,6 +1712,10 @@ const dataSlice = createSlice({
     dmWhatsappSharesLoading: false,
     dmSelectedWhatsappShare: null,
     dmSelectedWhatsappShareErrorStatus: null,
+    dmBlogPosts: [],
+    dmBlogPostsLoading: false,
+    dmSelectedBlogPost: null,
+    dmSelectedBlogPostErrorStatus: null,
     dmRefreshKey: 0,
     //------------------------------tutorial center
     tutorials: [],
@@ -1515,6 +1757,7 @@ const dataSlice = createSlice({
     invCurrentVariant: null,
     invShowVariantDetail: false,
     invCategories: [],
+    invTags: [],
     invStats: null,
   },
   reducers: {
@@ -2003,6 +2246,7 @@ const dataSlice = createSlice({
       dmRawChatSetList(state, action) {
         state.dmRawContentChat      = action.payload.data;
         state.dmRawContentChatTotal = action.payload.total;
+        state.dmRawContentChatOwnerId = action.payload.ownerId || null;
       },
       dmRawChatPrepend(state, action) {
         // older-page pagination — new page loads BEFORE the currently held messages
@@ -2012,6 +2256,31 @@ const dataSlice = createSlice({
         // a single new message — own send, or a real-time socket delivery
         const exists = state.dmRawContentChat.some(m => String(m._id) === String(action.payload._id));
         if (!exists) state.dmRawContentChat.push(action.payload);
+      },
+      dmRawChatEdit(state, action) {
+        // own edit's response, or another viewer's edit arriving via dm:chat:edit
+        const idx = state.dmRawContentChat.findIndex(m => String(m._id) === String(action.payload._id));
+        if (idx >= 0) state.dmRawContentChat[idx] = { ...state.dmRawContentChat[idx], ...action.payload };
+      },
+      dmRawChatSoftDelete(state, action) {
+        // own delete, or another viewer's delete arriving via dm:chat:delete —
+        // flips `deleted` in place rather than removing the row, so the
+        // "message was deleted" placeholder renders where the message was.
+        const idx = state.dmRawContentChat.findIndex(m => String(m._id) === String(action.payload._id));
+        if (idx >= 0) state.dmRawContentChat[idx] = { ...state.dmRawContentChat[idx], deleted: true, deletedDate: new Date().toISOString() };
+      },
+      dmRawChatMarkSeen(state, action) {
+        // a dm:chat:seen delivery (or the local echo of our own mark-seen call)
+        // — append a readBy entry for `userId` to every listed message that
+        // doesn't already have one, so the sender's seen-tick flips live.
+        const { messageIds, userId, date } = action.payload;
+        const idSet = new Set((messageIds || []).map(String));
+        state.dmRawContentChat = state.dmRawContentChat.map((m) => {
+          if (!idSet.has(String(m._id))) return m;
+          const already = (m.readBy || []).some((r) => String(r.userId) === String(userId));
+          if (already) return m;
+          return { ...m, readBy: [...(m.readBy || []), { userId, date }] };
+        });
       },
       dmReadySetList(state, action) {
         state.dmReadyToUpload      = action.payload.data;
@@ -2069,6 +2338,38 @@ const dataSlice = createSlice({
         if (idx >= 0) state.dmLinkPages[idx] = action.payload;
         if (state.dmSelectedLinkPage && String(state.dmSelectedLinkPage._id) === String(action.payload._id)) {
           state.dmSelectedLinkPage = { ...state.dmSelectedLinkPage, ...action.payload };
+        }
+      },
+      dmBlogSetList(state, action) {
+        state.dmBlogPosts = action.payload;
+      },
+      dmBlogSetLoading(state, action) {
+        state.dmBlogPostsLoading = action.payload;
+      },
+      dmBlogSetSelected(state, action) {
+        state.dmSelectedBlogPost = action.payload;
+      },
+      dmBlogSetSelectedErrorStatus(state, action) {
+        state.dmSelectedBlogPostErrorStatus = action.payload;
+      },
+      dmBlogRemove(state, action) {
+        state.dmBlogPosts = state.dmBlogPosts.filter(d => String(d._id) !== String(action.payload));
+        if (state.dmSelectedBlogPost && String(state.dmSelectedBlogPost._id) === String(action.payload)) {
+          state.dmSelectedBlogPost = null;
+        }
+      },
+      dmBlogUpsert(state, action) {
+        const idx = state.dmBlogPosts.findIndex(d => String(d._id) === String(action.payload._id));
+        const listItem = {
+          _id: action.payload._id, title: action.payload.title, slug: action.payload.slug,
+          status: action.payload.status, coverImage: action.payload.coverImage,
+          publishedAt: action.payload.publishedAt, updateDate: action.payload.updateDate,
+          createdByName: action.payload.createdByName,
+        };
+        if (idx >= 0) state.dmBlogPosts[idx] = listItem;
+        else state.dmBlogPosts = [listItem, ...state.dmBlogPosts];
+        if (state.dmSelectedBlogPost && String(state.dmSelectedBlogPost._id) === String(action.payload._id)) {
+          state.dmSelectedBlogPost = action.payload;
         }
       },
       dmWhatsappSetList(state, action) {
@@ -2275,6 +2576,7 @@ const dataSlice = createSlice({
     invSetCurrentVariant(state, action)     { state.invCurrentVariant = action.payload; },
     invToggleVariantDetail(state)           { state.invShowVariantDetail = !state.invShowVariantDetail; },
     invSetCategories(state, action)         { state.invCategories = action.payload; },
+    invSetTags(state, action)               { state.invTags = action.payload; },
     invSetStats(state, action)              { state.invStats = action.payload; },
     //------------------------------inventory
 

@@ -170,12 +170,14 @@ export default function Tutorials() {
               sx={{ flexGrow: 1, minWidth: 140, '& .MuiOutlinedInput-root': { bgcolor: T.CTRL_BG, borderRadius: '8px', fontSize: '0.78rem' } }} />
             <TextField select size="small" value={section} onChange={(e) => setSection(e.target.value)}
               SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}
               sx={{ minWidth: 110, '& .MuiOutlinedInput-root': { bgcolor: T.CTRL_BG, borderRadius: '8px', fontSize: '0.78rem' } }}>
               <option value="all">{t('common.all')}</option>
               {SECTIONS.map((s) => <option key={s} value={s}>{sectionLabel(s, t)}</option>)}
             </TextField>
             <TextField select size="small" value={language} onChange={(e) => setLanguage(e.target.value)}
               SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}
               sx={{ minWidth: 90, '& .MuiOutlinedInput-root': { bgcolor: T.CTRL_BG, borderRadius: '8px', fontSize: '0.78rem' } }}>
               <option value="all">{t('common.all')}</option>
               {LANGUAGES.map((l) => <option key={l} value={l}>{t(`tutorials.lang${l.toUpperCase()}`)}</option>)}

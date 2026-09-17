@@ -49,6 +49,7 @@ import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
 import CustomerViewedLog from './customerViewedLog';
+import { playbackUrl } from '../../tools/videoSource';
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -825,7 +826,10 @@ const CommunicationTab = ({ customerId, T, isDark, authCtx, axiosGlobal }) => {
           <Box component="img" src={lightbox.url} alt=""
             sx={{ maxWidth: '90vw', maxHeight: '85vh', display: 'block' }} />
         ) : lightbox?.kind === 'video' ? (
-          <Box component="video" src={lightbox?.url} controls autoPlay
+          // playbackUrl() serves the transcoded H.264/AAC copy when the
+          // recording's own container/codec isn't browser-decodable (phone
+          // recordings land as all sorts) — see tools/videoSource.js.
+          <Box component="video" src={playbackUrl(lightbox?.url)} controls autoPlay playsInline
             sx={{ maxWidth: '90vw', maxHeight: '85vh', display: 'block' }} />
         ) : null}
       </Dialog>

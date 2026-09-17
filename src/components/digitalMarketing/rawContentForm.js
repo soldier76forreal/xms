@@ -24,6 +24,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
+import { useBranch } from '../../contextApi/BranchContext';
 import { createRawContent } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer from './mediaViewer';
@@ -77,6 +78,7 @@ export default function RawContentForm({ open, onClose }) {
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const { branches } = useBranch();
 
   const T = {
     DIALOG_BG: isDark ? '#0d0d0d'                : theme.palette.background.paper,
@@ -95,6 +97,7 @@ export default function RawContentForm({ open, onClose }) {
   const [language, setLanguage] = useState('');
   const [useCase, setUseCase]   = useState('Anything');
   const [platform, setPlatform] = useState('Anything');
+  const [branchId, setBranchId] = useState('');
   const [pendingFiles, setPendingFiles] = useState([]);   // [{ key, file, name, description, voiceFile }]
   const [saving, setSaving]     = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);   // 0-100 during submit
@@ -108,7 +111,7 @@ export default function RawContentForm({ open, onClose }) {
   const replaceTargetKey = useRef(null);
 
   const resetForm = () => {
-    setTitle(''); setLanguage(''); setUseCase('Anything'); setPlatform('Anything');
+    setTitle(''); setLanguage(''); setUseCase('Anything'); setPlatform('Anything'); setBranchId('');
     setPendingFiles([]); setError('');
   };
 
@@ -189,6 +192,7 @@ export default function RawContentForm({ open, onClose }) {
       formData.append('language', language);
       formData.append('useCase', useCase);
       formData.append('platform', platform);
+      formData.append('branchId', branchId);
 
       const descriptions = [];
       const names         = [];
@@ -311,7 +315,8 @@ export default function RawContentForm({ open, onClose }) {
         <TextField select label={t('dm.languageLabel')} size="small" fullWidth value={language}
           onChange={(e) => setLanguage(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
-          SelectProps={{ native: true }}>
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
           <option value="">{t('dm.selectLanguageEllipsis')}</option>
           {LANGUAGES.map((l) => <option key={l.value} value={l.value}>{t(l.labelKey)}</option>)}
         </TextField>
@@ -319,16 +324,32 @@ export default function RawContentForm({ open, onClose }) {
         <TextField select label={t('dm.suggestedUseCaseLabel')} size="small" fullWidth value={useCase}
           onChange={(e) => setUseCase(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
-          SelectProps={{ native: true }}>
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
           {USE_CASES.map((u) => <option key={u.value} value={u.value}>{t(u.labelKey)}</option>)}
         </TextField>
 
         <TextField select label={t('dm.suggestedPlatformLabel')} size="small" fullWidth value={platform}
           onChange={(e) => setPlatform(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
-          SelectProps={{ native: true }}>
+          SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
           {PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.labelKey ? t(p.labelKey) : p.label}</option>)}
         </TextField>
+
+        {/* Optional tag — which branch this batch is FOR. Doesn't restrict who
+            can see the record (DM stays one shared org-wide pool); it's only
+            for filtering the list later. */}
+        {branches.length > 0 && (
+          <TextField select label={t('dm.branchLabel')} size="small" fullWidth value={branchId}
+            onChange={(e) => setBranchId(e.target.value)}
+            sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
+            SelectProps={{ native: true }}
+          InputLabelProps={{ shrink: true }}>
+            <option value="">{t('dm.noBranchOption')}</option>
+            {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
+          </TextField>
+        )}
 
         {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
       </Box>

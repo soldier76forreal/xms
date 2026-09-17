@@ -60,6 +60,7 @@ import PhotoSwipeLightbox from 'photoswipe/lightbox';
 import 'photoswipe/style.css';
 import PdfView from "../../components/fileManager/pdfView";
 import ShowVideo from "../../components/fileManager/showVideo";
+import { playbackUrl, isVideoFile } from "../videoSource";
 import { getImageSize  } from 'react-image-size';
 import Loader from "../../tools/loader/loader";
 import '../../components/overalStyle/fileFolderGrid.scss'
@@ -453,17 +454,17 @@ const Gallery = (props) =>{
                                                 </div>
                                             </Grid> 
                                         )
-                                    }else if(e.file.format === 'mp4'){
+                                    }else if(isVideoFile({format:e.file.format , name:e.file.metaData?.originalname , mimetype:e.file.metaData?.mimetype})){
                                         return(
                                             <Grid md={4}  key={i} item xs={2}>
                                                 <div onClick={()=>{setShowVideo(true)
-                                                    setTheVideo(`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`)}} 
+                                                    setTheVideo(playbackUrl(`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`))}} 
                                                     className='imageDivForFileFolder'>
                                                     {/* <div className={Style.fileIconDiv}>
                                                         <FileIcon  extension={e.file.format} {...defaultStyles[e.file.format]} />
                                                     </div> */}
                                                     <video style={{zIndex:'1000' , maxHeight:'90px'}} width='100%'>
-                                                        <source src={`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`} type="video/mp4" />
+                                                        <source src={playbackUrl(`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`)} />
                                                     </video>
                                                     {/* <VideoPlayer videoUrl={`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`}></VideoPlayer> */}
                                                     {/* <img src={`${axiosGlobal.defaultTargetApi}/uploads/${e.file.metaData.filename}`} className={Style.galleryImg}></img> */}

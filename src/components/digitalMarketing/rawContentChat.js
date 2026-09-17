@@ -15,13 +15,24 @@ import StopCircleIcon from '@mui/icons-material/StopCircle';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import PlayCircleIcon from '@mui/icons-material/PlayCircle';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import CheckIcon from '@mui/icons-material/Check';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
+import CloseIcon from '@mui/icons-material/Close';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
-import { fetchRawContentChat, sendRawContentChatMessage, actions } from '../../store/store';
+import {
+  fetchRawContentChat, sendRawContentChatMessage,
+  editRawContentChatMessage, deleteRawContentChatMessage, markRawContentChatSeen,
+  actions,
+} from '../../store/store';
 import MediaViewer, { resolveMediaKind } from './mediaViewer';
+import { playbackUrl } from '../../tools/videoSource';
 import UserAvatar from '../main/userAvatar';
+import ConfirmDialog from '../../tools/modal/confirmDialog';
 
 const fmtTime = (d) => {
   const dt = new Date(d);
@@ -45,6 +56,7 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
 
   const messages = useSelector(s => s.dmRawContentChat);
   const total    = useSelector(s => s.dmRawContentChatTotal);
+  const ownerId  = useSelector(s => s.dmRawContentChatOwnerId);
   const myId     = String(authCtx.decode?.id || authCtx.decode?._id || '');
 
   const [loading, setLoading]   = useState(true);
@@ -54,37 +66,68 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
   const [recording, setRecording] = useState(false);
   const [recordError, setRecordError] = useState('');
   const [viewerMedia, setViewerMedia] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState('');
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef        = useRef([]);
   const scrollRef         = useRef(null);
+
+  // Marks everything not-mine as seen — on initial load and again whenever a
+  // new message arrives while this panel is mounted (mirrors a WhatsApp/
+  // Telegram read receipt: "seen" means "was actually on screen", not just
+  // "downloaded"). Safe to call repeatedly — the backend only ever appends a
+  // readBy entry for messages that don't already have one from this user.
+  const markSeen = useCallback(() => {
+    if (!entityId) return;
+    dispatch(markRawContentChatSeen({ authCtx, axiosGlobal, id: entityId, kind }));
+  }, [entityId, kind, authCtx, axiosGlobal, dispatch]);
 
   const load = useCallback(async () => {
     setLoading(true);
     await dispatch(fetchRawContentChat({ authCtx, axiosGlobal, id: entityId, kind, params: { page: 1, limit: 50 } }));
     setLoading(false);
+    markSeen();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityId, kind, authCtx, axiosGlobal, dispatch]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Join/leave the room + listen for real-time deliveries
+  // Join/leave the room + listen for real-time deliveries (new message, plus
+  // another viewer's edit/delete/seen so every open tab stays in sync).
   useEffect(() => {
     const socket = authCtx.socket;
     if (!socket || !entityId) return;
     const joinEvent  = kind === 'readyToUpload' ? 'dm:joinReadyToUpload'  : 'dm:joinRawContent';
     const leaveEvent = kind === 'readyToUpload' ? 'dm:leaveReadyToUpload' : 'dm:leaveRawContent';
     socket.emit(joinEvent, entityId);
-    const handler = (msg) => {
+    const matchesThisThread = (msg) => {
       const msgEntityId = kind === 'readyToUpload' ? msg.readyToUploadId : msg.rawContentId;
-      if (String(msgEntityId) === String(entityId)) {
-        dispatch(actions.dmRawChatPush(msg));
-      }
+      return String(msgEntityId) === String(entityId);
     };
-    socket.on('dm:chat:new', handler);
+    const onNew = (msg) => {
+      if (!matchesThisThread(msg)) return;
+      dispatch(actions.dmRawChatPush(msg));
+      // A message someone ELSE just sent, while this panel is already open —
+      // stamp it seen right away rather than waiting for the next mount.
+      if (String(msg.senderId) !== myId) markSeen();
+    };
+    const onEdit = (msg) => { if (matchesThisThread(msg)) dispatch(actions.dmRawChatEdit(msg)); };
+    const onDelete = (payload) => { dispatch(actions.dmRawChatSoftDelete(payload)); };
+    const onSeen = (payload) => { dispatch(actions.dmRawChatMarkSeen(payload)); };
+    socket.on('dm:chat:new', onNew);
+    socket.on('dm:chat:edit', onEdit);
+    socket.on('dm:chat:delete', onDelete);
+    socket.on('dm:chat:seen', onSeen);
     return () => {
       socket.emit(leaveEvent, entityId);
-      socket.off('dm:chat:new', handler);
+      socket.off('dm:chat:new', onNew);
+      socket.off('dm:chat:edit', onEdit);
+      socket.off('dm:chat:delete', onDelete);
+      socket.off('dm:chat:seen', onSeen);
     };
-  }, [authCtx.socket, entityId, kind, dispatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authCtx.socket, entityId, kind, dispatch, myId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -159,6 +202,40 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
     });
   };
 
+  // ── Edit / delete — own text messages only (also enforced server-side) ──
+  const startEdit = (m) => { setEditingId(m._id); setEditDraft(m.body || ''); };
+  const cancelEdit = () => { setEditingId(null); setEditDraft(''); };
+  const saveEdit = async (messageId) => {
+    const nextBody = editDraft.trim();
+    if (!nextBody) return;
+    try {
+      await dispatch(editRawContentChatMessage({ authCtx, axiosGlobal, id: entityId, kind, messageId, body: nextBody })).unwrap();
+      cancelEdit();
+    } catch (_) { /* snackbar already dispatched */ }
+  };
+  const confirmDelete = async () => {
+    const messageId = confirmDeleteId;
+    setConfirmDeleteId(null);
+    try {
+      await dispatch(deleteRawContentChatMessage({ authCtx, axiosGlobal, id: entityId, kind, messageId })).unwrap();
+    } catch (_) { /* snackbar already dispatched */ }
+  };
+
+  // A message's seen-tick looks at the OTHER side of the two-party thread
+  // (the creator vs whoever sent this particular message — see
+  // rawContentChatModel.js's readBy comment): for a message the CREATOR sent,
+  // "seen" means some admin has read it; for a message anyone ELSE sent,
+  // "seen" means the creator specifically has read it. ownerId is the
+  // record's creator either way (see dmRawContentChatOwnerId).
+  const isSeenByCounterpart = (m) => {
+    if (!ownerId) return false;
+    const senderIsOwner = String(m.senderId) === String(ownerId);
+    if (senderIsOwner) {
+      return (m.readBy || []).some((r) => String(r.userId) !== String(ownerId));
+    }
+    return (m.readBy || []).some((r) => String(r.userId) === String(ownerId));
+  };
+
   return (
     <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${T.BD}` }}>
       <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
@@ -177,11 +254,45 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
           </Typography>
         ) : messages.map((m) => {
           const mine = String(m.senderId) === myId;
+          const isEditing = editingId === m._id;
+          const canEditDelete = mine && !m.deleted;
+          const seen = mine ? isSeenByCounterpart(m) : false;
           return (
-            <Box key={m._id} sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.75,
-              flexDirection: mine ? 'row-reverse' : 'row' }}>
+            <Box key={m._id} className="dmChatRow" sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.75,
+              flexDirection: mine ? 'row-reverse' : 'row',
+              '&:hover .dmChatActions': { opacity: canEditDelete && m.type === 'text' && !isEditing ? 1 : 0 } }}>
               {!mine && <UserAvatar userId={m.senderId} size={22} sx={{ mb: 2.25, flexShrink: 0 }} />}
+
+              {/* Edit/delete — own text messages only, revealed on row hover */}
+              {canEditDelete && m.type === 'text' && !isEditing && (
+                <Box className="dmChatActions" sx={{ display: 'flex', gap: 0.25, opacity: 0, transition: 'opacity 0.15s', mb: 2.25 }}>
+                  <Tooltip title={t('common.edit')}>
+                    <IconButton size="small" onClick={() => startEdit(m)} sx={{ color: T.TEXT_TER, width: 22, height: 22 }}>
+                      <EditOutlinedIcon sx={{ fontSize: 13 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={t('common.delete')}>
+                    <IconButton size="small" onClick={() => setConfirmDeleteId(m._id)} sx={{ color: '#EA005A', width: 22, height: 22 }}>
+                      <DeleteOutlineIcon sx={{ fontSize: 13 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              )}
+
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: mine ? 'flex-end' : 'flex-start', minWidth: 0 }}>
+              {isEditing ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, maxWidth: 260 }}>
+                  <TextField size="small" autoFocus value={editDraft} onChange={(e) => setEditDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(m._id); if (e.key === 'Escape') cancelEdit(); }}
+                    sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.CTRL_BG, borderRadius: '10px', fontSize: '0.8rem' } }} />
+                  <IconButton size="small" onClick={() => saveEdit(m._id)} sx={{ color: '#81c784', width: 24, height: 24 }}>
+                    <CheckIcon sx={{ fontSize: 15 }} />
+                  </IconButton>
+                  <IconButton size="small" onClick={cancelEdit} sx={{ color: T.TEXT_TER, width: 24, height: 24 }}>
+                    <CloseIcon sx={{ fontSize: 15 }} />
+                  </IconButton>
+                </Box>
+              ) : (
               <Box sx={{ maxWidth: '100%', px: 1.25, py: 0.75, borderRadius: '12px',
                 bgcolor: mine ? (isDark ? '#ffffff' : '#000000') : T.CTRL_BG,
                 color: mine ? (isDark ? '#000000' : '#ffffff') : T.TEXT_PRI }}>
@@ -190,8 +301,21 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
                     {m.senderName}
                   </Typography>
                 )}
+                {m.deleted ? (
+                  <Typography sx={{ fontSize: '0.78rem', fontStyle: 'italic', opacity: 0.6 }}>
+                    {t('dm.messageWasDeleted')}
+                  </Typography>
+                ) : (
+                <>
                 {m.type === 'text' && (
-                  <Typography sx={{ fontSize: '0.8rem' }}>{m.body}</Typography>
+                  <Typography sx={{ fontSize: '0.8rem' }}>
+                    {m.body}
+                    {m.edited && (
+                      <Typography component="span" sx={{ fontSize: '0.62rem', opacity: 0.6, ml: 0.5 }}>
+                        {t('dm.editedTag')}
+                      </Typography>
+                    )}
+                  </Typography>
                 )}
                 {m.type === 'voice' && (
                   <audio controls src={`${axiosGlobal.defaultTargetApi}/uploads/${m.fileDiskName}`} style={{ height: 32, maxWidth: 200 }} />
@@ -210,7 +334,7 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
                     return (
                       <Box onClick={() => viewFile(m.fileDiskName, m.fileName, 'video')}
                         sx={{ position: 'relative', cursor: 'pointer', maxWidth: 220, borderRadius: '10px', overflow: 'hidden', bgcolor: '#000' }}>
-                        <Box component="video" src={`${url}#t=0.1`} muted preload="metadata"
+                        <Box component="video" src={`${playbackUrl(url)}#t=0.1`} muted preload="metadata" playsInline
                           sx={{ width: '100%', maxHeight: 180, display: 'block', objectFit: 'cover' }} />
                         <PlayCircleIcon sx={{ position: 'absolute', inset: 0, m: 'auto', fontSize: 34, color: 'rgba(255,255,255,0.9)' }} />
                       </Box>
@@ -227,8 +351,20 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
                     </Typography>
                   );
                 })()}
+                </>
+                )}
               </Box>
-              <Typography sx={{ fontSize: '0.62rem', color: T.TEXT_TER, mt: 0.25 }}>{fmtTime(m.date)}</Typography>
+              )}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3, mt: 0.25 }}>
+                <Typography sx={{ fontSize: '0.62rem', color: T.TEXT_TER }}>{fmtTime(m.date)}</Typography>
+                {mine && !m.deleted && (
+                  <Tooltip title={seen ? t('dm.seenTip') : t('dm.sentTip')}>
+                    {seen
+                      ? <DoneAllIcon sx={{ fontSize: 13, color: '#64b5f6' }} />
+                      : <CheckIcon sx={{ fontSize: 13, color: T.TEXT_TER }} />}
+                  </Tooltip>
+                )}
+              </Box>
               </Box>
             </Box>
           );
@@ -273,6 +409,16 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
       )}
 
       <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
+
+      <ConfirmDialog
+        open={Boolean(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={confirmDelete}
+        title={t('dm.deleteMessageTitle')}
+        message={t('dm.deleteMessageMessage')}
+        confirmLabel={t('common.delete')}
+        destructive
+      />
     </Box>
   );
 }

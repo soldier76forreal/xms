@@ -3,7 +3,7 @@ import ReactDom from 'react-dom';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
-import Avatar from '@mui/material/Avatar';
+import UserAvatar from '../../components/main/userAvatar';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
@@ -20,7 +20,6 @@ import NormalMenuForProfile from './normalMenuForProfile';
 import LeftSideNav from "./leftSideNav";
 import NotificationCenter from "../../components/users/notificationCenter";
 
-import ProfilePhoto from '../../assets/imagePlaceHolder.png';
 
 // Top bar (Phase 7) — deliberately minimal: X logo + the notification bell
 // (the one fixed element across every section). Search, Messages, Uploads,
@@ -33,8 +32,6 @@ const MainNavPortal = (props) => {
   const authContext = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { themeMode } = useContext(ThemeCtx);
-
-  const profileImage = authContext.decode?.profileImage;
 
   const [leftSideNav, setLeftSideNav] = useState({ left: false });
 
@@ -75,10 +72,6 @@ const MainNavPortal = (props) => {
   const handleClick = (event) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
   const logOut = () => { authContext.logout(); setAnchorEl(null); };
-
-  const avatarSrc = profileImage?.filename
-    ? `${axiosGlobal.defaultTargetApi}/uploads/${profileImage.filename}`
-    : ProfilePhoto;
 
   // The X mark (client asset recreated as SVG so it stays crisp and theme-aware):
   // dark theme = black bold X on a white tile; light theme = inverted.
@@ -170,7 +163,7 @@ const MainNavPortal = (props) => {
                 onClick={handleClick}
                 sx={{ p: 0.5, display: { xs: 'inline-flex', md: 'none' } }}
               >
-                <Avatar alt="Profile" src={avatarSrc} sx={{ width: 36, height: 36 }} />
+                <UserAvatar userId={authContext.decode?.id} size={36} />
               </IconButton>
             </Tooltip>
 

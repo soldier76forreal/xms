@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Menu from '@mui/material/Menu';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Avatar from '@mui/material/Avatar';
+import UserAvatar from '../../components/main/userAvatar';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import { useTheme } from '@mui/material/styles';
@@ -60,10 +60,6 @@ export default function NormalMenuForProfile(props) {
     CHIP_BG:  isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
   };
 
-  const avatarSrc = decoded.profileImage?.filename
-    ? `${axiosGlobal.defaultTargetApi}/uploads/${decoded.profileImage.filename}`
-    : undefined;
-  const initials = ((decoded.firstName || '')[0] || '') + ((decoded.lastName || '')[0] || '');
 
   // Sections this user can actually see, derived from the REAL permission set
   // (module of every `X:view`-style key) — not the deprecated access[] strings.
@@ -134,11 +130,10 @@ export default function NormalMenuForProfile(props) {
     >
       {/* ── Identity header ── */}
       <Box sx={{ px: 2, pt: 2, pb: 1.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Avatar src={avatarSrc} alt="Profile"
-          sx={{ width: 44, height: 44, fontSize: '0.95rem', fontWeight: 700,
-            bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: T.TEXT_PRI }}>
-          {initials || null}
-        </Avatar>
+        <UserAvatar userId={decoded.id} size={44}
+          fontSize="0.95rem"
+          sx={{ fontWeight: 700,
+            bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: T.TEXT_PRI }} />
         <Box sx={{ minWidth: 0 }}>
           <Typography noWrap sx={{ fontSize: '0.9rem', fontWeight: 700, color: T.TEXT_PRI }}>
             {decoded.firstName} {decoded.lastName}

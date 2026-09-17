@@ -12,10 +12,21 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MovieIcon from '@mui/icons-material/Movie';
 
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Autocomplete from '@mui/material/Autocomplete';
+import Tooltip from '@mui/material/Tooltip';
+import Drawer from '@mui/material/Drawer';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import CloseIcon from '@mui/icons-material/Close';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import UserAvatar from '../main/userAvatar';
 import { usePermissions } from '../../contextApi/PermissionContext';
+import { useBranch } from '../../contextApi/BranchContext';
 import { fetchRawContents } from '../../store/store';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
@@ -33,7 +44,9 @@ const STATUS_META = {
   canceled:        { labelKey: 'dm.statusCanceled',    color: '#9e9e9e' },
   ready_to_upload: { labelKey: 'dm.statusReady',       color: '#81c784' },
 };
-const STATUS_TABS = ['all', 'working_on_it', 'rejected', 'canceled', 'ready_to_upload'];
+// Same suggestion list as rawContentForm.js/readyToUploadForm.js — the field
+// is freeSolo everywhere (extensible), so this is just a starting point.
+const PLACE_OPTIONS = ['Post', 'Reels', 'Story', 'YouTube Short', 'TikTok post', 'Carousel', 'Live'];
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -50,6 +63,7 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { can } = usePermissions();
+  const { branches } = useBranch();
 
   const items      = useSelector(s => s.dmRawContents);
   const total      = useSelector(s => s.dmRawContentsTotal);
@@ -61,6 +75,11 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
   const { isUnread } = useUnreadRecords('dmRawContent');
 
   const [status, setStatus]   = useState('all');
+  const [branchFilter, setBranchFilter] = useState('');
+  const [platformFilter, setPlatformFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo]     = useState('');
+  const [filterOpen, setFilterOpen] = useState(false);
   const [page, setPage]       = useState(1);
   const [pageSize, setPageSize] = useState(40);
   const [hasMore, setHasMore] = useState(false);
@@ -93,14 +112,22 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
   const buildParams = useCallback((pg = 1) => ({
     page: pg, limit: pageSize,
     ...(status !== 'all' ? { status } : {}),
-  }), [status, pageSize]);
+    ...(branchFilter ? { branchId: branchFilter } : {}),
+    ...(platformFilter ? { platform: platformFilter } : {}),
+    ...(dateFrom ? { dateFrom } : {}),
+    ...(dateTo ? { dateTo } : {}),
+  }), [status, pageSize, branchFilter, platformFilter, dateFrom, dateTo]);
 
   const load = useCallback((pg = 1) => {
     dispatch(fetchRawContents({ authCtx, axiosGlobal, params: buildParams(pg) }));
     setPage(pg);
   }, [authCtx, axiosGlobal, buildParams, dispatch]);
 
-  useEffect(() => { load(1); }, [status, pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(1); }, [status, branchFilter, platformFilter, dateFrom, dateTo, pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const clearFilters = () => { setStatus('all'); setBranchFilter(''); setPlatformFilter(''); setDateFrom(''); setDateTo(''); };
+  const activeFilterCount = [
+    status !== 'all', branchFilter, platformFilter, dateFrom, dateTo,
+  ].filter(Boolean).length;
   useEffect(() => { setHasMore(items.length < total); }, [items, total]);
 
   // Deep link from a notification (dm chat) — open that batch's detail directly.
@@ -148,6 +175,24 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
             <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
               {t('dm.rawContentCount', { count: total })}
             </Typography>
+            <Tooltip title={t('common.filters')}>
+              <IconButton size="small" onClick={() => setFilterOpen(!filterOpen)}
+                sx={{ color: activeFilterCount > 0 ? T.TEXT_PRI : T.TEXT_TER,
+                  bgcolor: filterOpen ? T.CTRL_BG : 'transparent',
+                  border: `1px solid ${activeFilterCount > 0 ? T.BD2 : T.BD}`,
+                  borderRadius: '8px', width: 28, height: 28, position: 'relative' }}>
+                <FilterListIcon sx={{ fontSize: 15 }} />
+                {activeFilterCount > 0 && (
+                  <Box sx={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14,
+                    borderRadius: '50%', bgcolor: 'text.primary', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography sx={{ fontSize: '0.55rem', color: isDark ? '#000' : '#fff', fontWeight: 700 }}>
+                      {activeFilterCount}
+                    </Typography>
+                  </Box>
+                )}
+              </IconButton>
+            </Tooltip>
             <PageSizeSelect value={pageSize} onChange={(v) => { setPageSize(v); }} />
             {can('digitalMarketing:rawContent:create') && (
               <Button size="small" variant="contained" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
@@ -157,23 +202,6 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
               </Button>
             )}
             <SectionTutorials section="digitalMarketing" tag="digitalMarketing:rawContent:create" />
-          </Box>
-
-          <Box sx={{ display: 'flex', gap: 0.5, px: 2, pb: 1, flexWrap: 'wrap' }}>
-            {STATUS_TABS.map((s) => {
-              const meta = s === 'all' ? { labelKey: 'common.all', color: T.TEXT_TER } : STATUS_META[s];
-              const active = status === s;
-              return (
-                <Button key={s} size="small" onClick={() => setStatus(s)}
-                  sx={{ minWidth: 0, height: 24, px: 1.1, py: 0, borderRadius: '7px',
-                    fontSize: '0.68rem', fontWeight: active ? 700 : 400, textTransform: 'none',
-                    color: active ? T.TEXT_PRI : T.TEXT_TER,
-                    bgcolor: active ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
-                    border: `1px solid ${active ? T.BD2 : 'transparent'}` }}>
-                  {t(meta.labelKey)}
-                </Button>
-              );
-            })}
           </Box>
 
           {/* ── Timeline ── */}
@@ -266,6 +294,84 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
       )}
 
       <RawContentForm open={formOpen} onClose={() => setFormOpen(false)} />
+
+      {/* ── Filter Drawer — same sidebar pattern as CRM's ── */}
+      <Drawer anchor="right" open={filterOpen} onClose={() => setFilterOpen(false)}
+        PaperProps={{ sx: { width: { xs: '100vw', sm: 320 },
+          bgcolor: T.PANEL_BG, borderLeft: `1px solid ${T.BD}` } }}>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5,
+          borderBottom: `1px solid ${T.BD}` }}>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
+            {t('common.filters')}
+          </Typography>
+          <IconButton size="small" onClick={() => setFilterOpen(false)} sx={{ color: T.TEXT_TER }}>
+            <CloseIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Box>
+
+        <Box sx={{ px: 2, py: 2, display: 'flex', flexDirection: 'column', gap: 2.5, overflowY: 'auto' }}>
+
+          <FormControl size="small" fullWidth>
+            <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.status')}</InputLabel>
+            <Select value={status} onChange={(e) => setStatus(e.target.value)} label={t('common.status')}
+              sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
+              <MenuItem value="all"><em>{t('common.all')}</em></MenuItem>
+              {Object.keys(STATUS_META).map((s) => (
+                <MenuItem key={s} value={s} sx={{ fontSize: '0.8rem' }}>{t(STATUS_META[s].labelKey)}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {branches.length > 1 && (
+            <FormControl size="small" fullWidth>
+              <InputLabel sx={{ fontSize: '0.78rem' }}>{t('common.branch')}</InputLabel>
+              <Select value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)} label={t('common.branch')}
+                sx={{ fontSize: '0.8rem', '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }}>
+                <MenuItem value=""><em>{t('dm.allBranchesOption')}</em></MenuItem>
+                {branches.map((b) => (
+                  <MenuItem key={b._id} value={b._id} sx={{ fontSize: '0.8rem' }}>{b.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          <Autocomplete freeSolo options={PLACE_OPTIONS} value={platformFilter}
+            onInputChange={(e, v) => setPlatformFilter(v || '')}
+            renderInput={(params) => (
+              <TextField {...params} size="small" label={t('dm.suggestedPlaceToUpload')}
+                inputProps={{ ...params.inputProps, style: { fontSize: '0.8rem' } }}
+                sx={{ '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } }} />
+            )} />
+
+          <Box>
+            <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 1,
+              textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {t('dm.filterByDateRange')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField size="small" type="date" label={t('common.from')} value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
+                  '& input': { fontSize: '0.78rem' } }} />
+              <TextField size="small" type="date" label={t('common.to')} value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                sx={{ flex: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
+                  '& input': { fontSize: '0.78rem' } }} />
+            </Box>
+          </Box>
+        </Box>
+
+        <Box sx={{ px: 2, py: 1.5, borderTop: `1px solid ${T.BD}` }}>
+          <Button fullWidth size="small" onClick={clearFilters}
+            sx={{ fontSize: '0.75rem', textTransform: 'none', color: T.TEXT_SEC,
+              border: `1px solid ${T.BD}`, borderRadius: '8px' }}>
+            {t('common.clearAllFilters')}
+          </Button>
+        </Box>
+      </Drawer>
     </Box>
   );
 }

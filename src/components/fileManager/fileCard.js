@@ -11,9 +11,11 @@ import { FileIcon, defaultStyles } from 'react-file-icon';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import { UNREAD_ACCENT, unreadRowTint } from '../../tools/unreadDot';
+import { playbackUrl } from '../../tools/videoSource';
 
 const IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
-const VIDEO_FORMATS = ['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v'];
+const VIDEO_FORMATS = ['mp4', 'webm', 'ogv', 'mov', 'mkv', 'avi', 'm4v', 'wmv', 'flv',
+  '3gp', '3g2', 'mpg', 'mpeg', 'ts', 'm2ts', 'mts', 'f4v', 'asf', 'divx', 'vob'];
 
 // ── File / folder grid tile (Phase 9 shell) ───────────────────────────────────
 // One card renders either a folder entry ({doc, subs}) or a file entry
@@ -41,11 +43,15 @@ const FileCard = ({ entry, apiBase, selected, checked, pinned, tags, unread,
   const isVideo = !isFolder && VIDEO_FORMATS.includes(format);
   const fileUrl = !isFolder && doc.metaData?.filename ? `${apiBase}/uploads/${doc.metaData.filename}` : null;
   // Images: server thumbnail when present, else the original (older uploads
-  // predate thumbnail generation). Videos: no server thumbnail exists (BUG-07,
-  // ffprobe missing) — the browser renders the first frame itself instead.
+  // predate thumbnail generation). Videos: a server poster frame now exists for
+  // new uploads (BUG-07 fixed in utils/mediaConvert.js — fixed timestamps
+  // instead of a percentage, so it no longer needs the missing ffprobe); older
+  // ones still fall back to letting the browser decode the first frame itself.
   const thumbUrl = !isFolder
     ? (doc.thumbnail ? `${apiBase}/uploads/${doc.thumbnail}` : (isImage ? fileUrl : null))
     : null;
+  // The playable source is NOT the raw upload — see tools/videoSource.js.
+  const videoUrl = isVideo && fileUrl ? playbackUrl(fileUrl) : null;
 
   return (
     <Box
@@ -93,11 +99,17 @@ const FileCard = ({ entry, apiBase, selected, checked, pinned, tags, unread,
       }}>
         {isFolder ? (
           <FolderIcon sx={{ fontSize: 40, color: isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)' }} />
-        ) : isVideo && fileUrl ? (
+        ) : isVideo && videoUrl ? (
           <>
-            {/* the browser decodes the first frame — no server thumbnail needed */}
-            <Box component="video" muted preload="metadata" src={`${fileUrl}#t=0.1`}
-              sx={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+            {/* server poster frame when there is one; otherwise the browser
+                decodes the first frame off the playable copy */}
+            {thumbUrl ? (
+              <Box component="img" src={thumbUrl} alt={name} loading="lazy"
+                sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <Box component="video" muted preload="metadata" playsInline src={`${videoUrl}#t=0.1`}
+                sx={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
+            )}
             <PlayCircleFilledIcon sx={{ position: 'absolute', inset: 0, m: 'auto', fontSize: 26,
               color: 'rgba(255,255,255,0.85)', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))' }} />
           </>

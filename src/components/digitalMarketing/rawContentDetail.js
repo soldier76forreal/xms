@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useHistory } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
@@ -10,6 +11,10 @@ import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Skeleton from '@mui/material/Skeleton';
 import LinearProgress from '@mui/material/LinearProgress';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate';
@@ -19,6 +24,9 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DownloadIcon from '@mui/icons-material/Download';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import LinkIcon from '@mui/icons-material/Link';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -26,10 +34,12 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchRawContent, updateRawContent, deleteRawContent } from '../../store/store';
 import RawContentChat from './rawContentChat';
 import ReadyToUploadForm from './readyToUploadForm';
+import LinkReadyToUploadDialog from './linkReadyToUploadDialog';
 import DmFileEditDialog from './dmFileEditDialog';
 import DmActivityLog from './dmActivityLog';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
+import { playbackUrl } from '../../tools/videoSource';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
@@ -54,6 +64,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
+  const history     = useHistory();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { can }     = usePermissions();
@@ -69,6 +80,9 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
     TEXT_TER: isDark ? 'rgba(255,255,255,0.2)'  : 'rgba(0,0,0,0.3)',
     CTRL_BG:  isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
     CARD_BG:  isDark ? '#151515' : 'rgba(0,0,0,0.02)',
+    DIALOG_BG: isDark ? '#0d0d0d' : theme.palette.background.paper,
+    INPUT_BG:  isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+    DIVIDER:   isDark ? 'rgba(255,255,255,0.07)' : theme.palette.divider,
   };
 
   const [loading, setLoading] = useState(true);
@@ -78,6 +92,8 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   const [titleDraft, setTitleDraft] = useState('');
   const [editFile, setEditFile] = useState(null);         // file entry open in the full edit dialog
   const [readyFormOpen, setReadyFormOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [readyMenuAnchor, setReadyMenuAnchor] = useState(null);
   const [confirmRemoveFile, setConfirmRemoveFile] = useState(null);   // fileId pending removal
   const [confirmDeleteBatch, setConfirmDeleteBatch] = useState(false);
   const [viewerMedia, setViewerMedia] = useState(null);   // { url, name, kind }
@@ -235,11 +251,25 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
                 {t('dm.alreadyReadyToUpload')}
               </Button>
             ) : (
-              <Button size="small" variant="outlined" color="success" startIcon={<CloudUploadIcon sx={{ fontSize: 14 }} />}
-                onClick={() => setReadyFormOpen(true)}
-                sx={{ fontSize: '0.7rem', textTransform: 'none', borderRadius: '8px' }}>
-                {t('dm.markReadyToUpload')}
-              </Button>
+              <>
+                <Button size="small" variant="outlined" color="success"
+                  startIcon={<CloudUploadIcon sx={{ fontSize: 14 }} />}
+                  endIcon={<ArrowDropDownIcon sx={{ fontSize: 16 }} />}
+                  onClick={(e) => setReadyMenuAnchor(e.currentTarget)}
+                  sx={{ fontSize: '0.7rem', textTransform: 'none', borderRadius: '8px' }}>
+                  {t('dm.markReadyToUpload')}
+                </Button>
+                <Menu anchorEl={readyMenuAnchor} open={!!readyMenuAnchor} onClose={() => setReadyMenuAnchor(null)}>
+                  <MenuItem onClick={() => { setReadyMenuAnchor(null); setReadyFormOpen(true); }}>
+                    <ListItemIcon><AddCircleOutlineIcon sx={{ fontSize: 17 }} /></ListItemIcon>
+                    <ListItemText primaryTypographyProps={{ fontSize: '0.8rem' }}>{t('dm.createNewReadyToUpload')}</ListItemText>
+                  </MenuItem>
+                  <MenuItem onClick={() => { setReadyMenuAnchor(null); setLinkDialogOpen(true); }}>
+                    <ListItemIcon><LinkIcon sx={{ fontSize: 17 }} /></ListItemIcon>
+                    <ListItemText primaryTypographyProps={{ fontSize: '0.8rem' }}>{t('dm.linkExistingReadyToUpload')}</ListItemText>
+                  </MenuItem>
+                </Menu>
+              </>
             )}
           </Box>
         )}
@@ -253,6 +283,34 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
       </Box>
 
       <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+        {/* ── Ready-to-upload content — shown at the TOP once this batch has
+            graduated, whether linked via the create-new flow or the
+            link-existing flow (both set readyToUploadId the same way). ── */}
+        {doc.status === 'ready_to_upload' && doc.readyToUpload && (
+          <Box sx={{ px: 3, pt: 2.5 }}>
+            <Box sx={{ p: 1.75, borderRadius: '12px', bgcolor: 'rgba(129,199,132,0.08)', border: '1px solid rgba(129,199,132,0.3)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
+                <CloudUploadIcon sx={{ fontSize: 15, color: '#81c784' }} />
+                <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#81c784' }}>
+                  {t('dm.readyToUploadContentLabel')}
+                </Typography>
+              </Box>
+              <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, mb: 0.5 }}>
+                {doc.readyToUpload.title?.trim() || t('dm.filesBatchFallback', { count: doc.readyToUpload.files?.length || 0 })}
+              </Typography>
+              <Typography sx={{ fontSize: '0.76rem', color: T.TEXT_SEC, mb: 1.25 }}>
+                {[doc.readyToUpload.language, doc.readyToUpload.platform].filter(Boolean).join(' · ') || '—'}
+                {doc.readyToUpload.caption ? ` — ${doc.readyToUpload.caption}` : ''}
+              </Typography>
+              <Button size="small" variant="outlined" startIcon={<OpenInNewIcon sx={{ fontSize: 13 }} />}
+                onClick={() => history.push(`/digitalMarketing?dm=ready&open=${doc.readyToUpload._id}`)}
+                sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px', borderColor: 'rgba(129,199,132,0.4)', color: '#81c784' }}>
+                {t('dm.openReadyToUpload')}
+              </Button>
+            </Box>
+          </Box>
+        )}
+
         {/* ── File gallery ── */}
         <Box sx={{ px: 3, py: 2 }}>
           <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
@@ -276,7 +334,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
                         <Box onClick={() => viewFile(f.diskName, f.name, kind)}
                           sx={{ position: 'relative', width: 34, height: 34, borderRadius: '6px', overflow: 'hidden',
                             cursor: 'pointer', flexShrink: 0, bgcolor: '#000' }}>
-                          <Box component="video" src={`${url}#t=0.1`} muted preload="metadata"
+                          <Box component="video" src={`${playbackUrl(url)}#t=0.1`} muted preload="metadata" playsInline
                             sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           <PlayCircleIcon sx={{ position: 'absolute', inset: 0, m: 'auto', fontSize: 18, color: 'rgba(255,255,255,0.9)' }} />
                         </Box>
@@ -371,7 +429,8 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
         )}
       </Box>
 
-      <ReadyToUploadForm open={readyFormOpen} onClose={() => setReadyFormOpen(false)} rawContentId={doc._id} />
+      <ReadyToUploadForm open={readyFormOpen} onClose={() => setReadyFormOpen(false)} rawContentId={doc._id} defaultBranchId={doc.branchId || ''} />
+      <LinkReadyToUploadDialog open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} rawContentId={doc._id} T={T} isDark={isDark} />
 
       <DmFileEditDialog open={Boolean(editFile)} onClose={() => setEditFile(null)}
         file={editFile} recordId={doc._id} kind="rawContent" />
