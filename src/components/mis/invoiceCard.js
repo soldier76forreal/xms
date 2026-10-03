@@ -20,10 +20,12 @@ import PaidIcon from '@mui/icons-material/Paid';
 import SendIcon from '@mui/icons-material/Send';
 
 import { usePermissions } from '../../contextApi/PermissionContext';
+import { useBranch } from '../../contextApi/BranchContext';
 import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 
 // status → chip colour (subtle alpha tints, dark/opacity language)
 const STATUS_META = {
+  requested:      { labelKey: 'mis.statusRequested', color: '#f06292' },
   draft:          { labelKey: 'mis.statusDraft',     color: '#9e9e9e' },
   sent:           { labelKey: 'mis.statusSent',      color: '#64b5f6' },
   accepted:       { labelKey: 'mis.statusAccepted',  color: '#81c784' },
@@ -47,6 +49,7 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const { can } = usePermissions();
+  const { activeBranchId } = useBranch();
 
   const T = {
     BD:       isDark ? 'rgba(255,255,255,0.07)' : theme.palette.divider,
@@ -71,8 +74,13 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
   const closeMenu = (e) => { e?.stopPropagation?.(); setMenuAnchor(null); };
   const act = (fn) => (e) => { closeMenu(e); fn && fn(doc); };
 
+  const isInterBranch = doc.tradeMode === 'interBranch';
+  // Only the TARGET/fulfilling branch may convert an inter-branch quote (the
+  // backend is the real gate — see POST /invoices/:id/convert's extra check —
+  // this just avoids showing an enabled button that would 403).
   const canConvert = !isInvoice && can('mis:preinvoice:convert') &&
-    doc.status !== 'converted' && !doc.convertedToInvoiceId;
+    doc.status !== 'converted' && !doc.convertedToInvoiceId &&
+    (!isInterBranch || String(doc.branchId) === String(activeBranchId));
 
   return (
     <Box onClick={() => onSelect && onSelect(doc)}
@@ -100,7 +108,7 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
         <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', border: `1px solid ${T.BD}`, flexShrink: 0 }}>
           <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: 0.5,
             textTransform: 'uppercase', color: T.TEXT_SEC }}>
-            {isInvoice ? t('mis.invoiceType') : t('mis.quoteType')}
+            {isInvoice ? t('mis.invoiceType') : (isInterBranch ? t('supply.docKindRequest') : t('mis.quoteType'))}
           </Typography>
         </Box>
 
@@ -109,6 +117,16 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
             {t(status.labelKey)}
           </Typography>
         </Box>
+
+        {/* A request already says so in its type badge; an inter-branch
+            INVOICE (a converted request) still needs the marker. */}
+        {isInterBranch && isInvoice && (
+          <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: '#ba68c822', flexShrink: 0 }}>
+            <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#ba68c8' }}>
+              {t('mis.interBranchBadge')}
+            </Typography>
+          </Box>
+        )}
 
         {isInvoice && paidSum > 0 && (
           <PaidIcon sx={{ fontSize: 13, color: doc.status === 'paid' ? '#81c784' : '#ffb74d', flexShrink: 0 }} />
@@ -137,7 +155,7 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
       {/* row 2 — customer + date + total */}
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 0.5, pl: '23px' }}>
         <Typography noWrap sx={{ fontSize: '0.76rem', color: T.TEXT_SEC, flexGrow: 1, minWidth: 0 }}>
-          {doc.customerSnapshot?.name || '—'}
+          {isInterBranch ? doc.requestingBranchSnapshot?.name : doc.customerSnapshot?.name || '—'}
         </Typography>
         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, flexShrink: 0 }}>
           {fmtDate(doc.issueDate)}

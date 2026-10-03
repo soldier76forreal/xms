@@ -5,7 +5,6 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -15,6 +14,7 @@ import Skeleton from '@mui/material/Skeleton';
 import { useTheme } from '@mui/material/styles';
 
 import CloseIcon from '@mui/icons-material/Close';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -28,15 +28,20 @@ import Inventory2Icon from '@mui/icons-material/Inventory2';
 import SendIcon from '@mui/icons-material/Send';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import RestoreIcon from '@mui/icons-material/Restore';
+import TerrainIcon from '@mui/icons-material/Terrain';
+import { useHistory } from 'react-router-dom';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
+import { useBranch } from '../../contextApi/BranchContext';
 import { updateMisPayment, actions } from '../../store/store';
 import SendToDialog from './sendToDialog';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
+import PackingListsForInvoice from './packingLists/packingListsForInvoice';
+import DocPreviewFrame from '../../tools/docPreviewFrame';
 
 // Phase 6 — MIS invoice/pre-invoice detail container (Session 45).
 // Header (number/type/status/customer/total + actions) · live document preview
@@ -45,6 +50,7 @@ import UserAvatar from '../main/userAvatar';
 // payment quick-record (invoice, mis:payment:edit) · activity timeline.
 
 const STATUS_META = {
+  requested:      { labelKey: 'mis.statusRequested', color: '#f06292' },
   draft:          { labelKey: 'mis.statusDraft',     color: '#9e9e9e' },
   sent:           { labelKey: 'mis.statusSent',      color: '#64b5f6' },
   accepted:       { labelKey: 'mis.statusAccepted',  color: '#81c784' },
@@ -55,6 +61,25 @@ const STATUS_META = {
   partially_paid: { labelKey: 'mis.statusPartial',   color: '#ffb74d' },
   cancelled:      { labelKey: 'mis.statusCancelled', color: '#e57373' },
 };
+
+// What the branch a request was sent to can move it through, in order.
+// 'converted' is never picked by hand — converting the request sets it.
+const REQUEST_STATUSES = ['requested', 'draft', 'sent', 'accepted', 'expired', 'cancelled'];
+
+// A status shown as a coloured pill — the one visual for status everywhere in
+// this panel, so the dropdown and the read-only view look the same.
+function StatusPill({ status, t, size = 'md' }) {
+  const meta = STATUS_META[status] || STATUS_META.draft;
+  return (
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+      <Box sx={{ width: size === 'md' ? 8 : 7, height: size === 'md' ? 8 : 7, borderRadius: '50%',
+        bgcolor: meta.color, boxShadow: `0 0 0 3px ${meta.color}33`, flexShrink: 0 }} />
+      <Typography sx={{ fontSize: size === 'md' ? '0.78rem' : '0.74rem', fontWeight: 700, color: meta.color }}>
+        {t(meta.labelKey)}
+      </Typography>
+    </Box>
+  );
+}
 
 const ACTIVITY_META = {
   created:           { labelKey: 'mis.activityCreated',           Icon: AddCircleOutlineIcon },
@@ -76,7 +101,9 @@ const fmtDateTime = (d) => {
   return `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 };
 
-export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, onDelete }) {
+// onBack (phones): an inline back arrow at the start of the title row — it
+// used to float over the title from outside.
+export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, onDelete, onBack }) {
   const { t } = useTranslation();
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -84,6 +111,8 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { can }     = usePermissions();
+  const { activeBranchId } = useBranch();
+  const history = useHistory();
 
   const T = {
     BD:       isDark ? 'rgba(255,255,255,0.07)' : theme.palette.divider,
@@ -103,11 +132,22 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
   const [paySaving, setPaySaving] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [restricted, setRestricted] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
 
   const isInvoice = doc.docType === 'invoice';
   const permBase  = isInvoice ? 'mis:invoice' : 'mis:preinvoice';
   const status    = STATUS_META[(full || doc).status] || STATUS_META.draft;
   const live      = full || doc;
+  const isInterBranch = live.tradeMode === 'interBranch';
+  // A request = an inter-branch quotation. Its status belongs to the branch it
+  // was sent to (live.branchId); the requesting side follows along read-only.
+  const isRequest = !isInvoice && isInterBranch;
+  const isTargetSide = isInterBranch && String(live.branchId) === String(activeBranchId);
+  const canSetRequestStatus = isRequest && isTargetSide && can('mis:preinvoice:edit')
+    && live.status !== 'converted' && !live.convertedToInvoiceId;
+  const canConvertDoc = Boolean(onConvert) && !isInvoice && can('mis:preinvoice:convert')
+    && live.status !== 'converted' && live.status !== 'cancelled' && !live.convertedToInvoiceId
+    && (!isInterBranch || isTargetSide);
 
   const loadDetail = useCallback(async (refetchDoc = true) => {
     setLoading(true);
@@ -150,6 +190,23 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
     loadDetail();   // refresh totals/status/activity + preview
   };
 
+  const changeRequestStatus = async (next) => {
+    if (!next || next === live.status) return;
+    setStatusSaving(true);
+    try {
+      const res = await authCtx.jwtInst({ method: 'put',
+        url: `${axiosGlobal.defaultTargetApi}/mis/invoices/${doc._id}`, data: { status: next } });
+      dispatch(actions.misInvUpsert(res.data));
+      dispatch(actions.setShowSnackBar({ status: true, type: 'success',
+        msg: t('mis.requestStatusChangedMsg', { number: live.docNumber, status: t((STATUS_META[next] || STATUS_META.draft).labelKey) }) }));
+      loadDetail();
+    } catch (err) {
+      dispatch(actions.setShowSnackBar({ status: true, type: 'error',
+        msg: err?.response?.data?.message || t('mis.requestStatusFailed') }));
+    }
+    setStatusSaving(false);
+  };
+
   if (restricted) return <RestrictedAccessScreen />;
 
   const activity = full?.activity || [];
@@ -158,19 +215,26 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
       {/* ── Header ── */}
-      <Box sx={{ px: 3, pt: 2, pb: 1.5, borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ px: { xs: 2, sm: 3 }, pt: 2, pb: 1.5, borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          {onBack && (
+            <IconButton size="small" onClick={onBack} sx={{ ml: -0.75, color: T.TEXT_SEC }}>
+              <ArrowBackIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          )}
           <Typography sx={{ fontSize: '1.02rem', fontWeight: 700, color: T.TEXT_PRI }}>
-            {isInvoice ? t('mis.invoiceType') : t('mis.quotationLong')} #{live.docNumber}
+            {isInvoice ? t('mis.invoiceType') : (isRequest ? t('supply.docKindRequest') : t('mis.quotationLong'))} #{live.docNumber}
           </Typography>
           <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: `${status.color}22` }}>
             <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: status.color }}>
               {t(status.labelKey)}
             </Typography>
           </Box>
-          {isInvoice && live.stockDecremented && (
-            <Tooltip title={t('mis.stockDecrementedTooltip')}>
-              <Inventory2Icon sx={{ fontSize: 14, color: T.TEXT_TER }} />
+          {/* Stock taken out: a paid invoice, or an accepted quotation / request
+              (and the invoice it was converted into). */}
+          {live.stockDecremented && (
+            <Tooltip title={isInvoice ? t('mis.stockDecrementedTooltip') : t('mis.stockReservedTooltip')}>
+              <Inventory2Icon sx={{ fontSize: 14, color: isInvoice ? T.TEXT_TER : '#81c784' }} />
             </Tooltip>
           )}
           {(live.assignedTo || []).length > 0 && (
@@ -201,19 +265,41 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
         </Box>
 
         <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, mt: 0.25 }}>
-          {live.customerSnapshot?.name || '—'}
-          {live.customerSnapshot?.country ? ` · ${live.customerSnapshot.country}` : ''}
+          {isInterBranch
+            ? t('mis.requestFromBranchLine', { branch: live.requestingBranchSnapshot?.name || '—' })
+            : (live.customerSnapshot?.name || '—')}
+          {!isInterBranch && live.customerSnapshot?.country ? ` · ${live.customerSnapshot.country}` : ''}
           {' · '}
           <Box component="span" sx={{ fontWeight: 700, color: T.TEXT_PRI }}>
             {fmtMoney(live.grandTotal)} AED
           </Box>
         </Typography>
 
+        {/* The supply record this was raised against, by its code. The record
+            lives in this doc's (fulfilling) branch — it opens from there. */}
+        {full?.supplyRecord && (() => {
+          const canOpen = String(live.branchId) === String(activeBranchId);
+          return (
+            <Box onClick={canOpen ? () => history.push(`/supply?open=${full.supplyRecord._id}`) : undefined}
+              sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, mt: 0.75, px: 0.9, py: '3px',
+                maxWidth: '100%', borderRadius: '7px', border: `1px solid ${T.BD}`,
+                cursor: canOpen ? 'pointer' : 'default', '&:hover': canOpen ? { borderColor: T.BD2 } : undefined }}>
+              <TerrainIcon sx={{ fontSize: 13, color: T.TEXT_TER }} />
+              <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_SEC }} noWrap>
+                <Box component="span" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#64b5f6' }}>
+                  {full.supplyRecord.code || '—'}
+                </Box>
+                {full.supplyRecord.title ? ` · ${full.supplyRecord.title}` : ''}
+              </Typography>
+            </Box>
+          );
+        })()}
+
         {/* actions */}
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1.25 }}>
-          {can(`${permBase}:edit`) && (
+          {onEdit && can(`${permBase}:edit`) && live.status !== 'converted' && (
             <Button size="small" variant="outlined" startIcon={<EditIcon sx={{ fontSize: 14 }} />}
-              onClick={() => onEdit && onEdit(live)}
+              onClick={() => onEdit(live)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
                 color: T.TEXT_SEC, borderColor: T.BD2 }}>
               {t('common.edit')}
@@ -235,12 +321,12 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               </Button>
             </>
           )}
-          {!isInvoice && can('mis:preinvoice:convert') && live.status !== 'converted' && !live.convertedToInvoiceId && (
+          {canConvertDoc && !isRequest && (
             <Button size="small" variant="outlined" startIcon={<SwapHorizIcon sx={{ fontSize: 14 }} />}
-              onClick={() => onConvert && onConvert(live)}
+              onClick={() => onConvert(live)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
                 color: T.TEXT_SEC, borderColor: T.BD2 }}>
-              {t('mis.convert')}
+              {t('mis.convertToInvoice')}
             </Button>
           )}
           {isInvoice && can('mis:payment:edit') && (
@@ -259,9 +345,9 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               {t('mis.sendToEllipsis')}
             </Button>
           )}
-          {can(`${permBase}:delete`) && (
+          {onDelete && can(`${permBase}:delete`) && (
             <Button size="small" startIcon={<DeleteOutlineIcon sx={{ fontSize: 14 }} />}
-              onClick={() => onDelete && onDelete(live)}
+              onClick={() => onDelete(live)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
                 color: '#EA005A', '&:hover': { bgcolor: 'rgba(234,0,90,0.07)' } }}>
               {t('common.delete')}
@@ -313,10 +399,8 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
           ) : previewHtml ? (
             <Box sx={{ border: `1px solid ${T.BD}`, borderRadius: '10px', overflow: 'hidden',
               bgcolor: '#ffffff' }}>
-              <Box component="iframe" srcDoc={previewHtml} title={`doc-${live.docNumber}`}
-                sandbox=""
-                sx={{ display: 'block', width: '100%', height: { xs: 480, md: 640 },
-                  border: 'none', bgcolor: '#ffffff' }} />
+              <DocPreviewFrame html={previewHtml} title={`doc-${live.docNumber}`}
+                height={{ xs: 480, md: 640 }} />
             </Box>
           ) : (
             <Box sx={{ py: 4, textAlign: 'center', border: `1px dashed ${T.BD}`, borderRadius: '10px' }}>
@@ -327,6 +411,9 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
             </Box>
           )}
         </Box>
+
+        {/* packing lists linked to this invoice (Session 72, Phase 3) */}
+        <PackingListsForInvoice invoiceId={doc._id} />
 
         {/* activity timeline */}
         <Box sx={{ px: 3, pb: 3 }}>
@@ -396,6 +483,64 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
           )}
         </Box>
       </Box>
+
+      {/* ── Request status bar — pinned to the bottom of the panel ── */}
+      {isRequest && (
+        <Box sx={{ flexShrink: 0, borderTop: `1px solid ${T.BD}`, px: { xs: 2, sm: 3 }, py: 1.25,
+          display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap',
+          bgcolor: isDark ? '#0b0b0b' : 'background.paper' }}>
+          <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: 1,
+            textTransform: 'uppercase', color: T.TEXT_TER }}>
+            {t('mis.requestStatusLabel')}
+          </Typography>
+
+          {canSetRequestStatus ? (
+            <Select size="small" value={live.status} disabled={statusSaving}
+              onChange={(e) => changeRequestStatus(e.target.value)}
+              renderValue={(v) => <StatusPill status={v} t={t} />}
+              sx={{ minWidth: 176, height: 34, borderRadius: '9px',
+                bgcolor: `${status.color}1a`,
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: `${status.color}88` },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: status.color },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: status.color },
+                '& .MuiSelect-icon': { color: status.color } }}
+              MenuProps={{ PaperProps: { sx: { borderRadius: '10px', mt: 0.5 } } }}>
+              {REQUEST_STATUSES.map((s) => (
+                <MenuItem key={s} value={s} sx={{ py: 0.9, display: 'block',
+                  '&.Mui-selected': { bgcolor: `${(STATUS_META[s] || STATUS_META.draft).color}1f` } }}>
+                  <StatusPill status={s} t={t} size="sm" />
+                  {/* what accepting does — it moves stock */}
+                  {s === 'accepted' && (
+                    <Typography sx={{ fontSize: '0.64rem', color: 'text.secondary', mt: 0.25, ml: 2 }}>
+                      {t('mis.acceptedTakesStockHint')}
+                    </Typography>
+                  )}
+                </MenuItem>
+              ))}
+            </Select>
+          ) : (
+            <Box sx={{ px: 1.25, py: 0.6, borderRadius: '9px', bgcolor: `${status.color}1a`,
+              border: `1px solid ${status.color}55` }}>
+              <StatusPill status={live.status} t={t} />
+            </Box>
+          )}
+          {statusSaving && <CircularProgress size={14} sx={{ color: T.TEXT_TER }} />}
+
+          <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC, flex: 1, minWidth: 160 }}>
+            {isTargetSide
+              ? t('mis.requestStatusHintTarget', { branch: live.requestingBranchSnapshot?.name || '—' })
+              : t('mis.requestStatusHintRequester')}
+          </Typography>
+
+          {canConvertDoc && (
+            <Button size="small" variant="contained" startIcon={<SwapHorizIcon sx={{ fontSize: 15 }} />}
+              onClick={() => onConvert(live)}
+              sx={{ fontSize: '0.74rem', textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}>
+              {t('mis.convertToInvoice')}
+            </Button>
+          )}
+        </Box>
+      )}
 
       <SendToDialog
         doc={live}

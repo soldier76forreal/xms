@@ -508,10 +508,152 @@ export const fetchMisCompanyProfile = createAsyncThunk('overallAssets/fetchMisCo
     const response = await theData.authCtx.jwtInst({
       method: 'get',
       url: `${theData.axiosGlobal.defaultTargetApi}/mis/company-profile`,
+      // Session 72 — omitting branchId reads/edits the global fallback doc
+      // (unchanged pre-Session-72 behavior); passing it reads/edits that
+      // branch's own override, falling back to global when none exists yet.
+      params: theData.branchId ? { branchId: theData.branchId } : {},
     });
     dispatch(actions.misSetCompanyProfile(response.data));
   } catch (err) {
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load company settings', type: 'error' }));
+  }
+});
+
+// Session 72 — branches eligible to quote against (excludes the caller's own).
+// requestingBranchId (the active branch) narrows it to branches that shared
+// with THAT branch — the same check the create route applies.
+export const fetchMisCrossBranchBranches = createAsyncThunk('overallAssets/fetchMisCrossBranchBranches', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/mis/cross-branch/branches`,
+      params: theData.requestingBranchId ? { requestingBranchId: theData.requestingBranchId } : {},
+    });
+    dispatch(actions.misSetCrossBranchBranches(response.data.data || []));
+  } catch (err) {
+    dispatch(actions.misSetCrossBranchBranches([]));
+  }
+});
+
+// Session 72 (Phase 3) — standalone Packing Lists
+
+export const fetchMisPackingLists = createAsyncThunk('overallAssets/fetchMisPackingLists', async (theData, { dispatch }) => {
+  dispatch(actions.misPlSetLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists`,
+      params: theData.params || {},
+    });
+    const isFirstPage = !theData.params?.skip || theData.params.skip <= 0;
+    if (isFirstPage) dispatch(actions.misPlSetList({ data: response.data.data, total: response.data.total }));
+    else dispatch(actions.misPlAppendList({ data: response.data.data, total: response.data.total }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load packing lists', type: 'error' }));
+  } finally {
+    dispatch(actions.misPlSetLoading(false));
+  }
+});
+
+export const fetchMisPackingList = createAsyncThunk('overallAssets/fetchMisPackingList', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}`,
+    });
+    dispatch(actions.misPlSetSelected(response.data));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load packing list', type: 'error' }));
+  }
+});
+
+export const saveMisPackingList = createAsyncThunk('overallAssets/saveMisPackingList', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: theData.id ? 'put' : 'post',
+    url: theData.id
+      ? `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}`
+      : `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists`,
+    data: theData.data,
+  });
+  dispatch(actions.misPlUpsert(response.data));
+  dispatch(actions.misPlBumpRefresh());
+  dispatch(actions.setShowSnackBar({ status: true, msg: theData.id ? 'Packing list updated' : `Packing list created — #${response.data.docNumber}`, type: 'success' }));
+  return response.data;
+});
+
+export const deleteMisPackingList = createAsyncThunk('overallAssets/deleteMisPackingList', async (theData, { dispatch }) => {
+  await theData.authCtx.jwtInst({
+    method: 'delete',
+    url: `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}`,
+  });
+  dispatch(actions.misPlRemove(theData.id));
+  dispatch(actions.setShowSnackBar({ status: true, msg: 'Packing list deleted', type: 'success' }));
+});
+
+// Real server-rendered (Puppeteer) PDF, downloaded as an actual blob — unlike
+// downloadMisInvoicePdf (browser print-dialog against /html), the label PDF's
+// non-A4 100mm×150mm page size wouldn't come out right through print, so this
+// fetches the real /pdf or /label/pdf binary and saves it directly.
+// Every PDF in the app (invoice / quotation, packing list, pallet label, deal
+// letter) comes through here. It asks the server for the JSON transport rather
+// than a raw file response: download managers such as Internet Download
+// Manager hook the browser and take over anything that looks like a file
+// download, answering this request with an empty 204 (→ "Failed to download")
+// and re-fetching the URL themselves without our token (→ nothing saved).
+// A JSON body is never intercepted, and the file is then saved from a blob URL,
+// which never touches the network. See api/utils/sendPdf.js.
+async function downloadPdfBlob(authCtx, axiosGlobal, url, fallbackName) {
+  const response = await authCtx.jwtInst({ method: 'get', url, params: { transport: 'base64' } });
+  const body = response.data || {};
+  if (typeof body.data !== 'string' || !body.data) throw new Error('Empty PDF response');
+  const binary = window.atob(body.data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const fileName = body.filename || fallbackName;
+  const blobUrl = window.URL.createObjectURL(new Blob([bytes], { type: body.contentType || 'application/pdf' }));
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.setAttribute('download', fileName);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Not revoked on the spot: some browsers start the save asynchronously and
+  // a URL revoked mid-handoff cancels it.
+  setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+}
+
+export const downloadMisPackingListPdf = createAsyncThunk('overallAssets/downloadMisPackingListPdf', async (theData, { dispatch }) => {
+  try {
+    await downloadPdfBlob(theData.authCtx, theData.axiosGlobal,
+      `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}/pdf${theData.lang ? `?lang=${theData.lang}` : ''}`,
+      `packing-list-${theData.docNumber || theData.id}.pdf`);
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to download the packing list PDF', type: 'error' }));
+  }
+});
+
+// kind: 'slab' (the per-pallet slab label, default) | 'short' (short-pallet label)
+export const downloadMisPalletLabelPdf = createAsyncThunk('overallAssets/downloadMisPalletLabelPdf', async (theData, { dispatch }) => {
+  try {
+    const qs = new URLSearchParams();
+    if (theData.lang) qs.set('lang', theData.lang);
+    if (theData.kind) qs.set('kind', theData.kind);
+    await downloadPdfBlob(theData.authCtx, theData.axiosGlobal,
+      `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}/pallets/${encodeURIComponent(theData.palletId)}/label/pdf${qs.toString() ? `?${qs}` : ''}`,
+      `label-${theData.kind === 'short' ? 'short-' : ''}${theData.docNumber || theData.id}-${theData.palletId}.pdf`);
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to download the pallet label PDF', type: 'error' }));
+  }
+});
+
+// Supply's printed stone sales contract (قرارداد فروش سنگ).
+export const downloadSupplyDealLetterPdf = createAsyncThunk('supply/downloadDealLetterPdf', async (theData, { dispatch }) => {
+  try {
+    await downloadPdfBlob(theData.authCtx, theData.axiosGlobal,
+      `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}/pdf`,
+      `contract-${theData.number || theData.id}.pdf`);
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to download the contract PDF', type: 'error' }));
   }
 });
 
@@ -1649,6 +1791,220 @@ export const deleteInvTag = createAsyncThunk('inventory/deleteTag', async (theDa
 
 //------------------------------inventory end
 
+//------------------------------supply start (Session 72)
+
+export const fetchSupplyRecords = createAsyncThunk('supply/fetchRecords', async (theData, { dispatch }) => {
+  dispatch(actions.supplySetRecordsLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/supply/records`,
+      params: theData.params || {},
+    });
+    const isFirstPage = !theData.params?.skip || theData.params.skip <= 0;
+    if (isFirstPage) {
+      dispatch(actions.supplySetRecords({ data: response.data.data, total: response.data.total }));
+    } else {
+      dispatch(actions.supplyAppendRecords({ data: response.data.data, total: response.data.total }));
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    dispatch(actions.supplySetRecordsLoading(false));
+  }
+});
+
+export const fetchSupplyRecord = createAsyncThunk('supply/fetchRecord', async (theData, { dispatch }) => {
+  dispatch(actions.supplySetSelectedRecordLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/supply/records/${theData.id}`,
+    });
+    dispatch(actions.supplySetSelectedRecord(response.data.data));
+  } catch (err) {
+    dispatch(actions.supplySetSelectedRecord(null));
+  } finally {
+    dispatch(actions.supplySetSelectedRecordLoading(false));
+  }
+});
+
+// Reverse lookup — the invoices/quotations raised against one supply record.
+// Returned to the caller rather than stored in Redux (same local-state pattern
+// as the other reverse-lookup panels, e.g. productPriceRequests.js).
+export const fetchSupplyRecordInvoices = createAsyncThunk('supply/fetchRecordInvoices', async (theData) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'get',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/records/${theData.id}/invoices`,
+    ...(theData.params ? { params: theData.params } : {}),
+  });
+  return response.data.data;
+});
+
+// Attach an existing invoice/quotation to a supply record, or detach it by
+// passing supplyRecordId: null.
+export const setMisInvoiceSupplyRecord = createAsyncThunk('supply/setInvoiceSupplyRecord', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/mis/invoices/${theData.id}/supply-record`,
+    data: { supplyRecordId: theData.supplyRecordId ?? null },
+  });
+  dispatch(actions.supplyRefresh());
+  toast(dispatch, theData.supplyRecordId ? 'Document linked' : 'Document unlinked');
+  return response.data.data;
+});
+
+export const createSupplyRecord = createAsyncThunk('supply/createRecord', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/records`,
+    data: theData.data,
+  });
+  dispatch(actions.supplyRefresh());
+  toast(dispatch, 'Supply record created');
+  return response.data.data;
+});
+
+export const updateSupplyRecord = createAsyncThunk('supply/updateRecord', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/records/${theData.id}`,
+    data: theData.data,
+  });
+  dispatch(actions.supplyRefresh());
+  toast(dispatch, 'Supply record updated');
+  return response.data.data;
+});
+
+export const deleteSupplyRecord = createAsyncThunk('supply/deleteRecord', async (theData, { dispatch }) => {
+  await theData.authCtx.jwtInst({
+    method: 'delete',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/records/${theData.id}`,
+  });
+  dispatch(actions.supplyRefresh());
+  toast(dispatch, 'Supply record deleted');
+});
+
+export const fetchSupplyDealLetters = createAsyncThunk('supply/fetchDealLetters', async (theData, { dispatch }) => {
+  dispatch(actions.supplySetDealLettersLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters`,
+      params: { supplyId: theData.supplyId },
+    });
+    dispatch(actions.supplySetDealLetters(response.data.data));
+  } catch (err) {
+    console.error(err);
+  } finally {
+    dispatch(actions.supplySetDealLettersLoading(false));
+  }
+});
+
+export const fetchSupplyDealLetter = createAsyncThunk('supply/fetchDealLetter', async (theData, { dispatch }) => {
+  dispatch(actions.supplySetSelectedDealLetterLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}`,
+    });
+    dispatch(actions.supplySetSelectedDealLetter(response.data.data));
+  } catch (err) {
+    dispatch(actions.supplySetSelectedDealLetter(null));
+  } finally {
+    dispatch(actions.supplySetSelectedDealLetterLoading(false));
+  }
+});
+
+export const createSupplyDealLetter = createAsyncThunk('supply/createDealLetter', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters`,
+    data: theData.data,
+  });
+  dispatch(fetchSupplyDealLetters({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, supplyId: theData.data.supplyId }));
+  dispatch(actions.supplyRefresh());
+  toast(dispatch, 'Deal letter created');
+  return response.data.data;
+});
+
+export const updateSupplyDealLetter = createAsyncThunk('supply/updateDealLetter', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}`,
+    data: theData.data,
+  });
+  dispatch(actions.supplySetSelectedDealLetter(response.data.data));
+  toast(dispatch, 'Deal letter updated');
+  return response.data.data;
+});
+
+export const saveSupplyDealLetterStatus = createAsyncThunk('supply/saveDealLetterStatus', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}/status`,
+    data: { status: theData.status },
+  });
+  dispatch(actions.supplySetSelectedDealLetter(response.data.data));
+  toast(dispatch, 'Deal letter status updated');
+  return response.data.data;
+});
+
+export const updateSupplyDealLetterPricing = createAsyncThunk('supply/updateDealLetterPricing', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'put',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}/pricing`,
+    data: { lines: theData.lines },
+  });
+  dispatch(actions.supplySetSelectedDealLetter(response.data.data));
+  toast(dispatch, 'Pricing updated');
+  return response.data.data;
+});
+
+export const receiveSupplyDealLetterStock = createAsyncThunk('supply/receiveDealLetterStock', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}/receive`,
+    data: { lines: theData.lines },
+  });
+  dispatch(actions.supplySetSelectedDealLetter(response.data.data));
+  toast(dispatch, 'Received into warehouse inventory');
+  return response.data.data;
+});
+
+export const deleteSupplyDealLetter = createAsyncThunk('supply/deleteDealLetter', async (theData, { dispatch }) => {
+  await theData.authCtx.jwtInst({
+    method: 'delete',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}`,
+  });
+  dispatch(fetchSupplyDealLetters({ authCtx: theData.authCtx, axiosGlobal: theData.axiosGlobal, supplyId: theData.supplyId }));
+  dispatch(actions.supplyRefresh());
+  toast(dispatch, 'Deal letter deleted');
+});
+
+export const fetchSupplyDealLetterActivity = createAsyncThunk('supply/fetchDealLetterActivity', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'get',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.dealLetterId}/activity`,
+    params: { page: theData.page || 1 },
+  });
+  dispatch(actions.supplySetDealLetterActivity(response.data));
+  return response.data;
+});
+
+export const postSupplyDealLetterActivity = createAsyncThunk('supply/postDealLetterActivity', async (theData, { dispatch }) => {
+  const response = await theData.authCtx.jwtInst({
+    method: 'post',
+    url: `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.dealLetterId}/activity`,
+    data: theData.formData,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  dispatch(actions.supplyPrependDealLetterActivity(response.data));
+  return response.data;
+});
+
+//------------------------------supply end
+
 
 
 
@@ -1681,6 +2037,13 @@ const dataSlice = createSlice({
     misSelectedInvoice: null,
     misRefreshKey: 0,
     misCompanyProfile: null,
+    misCrossBranchBranches: [],   // Session 72 — branches eligible to quote against
+    // Session 72 (Phase 3) — standalone Packing Lists
+    misPackingLists: [],
+    misPackingListsTotal: 0,
+    misPackingListsLoading: false,
+    misSelectedPackingList: null,
+    misPackingListRefreshKey: 0,
     //------------------------------digital marketing (Phase 8)
     dmRawContents: [],
     dmRawContentsTotal: 0,
@@ -1759,6 +2122,23 @@ const dataSlice = createSlice({
     invCategories: [],
     invTags: [],
     invStats: null,
+    // Supply (Session 72)
+    supplyRecords: [],
+    supplyRecordsTotal: 0,
+    supplyRecordsLoading: false,
+    supplyRefreshKey: '',
+    supplySelectedRecord: null,
+    supplySelectedRecordLoading: false,
+    supplyShowNewRecord: false,
+    supplyEditRecord: null,
+    supplyDealLetters: [],
+    supplyDealLettersLoading: false,
+    supplySelectedDealLetter: null,
+    supplySelectedDealLetterLoading: false,
+    supplyShowNewDealLetter: false,
+    supplyEditDealLetter: null,
+    supplyDealLetterActivity: [],
+    supplyDealLetterActivityTotal: 0,
   },
   reducers: {
     //------------------------------file manager start
@@ -2210,6 +2590,33 @@ const dataSlice = createSlice({
       misSetCompanyProfile(state, action) {
         state.misCompanyProfile = action.payload;
       },
+      misSetCrossBranchBranches(state, action) {
+        state.misCrossBranchBranches = action.payload;
+      },
+      // Session 72 (Phase 3) — standalone Packing Lists
+      misPlSetList(state, action) {
+        state.misPackingLists = action.payload.data;
+        state.misPackingListsTotal = action.payload.total;
+      },
+      misPlAppendList(state, action) {
+        state.misPackingLists = [...state.misPackingLists, ...action.payload.data];
+        state.misPackingListsTotal = action.payload.total;
+      },
+      misPlSetLoading(state, action) {
+        state.misPackingListsLoading = action.payload;
+      },
+      misPlSetSelected(state, action) {
+        state.misSelectedPackingList = action.payload;
+      },
+      misPlUpsert(state, action) {
+        state.misSelectedPackingList = action.payload;
+      },
+      misPlRemove(state, action) {
+        state.misPackingLists = state.misPackingLists.filter((d) => d._id !== action.payload);
+      },
+      misPlBumpRefresh(state) {
+        state.misPackingListRefreshKey = state.misPackingListRefreshKey + 1;
+      },
     //------------------------------mis reducers end
     //------------------------------digital marketing reducers (Phase 8)
       dmRawSetList(state, action) {
@@ -2579,6 +2986,25 @@ const dataSlice = createSlice({
     invSetTags(state, action)               { state.invTags = action.payload; },
     invSetStats(state, action)              { state.invStats = action.payload; },
     //------------------------------inventory
+
+    //------------------------------supply start (Session 72)
+    supplySetRecords(state, action)         { state.supplyRecords = action.payload.data; state.supplyRecordsTotal = action.payload.total; },
+    supplyAppendRecords(state, action)      { state.supplyRecords = [...state.supplyRecords, ...action.payload.data]; state.supplyRecordsTotal = action.payload.total; },
+    supplySetRecordsLoading(state, action)  { state.supplyRecordsLoading = action.payload; },
+    supplyRefresh(state)                    { state.supplyRefreshKey = Math.random().toString(); },
+    supplySetSelectedRecord(state, action)  { state.supplySelectedRecord = action.payload; },
+    supplySetSelectedRecordLoading(state, action) { state.supplySelectedRecordLoading = action.payload; },
+    supplyToggleNewRecord(state)            { state.supplyShowNewRecord = !state.supplyShowNewRecord; },
+    supplySetEditRecord(state, action)      { state.supplyEditRecord = action.payload; },
+    supplySetDealLetters(state, action)     { state.supplyDealLetters = action.payload; },
+    supplySetDealLettersLoading(state, action) { state.supplyDealLettersLoading = action.payload; },
+    supplySetSelectedDealLetter(state, action) { state.supplySelectedDealLetter = action.payload; },
+    supplySetSelectedDealLetterLoading(state, action) { state.supplySelectedDealLetterLoading = action.payload; },
+    supplyToggleNewDealLetter(state)        { state.supplyShowNewDealLetter = !state.supplyShowNewDealLetter; },
+    supplySetEditDealLetter(state, action)  { state.supplyEditDealLetter = action.payload; },
+    supplySetDealLetterActivity(state, action) { state.supplyDealLetterActivity = action.payload.data; state.supplyDealLetterActivityTotal = action.payload.total; },
+    supplyPrependDealLetterActivity(state, action) { state.supplyDealLetterActivity = [action.payload, ...state.supplyDealLetterActivity]; },
+    //------------------------------supply end
 
   },
   extraReducers:(builder) =>{

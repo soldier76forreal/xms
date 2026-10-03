@@ -14,6 +14,7 @@ import CloseIcon from '@mui/icons-material/Close';
 
 import AuthContext from '../../authAndConnections/auth';
 import AxiosGlobal from '../../authAndConnections/axiosGlobalUrl';
+import { useBranch } from '../../../contextApi/BranchContext';
 import { fetchMisCompanyProfile, saveMisCompanyProfile } from '../../../store/store';
 
 // Phase 6 — companyProfile settings editor (Session 45, admin / mis:settings:edit).
@@ -73,6 +74,7 @@ export default function CompanyProfileDrawer({ open, onClose }) {
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const { activeBranchId } = useBranch();
 
   const profile = useSelector(s => s.misCompanyProfile);
 
@@ -88,9 +90,9 @@ export default function CompanyProfileDrawer({ open, onClose }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) dispatch(fetchMisCompanyProfile({ authCtx, axiosGlobal }));
+    if (open) dispatch(fetchMisCompanyProfile({ authCtx, axiosGlobal, branchId: activeBranchId }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, activeBranchId]);
 
   useEffect(() => {
     if (profile) {
@@ -100,12 +102,17 @@ export default function CompanyProfileDrawer({ open, onClose }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const { phonesText, _id, key, updateDate, updatedBy, __v, ...rest } = values;
+    const { phonesText, _id, key, branchId, updateDate, updatedBy, __v, ...rest } = values;
     const data = {
       ...rest,
       phones: (phonesText || '').split(',').map(p => p.trim()).filter(Boolean),
       vatRate: Number(values.vatRate) || 0,
       quotationValidityDefaultDays: Number(values.quotationValidityDefaultDays) || 0,
+      // Session 72 — editing while a branch is active saves THAT branch's own
+      // override; the settings screen has no "edit the global fallback"
+      // affordance today, matching how every other MIS/Inventory screen is
+      // always scoped to the active branch.
+      branchId: activeBranchId,
     };
     await dispatch(saveMisCompanyProfile({ authCtx, axiosGlobal, data }));
     setSaving(false);

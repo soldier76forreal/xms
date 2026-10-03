@@ -6,6 +6,7 @@ import MovieIcon from '@mui/icons-material/Movie';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import SchoolIcon from '@mui/icons-material/School';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import TerrainIcon from '@mui/icons-material/Terrain';
 
 // ── Phase 7 navConfig — the single source of truth for section navigation ─────
 // Consumed by BOTH the desktop icon rail (sideRail.js) and the mobile drawer
@@ -31,6 +32,9 @@ export const NAV_ITEMS = [
   // itself by jobReports:viewAll. Placed before Tutorials per explicit request.
   { label: 'Job Reports',       navKey: 'jobReports',        icon: <AssignmentIcon />,      section: 9, path: '/jobReports' },
   { label: 'Tutorials',         navKey: 'tutorials',         icon: <SchoolIcon />,          section: 8, path: '/tutorials',        permission: 'tutorials:view' },
+  // Supply (Session 72) — stone-coupe sourcing/processing, separate from Inventory's
+  // sellable-stock view but branch-scoped the same way.
+  { label: 'Supply',            navKey: 'supply',            icon: <TerrainIcon />,         section: 10, path: '/supply',          permission: 'supply:view' },
 ];
 
 export const RAIL_WIDTH_COLLAPSED = 52;

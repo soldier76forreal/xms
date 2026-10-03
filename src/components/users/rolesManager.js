@@ -290,17 +290,24 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {/* Row-level scope by who created the record, resolved server-side.
+              'mis' also covers quotations and requests (requests SENT TO the
+              branch are always visible to its staff). NOTE: 'files' is not
+              enforced by the File Manager routes yet — kept as it was. */}
           {[
-            { id: 'crm',       labelKey: 'users.dsCrm'       },
-            { id: 'mis',       labelKey: 'users.dsInvoices'  },
-            { id: 'inventory', labelKey: 'users.dsInventory' },
-            { id: 'files',     labelKey: 'users.dsFiles'     },
-            { id: 'tasks',     labelKey: 'users.dsTasks'     },
+            { id: 'crm',              labelKey: 'users.dsCrm'              },
+            { id: 'mis',              labelKey: 'users.dsInvoices'         },
+            { id: 'packingList',      labelKey: 'users.dsPackingLists'     },
+            { id: 'inventory',        labelKey: 'users.dsInventory'        },
+            { id: 'supply',           labelKey: 'users.dsSupply'           },
+            { id: 'digitalMarketing', labelKey: 'users.dsDigitalMarketing' },
+            { id: 'files',            labelKey: 'users.dsFiles'            },
+            { id: 'tasks',            labelKey: 'users.dsTasks'            },
           ].map(({ id, labelKey }) => {
             const current = dataScopes[id] || 'all';
             return (
-              <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, width: 80, flexShrink: 0 }}>
+              <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap' }}>
+                <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, width: { xs: '100%', sm: 150 }, flexShrink: 0 }}>
                   {t(labelKey)}
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 0.5 }}>

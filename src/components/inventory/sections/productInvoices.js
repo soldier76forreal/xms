@@ -7,7 +7,6 @@ import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import Skeleton from '@mui/material/Skeleton';
 import Tooltip from '@mui/material/Tooltip';
-import { useTheme } from '@mui/material/styles';
 
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
@@ -24,6 +23,9 @@ import { usePermissions } from '../../../contextApi/PermissionContext';
 import { downloadMisInvoicePdf } from '../../../store/store';
 import InvoiceDetailDialog from '../../mis/invoiceDetailDialog';
 import InvoiceForm from '../../mis/invoiceForm';
+import CrossBranchRequestForm from '../../mis/crossBranchRequestForm';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import TerrainIcon from '@mui/icons-material/Terrain';
 
 // Phase 6 (Session 46) — product → Invoices reverse lookup.
 // GET /inventory/products/:id/invoices returns every invoice/pre-invoice whose
@@ -57,10 +59,11 @@ const TYPE_TABS = [
   { id: 'pre_invoice', labelKey: 'mis.quoteType' },
 ];
 
-export default function ProductInvoices({ productId, productCode }) {
+// readOnly    — the product belongs to a branch that SHARED its catalogue with
+//               us; their paperwork is off-limits, a stock request is the action.
+// hasForecast — some of this product is being prepared in that branch's Supply.
+export default function ProductInvoices({ productId, productCode, readOnly = false, branchId, branchName, hasForecast = false }) {
   const { t } = useTranslation();
-  const theme  = useTheme();
-  const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
@@ -73,6 +76,7 @@ export default function ProductInvoices({ productId, productCode }) {
   const [typeFilter, setTypeFilter] = useState('all');
   const [order, setOrder]     = useState('desc'); // 'desc' = newest first
   const [formOpen, setFormOpen] = useState(false);
+  const [requestPreset, setRequestPreset] = useState(null); // cross-branch stock request (null = closed)
   const [formDocType, setFormDocType] = useState('invoice');
 
   const load = useCallback(async () => {
@@ -97,6 +101,18 @@ export default function ProductInvoices({ productId, productCode }) {
 
   const openNewForm = (docType) => { setFormDocType(docType); setFormOpen(true); };
 
+  // Requests go branch → branch, so they're offered only while viewing a
+  // branch that SHARED its catalogue with us — the target is that branch
+  // (detected, locked) and the catalogue search starts on this product. On
+  // our own products there is nothing to request (and Requests have their
+  // own MIS tab for anything else).
+  const canRequest = readOnly && can('mis:crossBranch:quote') && can('mis:preinvoice:create');
+  // A forecast lot can also be requested with just inventory:forecast:request —
+  // no Supply access, no general cross-branch key (the server checks the same).
+  const canRequestForecast = readOnly && hasForecast && can('mis:preinvoice:create')
+    && (can('mis:crossBranch:quote') || can('inventory:forecast:request'));
+  const openRequest = (source) => setRequestPreset({ branchId, branchName, source, search: productCode });
+
   const shown = expanded ? docs : docs.slice(0, PREVIEW_COUNT);
 
   return (
@@ -112,19 +128,44 @@ export default function ProductInvoices({ productId, productCode }) {
             : t('inventory.invoicesContaining')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 0.75 }}>
-          {can('mis:invoice:create') && (
+          {/* On a branch that merely SHARED its catalogue you can't raise their
+              paperwork — the only action available is requesting stock from
+              them, which is what the Request button does. */}
+          {!readOnly && can('mis:invoice:create') && (
             <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
               onClick={() => openNewForm('invoice')}
               sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
               {t('inventory.newInvoice')}
             </Button>
           )}
-          {can('mis:preinvoice:create') && (
+          {!readOnly && can('mis:preinvoice:create') && (
             <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
               onClick={() => openNewForm('pre_invoice')}
               sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
               {t('inventory.newQuote')}
             </Button>
+          )}
+          {canRequest && (
+            <Tooltip title={t('inventory.reqStockTip', { branch: branchName || t('inventory.thisBranch') })}>
+              <Button size="small" variant="contained"
+                startIcon={<StorefrontIcon sx={{ fontSize: 14 }} />}
+                onClick={() => openRequest('inventory')}
+                sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
+                {t('inventory.reqStockButton')}
+              </Button>
+            </Tooltip>
+          )}
+          {/* The lot being prepared (Supply forecast / final, not yet in the
+              warehouse) — reserve it before it lands. */}
+          {canRequestForecast && (
+            <Tooltip title={t('inventory.reqForecastTip', { branch: branchName || t('inventory.thisBranch') })}>
+              <Button size="small" variant="contained" color="warning"
+                startIcon={<TerrainIcon sx={{ fontSize: 14 }} />}
+                onClick={() => openRequest('supply')}
+                sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
+                {t('inventory.reqForecastButton')}
+              </Button>
+            </Tooltip>
           )}
         </Box>
       </Box>
@@ -245,6 +286,14 @@ export default function ProductInvoices({ productId, productCode }) {
         onClose={() => setFormOpen(false)}
         onSaved={load}
         preset={{ productSearch: productCode }}
+      />
+
+      {/* Stock request — see openRequest() for how the target is chosen. */}
+      <CrossBranchRequestForm
+        open={Boolean(requestPreset)}
+        onClose={() => setRequestPreset(null)}
+        onSaved={load}
+        preset={requestPreset}
       />
     </Box>
   );

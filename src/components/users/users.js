@@ -30,6 +30,7 @@ import UserForm from './userForm';
 import RolesManager from './rolesManager';
 import GroupsManager from './groupsManager';
 import BranchesManager from './branchesManager';
+import BranchPanel from './branchPanel';
 import TaskList from './taskList';
 import RolePanel from './rolePanel';
 import GroupPanel from './groupPanel';
@@ -327,6 +328,10 @@ const Users = () => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [selectedRole,   setSelectedRole]   = useState(null);
   const [selectedGroup,  setSelectedGroup]  = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState(null);
+  // Edit requests raised from the branch DETAIL panel; BranchesManager owns the
+  // single form instance and opens it when this changes.
+  const [branchEditRequest, setBranchEditRequest] = useState(null);
   const [selectedTask,   setSelectedTask]   = useState(null);
   const [taskRefreshKey, setTaskRefreshKey] = useState(0);
 
@@ -361,7 +366,8 @@ const Users = () => {
   }, [location.search]);
 
   // Current selection for the active tab
-  const currentSelection = { users: selectedUserId, roles: selectedRole, groups: selectedGroup, tasks: selectedTask }[tab];
+  const currentSelection = { users: selectedUserId, roles: selectedRole, groups: selectedGroup,
+    branches: selectedBranch, tasks: selectedTask }[tab];
 
   // Desktop: always split layout (list left, detail right)
   const desktopSplit = isMd;
@@ -394,6 +400,11 @@ const Users = () => {
         return selectedGroup
           ? <GroupPanel group={selectedGroup} />
           : panelMode ? <EmptyPanel tab="groups" T={T} /> : null;
+      case 'branches':
+        return selectedBranch
+          ? <BranchPanel branch={selectedBranch}
+              onEdit={(b) => setBranchEditRequest({ branch: b, key: Date.now() })} />
+          : panelMode ? <EmptyPanel tab="branches" T={T} /> : null;
       case 'tasks':
         return selectedTask
           ? <TaskPanel task={selectedTask} currentUserId={authCtx.decode?.id} onUpdate={handleTaskUpdate} />
@@ -463,7 +474,8 @@ const Users = () => {
                 <GroupsManager onSelect={setSelectedGroup} selectedId={selectedGroup?._id} />
               )}
               {tab === 'branches' && (
-                <BranchesManager />
+                <BranchesManager onSelect={setSelectedBranch} selectedId={selectedBranch?._id}
+                  editRequest={branchEditRequest} />
               )}
               {tab === 'tasks' && (
                 <TaskList onSelect={setSelectedTask} selectedId={selectedTask?._id} refreshKey={taskRefreshKey} />

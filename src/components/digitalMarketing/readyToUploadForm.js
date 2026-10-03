@@ -22,6 +22,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { useBranch } from '../../contextApi/BranchContext';
 import { submitReadyToUpload, createReadyToUpload } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
+import ProductVarietyPicker from './productVarietyPicker';
 
 // Freeform suggestions — the field is freeSolo (extensible), so these stay literal
 // English strings; translating them would split the stored `platform` value by UI language.
@@ -39,7 +40,7 @@ const LANGUAGES = [
 //    AND flips the source raw content's status server-side.
 //  - rawContentId absent — opened standalone (Ready to Upload list "New"
 //    button); submitting creates a readyToUpload record with no back-reference.
-export default function ReadyToUploadForm({ open, onClose, rawContentId, defaultBranchId = '' }) {
+export default function ReadyToUploadForm({ open, onClose, rawContentId, defaultBranchId = '', defaultProducts = [] }) {
   const isStandalone = !rawContentId;
   const { t }  = useTranslation();
   const theme  = useTheme();
@@ -70,14 +71,21 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
   // editable here in case this record is FOR a different branch than the
   // source batch was tagged with.
   const [branchId, setBranchId] = useState(defaultBranchId || '');
+  const [products, setProducts] = useState([]);   // tagged Inventory varieties — see productVarietyPicker.js
   const [saving, setSaving]     = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError]       = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   useEffect(() => { if (open) setBranchId(defaultBranchId || ''); }, [open, defaultBranchId]);
+  // Pre-fills with the source raw content's already-tagged varieties when
+  // opened from the "mark ready to upload" flow — a graduated record is the
+  // same content further along, so starting from a blank picker would
+  // silently drop what was already tagged unless the user re-picks by hand.
+  // Still fully editable from here.
+  useEffect(() => { if (open) setProducts(defaultProducts || []); }, [open, defaultProducts]);
 
-  const resetForm = () => { setTitle(''); setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setBranchId(''); setError(''); };
+  const resetForm = () => { setTitle(''); setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setBranchId(''); setProducts([]); setError(''); };
   const handleClose = () => {
     if (files.length) { setConfirmDiscard(true); return; }
     resetForm();
@@ -99,6 +107,7 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
       fd.append('platform', platform);
       fd.append('caption', caption);
       fd.append('branchId', branchId);
+      fd.append('products', JSON.stringify(products.map((p) => ({ productId: p.productId, variantId: p.variantId }))));
       setUploadProgress(0);
       const onProgress = (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null);
       if (isStandalone) {
@@ -173,6 +182,9 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
         <TextField label={t('dm.captionLabel')} size="small" fullWidth multiline minRows={3} value={caption}
           onChange={(e) => setCaption(e.target.value)}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
+
+        {/* ── Tagged Inventory varieties — branch-scoped, see productVarietyPicker.js ── */}
+        <ProductVarietyPicker value={products} onChange={setProducts} T={T} />
 
         {branches.length > 0 && (
           <TextField select label={t('dm.branchLabel')} size="small" fullWidth value={branchId}

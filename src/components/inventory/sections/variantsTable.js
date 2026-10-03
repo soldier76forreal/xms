@@ -223,13 +223,29 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
           {UNIT_LABELS[variant.unit] || variant.unit}
         </Typography>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>{formatQty(variant.quantity)}</Typography>
-          <Tooltip title={t('inventory.adjustStockTooltip')}>
-            <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setStockOpen(true)}>
-              <AddCircleOutlineIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </Tooltip>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{formatQty(variant.quantity)}</Typography>
+            <Tooltip title={t('inventory.adjustStockTooltip')}>
+              <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setStockOpen(true)}>
+                <AddCircleOutlineIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          {/* Supply (Session 72) — in-progress coupe quantity, shown next to but
+              never merged into the real sellable quantity above. */}
+          {Boolean(variant.supply?.forecastQty || variant.supply?.finalQty) && (
+            <Box sx={{ display: 'flex', gap: 0.5, mt: 0.25 }}>
+              {Boolean(variant.supply?.forecastQty) && (
+                <Chip label={`${t('supply.forecastShort')} ${formatQty(variant.supply.forecastQty)}`} size="small"
+                  sx={{ height: 16, fontSize: '0.58rem', fontWeight: 700, bgcolor: '#64b5f622', color: '#64b5f6', px: 0.5 }} />
+              )}
+              {Boolean(variant.supply?.finalQty) && (
+                <Chip label={`${t('supply.finalShort')} ${formatQty(variant.supply.finalQty)}`} size="small"
+                  sx={{ height: 16, fontSize: '0.58rem', fontWeight: 700, bgcolor: '#81c78422', color: '#81c784', px: 0.5 }} />
+              )}
+            </Box>
+          )}
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

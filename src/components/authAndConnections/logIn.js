@@ -18,6 +18,7 @@ import AuthContext from './auth';
 import AxiosGlobal from './axiosGlobalUrl';
 import LanguageCtx from '../../contextApi/languageContext';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../users/countryData';
+import { SMS_OTP_LOGIN_ENABLED } from '../../tools/featureFlags';
 
 // ── Design tokens (dark/opacity shell) ────────────────────────────────────────
 const BG        = '#060606';
@@ -65,7 +66,10 @@ const LogIn = () => {
   const { language, setLanguage, languages } = useContext(LanguageCtx);
   const [langAnchor, setLangAnchor] = useState(null);
 
-  const [step,     setStep]     = useState('phone');   // 'phone' | 'code' | 'password'
+  // 'phone' | 'code' | 'password'. With SMS sign-in retired the phone and code
+  // steps are unreachable and password is the only screen — see
+  // SMS_OTP_LOGIN_ENABLED in tools/featureFlags.js.
+  const [step,     setStep]     = useState(SMS_OTP_LOGIN_ENABLED ? 'phone' : 'password');
   const [phone,    setPhone]    = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -335,7 +339,7 @@ const LogIn = () => {
         </Typography>
 
         {/* ── PHONE STEP ────────────────────────────────────────────────────── */}
-        {step === 'phone' && (
+        {SMS_OTP_LOGIN_ENABLED && step === 'phone' && (
           <>
             <Typography variant="body2" sx={{ color: TEXT_SEC, textAlign: 'center', lineHeight: 1.7 }}>
               {t('auth.enterMobileNumber')}
@@ -534,17 +538,26 @@ const LogIn = () => {
               {busy ? t('auth.signingIn') : t('auth.signIn')}
             </Button>
 
-            <Typography
-              onClick={() => { setStep('phone'); setPassword(''); setShowPassword(false); setError(''); setAttLeft(null); }}
-              sx={{ fontSize: '0.75rem', color: TEXT_SEC, textAlign: 'center', cursor: 'pointer',
-                '&:hover': { color: TEXT_PRI, textDecoration: 'underline' } }}>
-              {t('auth.useCodeInstead')}
-            </Typography>
+            {SMS_OTP_LOGIN_ENABLED && (
+              <Typography
+                onClick={() => { setStep('phone'); setPassword(''); setShowPassword(false); setError(''); setAttLeft(null); }}
+                sx={{ fontSize: '0.75rem', color: TEXT_SEC, textAlign: 'center', cursor: 'pointer',
+                  '&:hover': { color: TEXT_PRI, textDecoration: 'underline' } }}>
+                {t('auth.useCodeInstead')}
+              </Typography>
+            )}
+
+            {/* With no self-service recovery left, say who to ask. */}
+            {!SMS_OTP_LOGIN_ENABLED && (
+              <Typography sx={{ fontSize: '0.72rem', color: TEXT_SEC, textAlign: 'center', lineHeight: 1.7 }}>
+                {t('auth.forgotPasswordContactAdmin')}
+              </Typography>
+            )}
           </>
         )}
 
         {/* ── CODE STEP ────────────────────────────────────────────────────── */}
-        {step === 'code' && (
+        {SMS_OTP_LOGIN_ENABLED && step === 'code' && (
           <>
             <Typography variant="body2" sx={{ color: TEXT_SEC, textAlign: 'center', lineHeight: 1.7 }}>
               Enter the 6-digit code sent to

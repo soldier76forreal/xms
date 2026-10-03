@@ -12,6 +12,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import EditIcon from '@mui/icons-material/Edit';
+import KeyIcon from '@mui/icons-material/VpnKey';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
@@ -28,6 +29,7 @@ import { Can, usePermissions } from '../../contextApi/PermissionContext';
 import { COUNTRIES } from './countryData';
 import { LANGUAGES } from '../../i18n';
 import UserForm from './userForm';
+import SetPasswordDialog from './setPasswordDialog';
 import UserLogs from './userLogs';
 import AssignCustomersDialog from '../crm/assignCustomersDialog';
 import InvoiceDetailDialog from '../mis/invoiceDetailDialog';
@@ -123,6 +125,7 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
   const [loading,      setLoading]      = useState(true);
   const [errorStatus,  setErrorStatus]  = useState(null);
   const [unlocking,    setUnlocking]    = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [editOpen,     setEditOpen]     = useState(false);
   const [crmTasks,     setCrmTasks]     = useState([]);
   const [crmLoading,   setCrmLoading]   = useState(false);
@@ -406,6 +409,20 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
                   >
                     <EditIcon sx={{ fontSize: 16 }} />
                   </IconButton>
+                </Can>
+                {/* Password is the only credential now that SMS sign-in is
+                    retired, so an admin needs a way to set one — a new account
+                    has none and cannot otherwise sign in at all. */}
+                <Can permission="users:edit">
+                  <Tooltip title={t('users.pwSetTitle')}>
+                    <IconButton
+                      size="small"
+                      onClick={() => setPasswordOpen(true)}
+                      sx={{ color: T.TEXT_TER, '&:hover': { color: T.TEXT_PRI, bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' } }}
+                    >
+                      <KeyIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
                 </Can>
               </Box>
             </Box>
@@ -790,6 +807,17 @@ const ShowUser = ({ userId, onClose, onUnlock, socket, panelMode = false }) => {
           open={editOpen}
           onClose={() => setEditOpen(false)}
           onSave={() => fetchUser()}
+        />
+      )}
+
+      {/* Admin password set / reset */}
+      {data?.user && (
+        <SetPasswordDialog
+          open={passwordOpen}
+          onClose={() => { setPasswordOpen(false); fetchUser(); }}
+          mode="admin"
+          userId={data.user._id}
+          userName={`${data.user.firstName || ''} ${data.user.lastName || ''}`.trim()}
         />
       )}
 

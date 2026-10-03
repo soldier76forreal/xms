@@ -1,5 +1,5 @@
-import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
-import { useDispatch } from 'react-redux';
+import { useState, useEffect, useContext, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -28,15 +28,19 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
 import PersonIcon from '@mui/icons-material/Person';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { useBranch } from '../../contextApi/BranchContext';
-import { actions } from '../../store/store';
+import { usePermissions } from '../../contextApi/PermissionContext';
+import { actions, fetchMisCrossBranchBranches } from '../../store/store';
 import useForm, { required } from '../../tools/hooks/useForm';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import COUNTRIES from '../crm/util/countryData';
 import CustomerForm from '../crm/customerForm';
+import CrossBranchTargetPicker from './crossBranchTargetPicker';
 
 // Phase 6 — invoice / pre-invoice Drawer form (Session 46).
 // Sectioned + validated via the shared useForm hook (scalars) with manual
@@ -53,6 +57,7 @@ const STATUS_BY_TYPE = {
 };
 
 const STATUS_LABEL_KEYS = {
+  requested: 'mis.statusRequested',
   draft: 'mis.statusDraft', sent: 'mis.statusSent', accepted: 'mis.statusAccepted',
   converted: 'mis.statusConverted', expired: 'mis.statusExpired', issued: 'mis.statusIssued',
   paid: 'mis.statusPaid', partially_paid: 'mis.statusPartial', cancelled: 'mis.statusCancelled',
@@ -92,7 +97,6 @@ function useDebounce(value, delay) {
   return deb;
 }
 
-const EMPTY_PACK_ROW = { pallet: '', productName: '', length: '', width: '', pcs: '', thickness: '', sqm: '', notes: '' };
 
 export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', doc = null, onClose, onSaved, preset = null }) {
   const { t } = useTranslation();
@@ -101,7 +105,10 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
-  const { activeBranchId } = useBranch();
+  const { activeBranchId, branches: ownBranches } = useBranch();
+  const { can } = usePermissions();
+  const canCrossBranch = can('mis:crossBranch:quote');
+  const crossBranchBranches = useSelector((s) => s.misCrossBranchBranches);
 
   const T = {
     PANEL_BG: isDark ? '#0d0d0d' : theme.palette.background.paper,
@@ -114,8 +121,16 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   };
 
   const isEdit    = mode === 'edit';
-  const activeType = isEdit && doc ? doc.docType : docType;
+  // 'convert' — a quotation becoming an invoice. The form opens as a NEW
+  // invoice filled in from the quotation; the user completes what an invoice
+  // needs (customer + address, prices, VAT, shipping…) and saving posts it to
+  // the quotation's /convert route, which links the two and marks the
+  // quotation converted.
+  const isConvert = mode === 'convert';
+  const activeType = isConvert ? 'invoice' : (isEdit && doc ? doc.docType : docType);
   const isInvoice = activeType === 'invoice';
+  // The full quotation/request being edited or converted (list rows are partial).
+  const [sourceDoc, setSourceDoc] = useState(null);
 
   const form = useForm(
     { issueDate: toDateInput(new Date()), status: 'draft',
@@ -129,10 +144,34 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   );
   const { values, setField, setValues, fieldError, handleBlur, validate, isDirty } = form;
 
+  // Session 72 — inter-branch quotation mode. Only offered for a NEW pre_invoice
+  // (never edit — a doc's tradeMode is fixed at creation) to a user holding
+  // mis:crossBranch:quote. 'customer' preserves every pre-Session-72 behavior
+  // byte-for-byte when left at its default.
+  const [tradeMode, setTradeMode]     = useState('customer');
+  const [targetBranchId, setTargetBranchId] = useState('');
+  const [crossBranchSource, setCrossBranchSource] = useState('inventory');
+  const isInterBranch = tradeMode === 'interBranch';
+  // The branch that was asked — its name, for the read-only parties block.
+  const targetBranchName = useMemo(() => {
+    const all = [...(ownBranches || []), ...(crossBranchBranches || [])];
+    const b = all.find((x) => String(x._id) === String(targetBranchId));
+    return b ? b.name : '';
+  }, [ownBranches, crossBranchBranches, targetBranchId]);
+  // A request's status is the asked branch's call (enforced server-side too):
+  // the requesting side sees it in its own edit form but can't change it.
+  const statusLocked = isInterBranch && isEdit && String(targetBranchId) !== String(activeBranchId);
+  // A fresh conversion is a draft or goes straight out as issued — payment
+  // statuses only come from recording a payment. A request also has its own
+  // first status, 'requested'.
+  const statusOptions = isConvert
+    ? ['draft', 'issued']
+    : (activeType === 'pre_invoice' && isInterBranch
+      ? ['requested', ...STATUS_BY_TYPE.pre_invoice]
+      : STATUS_BY_TYPE[activeType]);
+
   const [lines, setLines]         = useState([]);
-  const [packRows, setPackRows]   = useState([]);
-  const [packMeta, setPackMeta]   = useState({ truckNumber: '', driverName: '', driverMobile: '' });
-  const [arraysBaseline, setArraysBaseline] = useState('[]|[]|{}');
+  const [arraysBaseline, setArraysBaseline] = useState('[]');
   const [linesError, setLinesError] = useState('');
   const [saving, setSaving]       = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -148,6 +187,9 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   const [prodResults, setProdResults] = useState([]);
   const [prodLoading, setProdLoading] = useState(false);
   const debProdSearch = useDebounce(prodSearch, 350);
+  // Session 72 — populated instead of prodResults when isInterBranch &&
+  // crossBranchSource==='supply' (a flat shape, not nested product+variants).
+  const [supplyResults, setSupplyResults] = useState([]);
 
   // picked customer's shipping address (from CRM customer.address[0]) + add-address dialog
   const [custAddress, setCustAddress] = useState(null);
@@ -167,7 +209,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
     [lines]
   );
 
-  const arraysDirty = `${JSON.stringify(lines)}|${JSON.stringify(packRows)}|${JSON.stringify(packMeta)}` !== arraysBaseline;
+  const arraysDirty = `${JSON.stringify(lines)}` !== arraysBaseline;
   const anyDirty    = isDirty || arraysDirty;
 
   // ── prefill / reset on open ──────────────────────────────────────────────────
@@ -175,26 +217,41 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
     if (!open) return;
     setLinesError(''); setAddrError(''); setCustAddress(null);
     setCustSearch(''); setCustResults([]); setProdSearch(''); setProdResults([]);
+    setTradeMode('customer'); setTargetBranchId(''); setCrossBranchSource('inventory');
+    setSourceDoc(null);
+    // Also loaded for an inter-branch edit/convert — it's where the other
+    // branch's name comes from.
+    if (canCrossBranch) dispatch(fetchMisCrossBranchBranches({ authCtx, axiosGlobal, requestingBranchId: activeBranchId }));
 
     const applyDoc = (d) => {
+      setSourceDoc(d);
       setValues({
-        issueDate: toDateInput(d.issueDate), status: d.status || 'draft',
+        // A conversion is a NEW invoice: dated today, starting as a draft, no
+        // shipping yet — everything else carries over from the quotation.
+        issueDate: isConvert ? toDateInput(new Date()) : toDateInput(d.issueDate),
+        status: isConvert ? 'draft' : (d.status || 'draft'),
         customerId: d.customerId || '', customerName: d.customerSnapshot?.name || '',
         customerTrn: d.customerSnapshot?.trn || '', customerCountry: d.customerSnapshot?.country || '',
         customerPhone: d.customerSnapshot?.phone || '', customerAddress: d.customerSnapshot?.address || '',
         vatRate: d.lineItems?.[0]?.vatRate ?? 5,
-        shipping: d.shipping || '', validityDays: d.validityDays ?? '', notes: d.notes || '',
+        shipping: isConvert ? '' : (d.shipping || ''),
+        validityDays: isConvert ? '' : (d.validityDays ?? ''), notes: d.notes || '',
       });
-      const ls = (d.lineItems || []).map(li => ({ ...li }));
-      const pr = (d.packingList?.rows || []).map(r => ({ ...EMPTY_PACK_ROW, ...r }));
-      const pm = { truckNumber: d.packingList?.truckNumber || '',
-                   driverName: d.packingList?.driverName || '',
-                   driverMobile: d.packingList?.driverMobile || '' };
-      setLines(ls); setPackRows(pr); setPackMeta(pm);
-      setArraysBaseline(`${JSON.stringify(ls)}|${JSON.stringify(pr)}|${JSON.stringify(pm)}`);
+      // An inter-branch doc keeps its trade mode: no CRM customer — the two
+      // parties are branches (branchId = the one asked, the fulfilling side).
+      if (d.tradeMode === 'interBranch') {
+        setTradeMode('interBranch');
+        setTargetBranchId(String(d.branchId));
+      }
+      // Server-computed per-line figures are dropped — the server recomputes
+      // them from quantity/price/discount/VAT on save.
+      const ls = (d.lineItems || []).map(({ _id, vatAmount, lineTotal, ...li }) => ({ ...li }));
+      setLines(ls);
+      // A conversion starts dirty on purpose: closing it unsaved should ask.
+      setArraysBaseline(isConvert ? '' : `${JSON.stringify(ls)}`);
     };
 
-    if (isEdit && doc) {
+    if ((isEdit || isConvert) && doc) {
       // list rows exclude packingList/notes — fetch the full doc for a safe prefill
       (async () => {
         try {
@@ -210,8 +267,8 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
         customerPhone: '', customerAddress: '',
         vatRate: 5, shipping: '', validityDays: '', notes: '',
       });
-      setLines([]); setPackRows([]); setPackMeta({ truckNumber: '', driverName: '', driverMobile: '' });
-      setArraysBaseline('[]|[]|{"truckNumber":"","driverName":"","driverMobile":""}');
+      setLines([]);
+      setArraysBaseline('[]');
 
       // Launched from CRM (customer details → Requests tab) or Inventory
       // (product detail → Invoices box): pre-fill but let the user change it.
@@ -219,7 +276,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
       if (preset?.productSearch) setProdSearch(preset.productSearch);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, isEdit, doc?._id, preset]);
+  }, [open, isEdit, isConvert, doc?._id, preset]);
 
   // ── pickers ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -246,17 +303,32 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   }, [debCustSearch, open]);
 
   useEffect(() => {
-    if (!open || !debProdSearch.trim()) { setProdResults([]); return; }
+    if (!open || !debProdSearch.trim()) { setProdResults([]); setSupplyResults([]); return; }
+    // Session 72 — three lookup sources depending on tradeMode/crossBranchSource:
+    // own-branch Inventory (unchanged default), another branch's Inventory, or
+    // another branch's Supply (in-progress deal-letter varieties).
+    if (isInterBranch && !targetBranchId) { setProdResults([]); setSupplyResults([]); return; }
+    // The branch that was ASKED, editing or converting a request, searches its
+    // own stock like any document of its own; only the asking side browses the
+    // other branch's catalogue.
+    const viaCrossBranch = isInterBranch && String(targetBranchId) !== String(activeBranchId);
+    const usingSupply = viaCrossBranch && crossBranchSource === 'supply';
+    const url = viaCrossBranch
+      ? `${axiosGlobal.defaultTargetApi}/mis/cross-branch/${usingSupply ? 'supply' : 'inventory'}`
+      : `${axiosGlobal.defaultTargetApi}/mis/products-lookup`;
+    const params = viaCrossBranch
+      ? { search: debProdSearch.trim(), branchId: targetBranchId, requestingBranchId: activeBranchId }
+      : { search: debProdSearch.trim(), branchId: activeBranchId };
+
     (async () => {
       setProdLoading(true);
       try {
-        const res = await authCtx.jwtInst({ method: 'get',
-          url: `${axiosGlobal.defaultTargetApi}/mis/products-lookup`,
-          params: { search: debProdSearch.trim(), branchId: activeBranchId } });
-        setProdResults(res.data || []);
+        const res = await authCtx.jwtInst({ method: 'get', url, params });
+        if (usingSupply) { setSupplyResults(res.data?.data || []); setProdResults([]); }
+        else { setProdResults(res.data || []); setSupplyResults([]); }
       } catch (err) {
-        setProdResults([]);
-        console.error('mis/products-lookup search failed:', err?.response?.status, err?.response?.data || err.message);
+        setProdResults([]); setSupplyResults([]);
+        console.error('MIS product/supply lookup failed:', err?.response?.status, err?.response?.data || err.message);
         dispatch(actions.setShowSnackBar({ status: true,
           msg: err?.response?.status === 403
             ? t('mis.noPermSearchProducts')
@@ -266,7 +338,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
       setProdLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debProdSearch, open]);
+  }, [debProdSearch, open, isInterBranch, targetBranchId, crossBranchSource]);
 
   const formatAddress = (a) => {
     if (!a) return '';
@@ -314,12 +386,37 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
       discount:  0,
       discountType: 'amount',
       vatRate:   Number(values.vatRate) || 0,
+      sourceType: 'inventory',
       // client-only — snapshot of stock available at add-time, used to block
       // over-selling; stripped before the save payload is built (not a schema field)
       availableQty: variant ? variant.quantity : null,
       // client-only — lets the packing list pick this line's product + seed its
       // nominal dimensions (the user still adjusts for the actual physical cut)
       spec: variant ? variant.spec : null,
+    }]);
+    setLinesError('');
+  };
+
+  // Session 72 — a line sourced from another branch's Supply (in-progress
+  // deal-letter variety) rather than real Inventory. No stock check (nothing
+  // in real InvVariant.quantity backs it yet — see findStockOverages on the
+  // backend), and it carries supplyDealLetterId so the backend can trace it.
+  const addSupplyLine = (row) => {
+    setLines(ls => [...ls, {
+      productId: row.productId,
+      variantId: row.variantId,
+      code: row.variantCode,
+      name: row.variantCode,
+      unit: row.unit,
+      quantity: 1,
+      unitPrice: row.price != null ? row.price : 0,
+      discount: 0,
+      discountType: 'amount',
+      vatRate: Number(values.vatRate) || 0,
+      sourceType: 'supply',
+      supplyDealLetterId: row.dealLetterId,
+      availableQty: null,
+      spec: null,
     }]);
     setLinesError('');
   };
@@ -336,36 +433,10 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
     setLines(ls => ls.map(l => ({ ...l, vatRate: Number(v) || 0 })));
   };
 
-  const setPackRow = (idx, key, value) =>
-    setPackRows(rs => rs.map((r, i) => (i === idx ? { ...r, [key]: value } : r)));
-  const setPackRowMulti = (idx, patch) =>
-    setPackRows(rs => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
-
-  // Picking a line item for a packing row auto-fills the product name + seeds
-  // the nominal dimensions as a starting point — the user still adjusts L/W/T
-  // for the actual physical cut piece (nominal code dims ≠ cut dims; see the
-  // Inventory packing-list note in the spec).
-  const applyLineToPackRow = (idx, line) => {
-    if (!line) return;
-    const spec = line.spec;
-    setPackRowMulti(idx, {
-      productName: `${line.code} — ${line.name}`,
-      ...(spec && !spec.unsized ? {
-        length:    spec.lengthCm    ?? '',
-        width:     spec.widthCm     ?? '',
-        thickness: spec.thicknessMm ?? '',
-      } : {}),
-    });
-  };
-
   const totals = useMemo(
     () => computeTotals(lines, isInvoice ? values.shipping : 0),
     [lines, values.shipping, isInvoice]
   );
-  const packTotals = useMemo(() => ({
-    pcs: packRows.reduce((a, r) => a + (Number(r.pcs) || 0), 0),
-    sqm: round2(packRows.reduce((a, r) => a + (Number(r.sqm) || 0), 0)),
-  }), [packRows]);
 
   // ── save ─────────────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -376,9 +447,10 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
     else if (lines.some(l => Number(l.unitPrice) < 0)) { setLinesError(t('mis.errUnitPriceNegative')); linesOk = false; }
     else if (lines.some(lineExceedsStock)) { setLinesError(t('mis.errStockExceeded')); linesOk = false; }
 
-    // Customer: required for invoices (goods need a destination), optional for quotes
+    // Customer: required for invoices (goods need a destination), optional for
+    // quotes — and never asked for between branches (the buyer is a branch).
     let custOk = true;
-    if (isInvoice && !values.customerId) {
+    if (isInvoice && !isInterBranch && !values.customerId) {
       setCustError(t('mis.selectCustomerError'));
       custOk = false;
     } else {
@@ -387,27 +459,40 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
     // Shipping address: required for invoices (the loads go somewhere), optional for quotes
     let addrOk = true;
-    if (isInvoice && !values.customerAddress?.trim()) {
+    if (isInvoice && !isInterBranch && !values.customerAddress?.trim()) {
       setAddrError(t('mis.noAddressError'));
       addrOk = false;
     } else {
       setAddrError('');
     }
 
-    if (!scalarsOk || !custOk || !linesOk || !addrOk) return;
+    // Session 72 — an inter-branch quote needs a target branch picked
+    let targetOk = true;
+    if (isInterBranch && !targetBranchId) {
+      setLinesError(t('mis.selectTargetBranchError'));
+      targetOk = false;
+    }
+
+    if (!scalarsOk || !custOk || !linesOk || !addrOk || !targetOk) return;
 
     setSaving(true);
     const payload = {
       docType: activeType,
-      branchId: activeBranchId,
+      // Session 72 — for an inter-branch quote, branchId is the TARGET/
+      // fulfilling branch (the one being quoted against), not the caller's own.
+      branchId: isInterBranch ? targetBranchId : activeBranchId,
       issueDate: values.issueDate,
       status: values.status,
-      customerId: values.customerId,
-      customerSnapshot: {
-        name: values.customerName, trn: values.customerTrn,
-        country: values.customerCountry, phone: values.customerPhone,
-        address: values.customerAddress,
-      },
+      ...(isInterBranch
+        ? { tradeMode: 'interBranch', requestingBranchId: activeBranchId }
+        : {
+            customerId: values.customerId,
+            customerSnapshot: {
+              name: values.customerName, trn: values.customerTrn,
+              country: values.customerCountry, phone: values.customerPhone,
+              address: values.customerAddress,
+            },
+          }),
       lineItems: lines.map(({ availableQty, spec, ...l }) => ({
         ...l,
         quantity:  Number(l.quantity)  || 0,
@@ -416,36 +501,38 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
         vatRate:   Number(l.vatRate)   || 0,
       })),
       notes: values.notes,
+      // Set only when this document is being raised FROM a supply record
+      // (Supply → "New quotation/invoice"). Re-validated server-side against
+      // the doc's own branch.
+      ...(preset?.supplyRecordId ? { supplyRecordId: preset.supplyRecordId } : {}),
+      // packingList is intentionally NOT sent here any more (Session 72,
+      // Phase 3) — packing lists are their own standalone MIS resource now
+      // (see mis.js's Packing Lists tab / packingLists/packingListForm.js).
       ...(isInvoice
-        ? { shipping: Number(values.shipping) || 0,
-            packingList: {
-              rows: packRows
-                .filter(r => Object.values(r).some(v => String(v).trim() !== ''))
-                .map((r, i) => ({
-                  no: i + 1, pallet: r.pallet, productName: r.productName,
-                  length: Number(r.length) || undefined, width: Number(r.width) || undefined,
-                  pcs: Number(r.pcs) || undefined, thickness: Number(r.thickness) || undefined,
-                  sqm: Number(r.sqm) || undefined, notes: r.notes,
-                })),
-              totalPcs: packTotals.pcs || undefined,
-              totalSqm: packTotals.sqm || undefined,
-              ...packMeta,
-            } }
+        ? { shipping: Number(values.shipping) || 0 }
         : { validityDays: values.validityDays === '' ? undefined : Number(values.validityDays) }),
     };
 
     try {
-      if (isEdit && doc) {
-        await authCtx.jwtInst({ method: 'put',
+      let saved = null;
+      if (isConvert && doc) {
+        const res = await authCtx.jwtInst({ method: 'post',
+          url: `${axiosGlobal.defaultTargetApi}/mis/invoices/${doc._id}/convert`, data: payload });
+        saved = res.data;
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('mis.convertedToInvoiceMsg', { quote: doc.docNumber, number: res.data.docNumber }), type: 'success' }));
+      } else if (isEdit && doc) {
+        const res = await authCtx.jwtInst({ method: 'put',
           url: `${axiosGlobal.defaultTargetApi}/mis/invoices/${doc._id}`, data: payload });
+        saved = res.data;
         dispatch(actions.setShowSnackBar({ status: true, msg: t('mis.docUpdatedMsg', { type: isInvoice ? t('mis.invoiceType') : t('mis.quoteType'), number: doc.docNumber }), type: 'success' }));
       } else {
         const res = await authCtx.jwtInst({ method: 'post',
           url: `${axiosGlobal.defaultTargetApi}/mis/invoices`, data: payload });
+        saved = res.data;
         dispatch(actions.setShowSnackBar({ status: true, msg: t('mis.docCreatedMsg', { type: isInvoice ? t('mis.invoiceType') : t('mis.quoteType'), number: res.data.docNumber }), type: 'success' }));
       }
       dispatch(actions.misInvBumpRefresh());
-      onSaved && onSaved();
+      onSaved && onSaved(saved);
       onClose();
     } catch (err) {
       dispatch(actions.setShowSnackBar({ status: true,
@@ -482,9 +569,11 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
         <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5,
           borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
           <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-            {isEdit
-              ? t(isInvoice ? 'mis.editInvoiceTitle' : 'mis.editQuoteTitle', { number: doc?.docNumber })
-              : t(isInvoice ? 'mis.newInvoice' : 'mis.newQuote')}
+            {isConvert
+              ? t('mis.convertFormTitle', { number: doc?.docNumber })
+              : isEdit
+                ? t(isInvoice ? 'mis.editInvoiceTitle' : 'mis.editQuoteTitle', { number: doc?.docNumber })
+                : t(isInvoice ? 'mis.newInvoice' : 'mis.newQuote')}
           </Typography>
           <IconButton size="small" onClick={handleClose} sx={{ color: T.TEXT_TER }}>
             <CloseIcon sx={{ fontSize: 16 }} />
@@ -494,6 +583,36 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
         {/* body */}
         <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 2, py: 2,
           display: 'flex', flexDirection: 'column', gap: 3 }}>
+
+          {/* ── Trade mode (Session 72) — new pre_invoice only, mis:crossBranch:quote only ── */}
+          {!isEdit && !isInvoice && canCrossBranch && (
+            <Box sx={{ display: 'flex', gap: 0.75 }}>
+              {[{ v: 'customer', l: t('mis.tradeModeCustomer') }, { v: 'interBranch', l: t('mis.tradeModeInterBranch') }].map((opt) => {
+                const sel = tradeMode === opt.v;
+                return (
+                  <Button key={opt.v} size="small" onClick={() => setTradeMode(opt.v)}
+                    sx={{ flex: 1, borderRadius: '8px', fontSize: '0.72rem', textTransform: 'none',
+                      fontWeight: sel ? 700 : 400, color: sel ? T.TEXT_PRI : T.TEXT_TER,
+                      bgcolor: sel ? T.CTRL_BG : 'transparent', border: `1px solid ${sel ? T.BD2 : T.BD}` }}>
+                    {opt.l}
+                  </Button>
+                );
+              })}
+            </Box>
+          )}
+
+          {/* What this conversion does — and what is still left to fill in. */}
+          {isConvert && (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', px: 1.25, py: 1,
+              border: `1px solid ${T.BD}`, borderRadius: '10px', bgcolor: T.CTRL_BG }}>
+              <SwapHorizIcon sx={{ fontSize: 16, color: T.TEXT_SEC, mt: '1px' }} />
+              <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC, lineHeight: 1.6 }}>
+                {isInterBranch
+                  ? t('mis.convertBannerInterBranch', { number: doc?.docNumber })
+                  : t('mis.convertBanner', { number: doc?.docNumber })}
+              </Typography>
+            </Box>
+          )}
 
           {/* ── Document ── */}
           <Box>
@@ -506,12 +625,12 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                 error={Boolean(fieldError('issueDate'))}
                 helperText={fieldError('issueDate')}
                 InputLabelProps={{ shrink: true, ...tfLabel }} inputProps={tfInput} sx={tfSx} />
-              <FormControl size="small" fullWidth>
+              <FormControl size="small" fullWidth disabled={statusLocked}>
                 <InputLabel sx={{ fontSize: '0.75rem' }}>{t('common.status')}</InputLabel>
                 <Select value={values.status} label={t('common.status')}
                   onChange={(e) => setField('status', e.target.value)}
                   sx={{ fontSize: '0.8rem', ...tfSx }}>
-                  {STATUS_BY_TYPE[activeType].map(s => (
+                  {statusOptions.map(s => (
                     <MenuItem key={s} value={s} sx={{ fontSize: '0.8rem' }}>{t(STATUS_LABEL_KEYS[s] || s)}</MenuItem>
                   ))}
                 </Select>
@@ -522,9 +641,22 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                 {t('mis.paidWarningNote')}
               </Typography>
             )}
+            {/* Accepting a quotation / request takes its quantities out of stock
+                (inventory lines) or out of their lot (supply lines). */}
+            {!isInvoice && values.status === 'accepted' && sourceDoc?.status !== 'accepted' && (
+              <Typography sx={{ fontSize: '0.68rem', color: '#81c784', mt: 0.75 }}>
+                {t('mis.acceptedTakesStockNote')}
+              </Typography>
+            )}
+            {!isInvoice && sourceDoc?.status === 'accepted' && values.status !== 'accepted' && (
+              <Typography sx={{ fontSize: '0.68rem', color: '#ffb74d', mt: 0.75 }}>
+                {t('mis.unacceptPutsStockBackNote')}
+              </Typography>
+            )}
           </Box>
 
-          {/* ── Customer (CRM picker) ── */}
+          {/* ── Customer (CRM picker) — hidden for an inter-branch quote ── */}
+          {!isInterBranch && (
           <Box>
             <SectionLabel>{t('mis.sectionCustomer')}{!isInvoice ? t('mis.optionalSuffix') : ''}</SectionLabel>
 
@@ -633,6 +765,48 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                 InputLabelProps={tfLabel} inputProps={tfInput} sx={tfSx} />
             </Box>
           </Box>
+          )}
+
+          {/* ── The two branches of an existing request / inter-branch doc ── */}
+          {isInterBranch && (isEdit || isConvert) && (
+          <Box>
+            <SectionLabel>{t('mis.sectionBranches')}</SectionLabel>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.25,
+              border: `1px solid ${T.BD}`, borderRadius: '10px', bgcolor: T.CTRL_BG }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: '0.6rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {t('mis.requestedByLabel')}
+                </Typography>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: T.TEXT_PRI }} noWrap>
+                  {sourceDoc?.requestingBranchSnapshot?.name || '—'}
+                </Typography>
+              </Box>
+              <ArrowForwardIcon sx={{ fontSize: 16, color: T.TEXT_TER }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: '0.6rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {t('mis.fulfilledByLabel')}
+                </Typography>
+                <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, color: T.TEXT_PRI }} noWrap>
+                  {targetBranchName || '—'}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+          )}
+
+          {/* ── Target branch (Session 72, inter-branch quote only) ── */}
+          {isInterBranch && !isEdit && !isConvert && (
+          <Box>
+            <SectionLabel>{t('mis.sectionTargetBranch')}</SectionLabel>
+            <CrossBranchTargetPicker
+              branches={crossBranchBranches}
+              branchId={targetBranchId}
+              onBranchChange={(id) => { setTargetBranchId(id); setLines([]); setProdResults([]); setSupplyResults([]); }}
+              source={crossBranchSource}
+              onSourceChange={(s) => { setCrossBranchSource(s); setProdResults([]); setSupplyResults([]); }}
+            />
+          </Box>
+          )}
 
           {/* ── Line items (Inventory picker) ── */}
           <Box>
@@ -704,6 +878,38 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
               </Box>
             )}
 
+            {supplyResults.length > 0 && (
+              <Box sx={{ mb: 1.5, border: `1px solid ${T.BD}`, borderRadius: '10px',
+                overflow: 'hidden', maxHeight: 260, overflowY: 'auto' }}>
+                {supplyResults.map((row) => {
+                  const rowAdded = addedKeys.has(`v:${row.variantId}`);
+                  // net of what's already promised to accepted documents
+                  const remaining = row.left != null ? row.left
+                    : (row.status === 'final_product' ? (row.finalQty || 0) - (row.receivedQty || 0) : null);
+                  return (
+                    <Box key={`${row.dealLetterId}-${row.variantId}`} onClick={() => addSupplyLine(row)}
+                      sx={{ px: 1.5, py: 0.75, display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer',
+                        borderBottom: `1px solid ${T.BD}`, '&:last-child': { borderBottom: 'none' },
+                        '&:hover': { bgcolor: T.CTRL_BG } }}>
+                      <Typography sx={{ fontSize: '0.7rem', fontFamily: 'monospace',
+                        color: rowAdded ? 'success.main' : T.TEXT_SEC, flexGrow: 1 }} noWrap>
+                        {row.variantCode}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.64rem', color: T.TEXT_TER, flexShrink: 0 }}>
+                        {row.status === 'final_product'
+                          ? t('mis.supplyRowFinal', { qty: remaining, unit: row.unit })
+                          : t('mis.supplyRowForecast', { qty: row.left != null ? row.left : row.forecastQty, unit: row.unit })}
+                        {row.price != null ? ` · ${fmtMoney(row.price)} ${row.currency || 'AED'}` : ''}
+                      </Typography>
+                      {rowAdded
+                        ? <CheckIcon sx={{ fontSize: 13, color: 'success.main' }} />
+                        : <AddIcon sx={{ fontSize: 13, color: T.TEXT_TER }} />}
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+
             {lines.length === 0 ? (
               <Typography sx={{ fontSize: '0.72rem', color: linesError ? '#EA005A' : T.TEXT_TER,
                 py: 1, textAlign: 'center', border: `1px dashed ${linesError ? '#EA005A' : T.BD}`,
@@ -746,7 +952,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                         InputLabelProps={tfLabel} sx={{ ...tfSx, width: 76 }} />
                       <Select size="small" value={l.discountType}
                         onChange={(e) => setLine(i, 'discountType', e.target.value)}
-                        sx={{ fontSize: '0.72rem', width: 72, ...tfSx }}>
+                        sx={{ fontSize: '0.72rem', width: 86, flexShrink: 0, ...tfSx }}>
                         <MenuItem value="amount" sx={{ fontSize: '0.75rem' }}>AED</MenuItem>
                         <MenuItem value="percent" sx={{ fontSize: '0.75rem' }}>%</MenuItem>
                       </Select>
@@ -801,82 +1007,10 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
             </Box>
           </Box>
 
-          {/* ── Packing list (invoice only) ── */}
-          {isInvoice && (
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.25 }}>
-                <SectionLabel>{t('mis.sectionPackingList')}</SectionLabel>
-                <Box sx={{ flexGrow: 1 }} />
-                <Button size="small" startIcon={<AddIcon sx={{ fontSize: 13 }} />}
-                  onClick={() => setPackRows(rs => [...rs, { ...EMPTY_PACK_ROW }])}
-                  sx={{ fontSize: '0.68rem', textTransform: 'none', color: T.TEXT_TER, mb: 1.25 }}>
-                  {t('mis.addRowButton')}
-                </Button>
-              </Box>
-
-              {packRows.length > 0 && (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
-                  {packRows.map((r, i) => (
-                    <Box key={i} sx={{ border: `1px solid ${T.BD}`, borderRadius: '10px', p: 1.25 }}>
-                      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                        <TextField size="small" label={t('mis.fieldPallet')} value={r.pallet}
-                          onChange={(e) => setPackRow(i, 'pallet', e.target.value)}
-                          inputProps={{ style: { fontSize: '0.76rem' } }}
-                          InputLabelProps={tfLabel} sx={{ ...tfSx, width: 90 }} />
-                        <Autocomplete
-                          freeSolo
-                          options={lines}
-                          getOptionLabel={(opt) => (typeof opt === 'string' ? opt : `${opt.code} — ${opt.name}`)}
-                          inputValue={r.productName || ''}
-                          onInputChange={(_, val, reason) => { if (reason !== 'reset') setPackRow(i, 'productName', val); }}
-                          onChange={(_, val) => { if (val && typeof val === 'object') applyLineToPackRow(i, val); }}
-                          sx={{ flex: 1 }}
-                          renderInput={(params) => (
-                            <TextField {...params} size="small" label={t('mis.fieldProductPick')}
-                              inputProps={{ ...params.inputProps, style: { fontSize: '0.76rem' } }}
-                              InputLabelProps={tfLabel} sx={tfSx} />
-                          )}
-                        />
-                        <IconButton size="small" onClick={() => setPackRows(rs => rs.filter((_, j) => j !== i))}
-                          sx={{ width: 24, height: 24, color: T.TEXT_TER, alignSelf: 'center' }}>
-                          <DeleteOutlineIcon sx={{ fontSize: 13 }} />
-                        </IconButton>
-                      </Box>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        {[
-                          ['length', t('mis.colLength')], ['width', t('mis.colWidth')], ['pcs', t('mis.colPcs')],
-                          ['thickness', t('mis.colThickness')], ['sqm', t('mis.colSqm')],
-                        ].map(([key, label]) => (
-                          <TextField key={key} size="small" label={label} type="number" value={r[key]}
-                            onChange={(e) => setPackRow(i, key, e.target.value)}
-                            inputProps={{ min: 0, step: 'any', style: { fontSize: '0.76rem' } }}
-                            InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
-                        ))}
-                      </Box>
-                    </Box>
-                  ))}
-                  <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC, textAlign: 'right' }}>
-                    {t('mis.packTotalsLine', { pcs: packTotals.pcs, sqm: fmtMoney(packTotals.sqm) })}
-                  </Typography>
-                </Box>
-              )}
-
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField size="small" label={t('mis.fieldTruckNo')} value={packMeta.truckNumber}
-                  onChange={(e) => setPackMeta(m => ({ ...m, truckNumber: e.target.value }))}
-                  inputProps={{ style: { fontSize: '0.78rem' } }}
-                  InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
-                <TextField size="small" label={t('mis.fieldDriver')} value={packMeta.driverName}
-                  onChange={(e) => setPackMeta(m => ({ ...m, driverName: e.target.value }))}
-                  inputProps={{ style: { fontSize: '0.78rem' } }}
-                  InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
-                <TextField size="small" label={t('mis.fieldDriverMobile')} value={packMeta.driverMobile}
-                  onChange={(e) => setPackMeta(m => ({ ...m, driverMobile: e.target.value }))}
-                  inputProps={{ style: { fontSize: '0.78rem' } }}
-                  InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
-              </Box>
-            </Box>
-          )}
+          {/* Packing list moved out of this form (Session 72, Phase 3) — it's
+              now its own standalone MIS sub-section (mis.js's Packing Lists
+              tab), attachable to this invoice after saving via the invoice
+              detail page's "Packing lists" reverse-lookup section. */}
 
           {/* ── Notes ── */}
           <Box>
@@ -893,7 +1027,9 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
           <Button fullWidth variant="contained" size="small" disabled={saving} onClick={handleSave}
             sx={{ fontSize: '0.78rem', textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}>
             {saving ? <CircularProgress size={14} sx={{ mr: 0.75 }} /> : null}
-            {isEdit ? t('mis.saveChanges') : t(isInvoice ? 'mis.createInvoiceButton' : 'mis.createQuoteButton')}
+            {isConvert
+              ? t('mis.convertSubmit', { number: doc?.docNumber })
+              : isEdit ? t('mis.saveChanges') : t(isInvoice ? 'mis.createInvoiceButton' : 'mis.createQuoteButton')}
           </Button>
         </Box>
       </Drawer>

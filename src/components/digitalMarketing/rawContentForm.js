@@ -1,4 +1,4 @@
-import { useState, useContext, useRef } from 'react';
+import { useState, useContext, useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useTheme, useMediaQuery } from '@mui/material';
@@ -28,6 +28,7 @@ import { useBranch } from '../../contextApi/BranchContext';
 import { createRawContent } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer from './mediaViewer';
+import ProductVarietyPicker from './productVarietyPicker';
 
 // value stays the literal English word (stored on the record); only the displayed label translates.
 const USE_CASES = [
@@ -98,7 +99,14 @@ export default function RawContentForm({ open, onClose }) {
   const [useCase, setUseCase]   = useState('Anything');
   const [platform, setPlatform] = useState('Anything');
   const [branchId, setBranchId] = useState('');
+  const [products, setProducts] = useState([]);   // tagged Inventory varieties — see productVarietyPicker.js
   const [pendingFiles, setPendingFiles] = useState([]);   // [{ key, file, name, description, voiceFile }]
+  // Text-format content — the alternative to uploading files: type it and/or
+  // speak it. textVoiceFile mirrors pendingFiles' per-file voiceFile pattern,
+  // just at the batch level instead of per-file.
+  const [textContent, setTextContent] = useState('');
+  const [textVoiceFile, setTextVoiceFile] = useState(null);
+  const [recordingText, setRecordingText] = useState(false);
   const [saving, setSaving]     = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);   // 0-100 during submit
   const [error, setError]       = useState('');
@@ -107,19 +115,41 @@ export default function RawContentForm({ open, onClose }) {
   const [viewerMedia, setViewerMedia] = useState(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef        = useRef([]);
+  const textRecorderRef  = useRef(null);
+  const textChunksRef    = useRef([]);
   const replaceInputRef  = useRef(null);
   const replaceTargetKey = useRef(null);
 
+  // Branch default: when the creator belongs to exactly ONE branch there is no
+  // real choice to make, so it is preselected. With two or more it stays empty
+  // on purpose — guessing which one a batch is for would silently mistag it.
+  const autoBranchId = branches.length === 1 ? String(branches[0]._id) : '';
+  const [branchTouched, setBranchTouched] = useState(false);
+  const prevOpen = useRef(false);
+
+  useEffect(() => {
+    if (open && !prevOpen.current) setBranchTouched(false);   // fresh open
+    prevOpen.current = open;
+  }, [open]);
+
+  // Re-runs when `branches` arrives, so a late context fetch still gets applied
+  // — but never overwrites a choice the user has already made.
+  useEffect(() => {
+    if (!open || branchTouched) return;
+    setBranchId(autoBranchId);
+  }, [open, autoBranchId, branchTouched]);
+
   const resetForm = () => {
-    setTitle(''); setLanguage(''); setUseCase('Anything'); setPlatform('Anything'); setBranchId('');
-    setPendingFiles([]); setError('');
+    setTitle(''); setLanguage(''); setUseCase('Anything'); setPlatform('Anything');
+    setBranchId(autoBranchId); setBranchTouched(false);
+    setProducts([]); setPendingFiles([]); setTextContent(''); setTextVoiceFile(null); setError('');
   };
 
   // Default a friendly per-file name from the filename (extension stripped).
   const baseName = (filename) => (filename || '').replace(/\.[^.]+$/, '');
 
   const handleClose = () => {
-    if (pendingFiles.length) { setConfirmDiscard(true); return; }
+    if (pendingFiles.length || textContent.trim() || textVoiceFile) { setConfirmDiscard(true); return; }
     resetForm();
     onClose();
   };
@@ -183,8 +213,38 @@ export default function RawContentForm({ open, onClose }) {
     setRecordingKey(null);
   };
 
+  // Voice recording for the batch-level text content — same MediaRecorder
+  // pattern as startVoiceDescription/stopVoiceDescription above, just not
+  // keyed to a particular file.
+  const startTextVoice = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      textChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) textChunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(textChunksRef.current, { type: 'audio/webm' });
+        setTextVoiceFile(new File([blob], `voice-content-${Date.now()}.webm`, { type: 'audio/webm' }));
+      };
+      recorder.start();
+      textRecorderRef.current = recorder;
+      setRecordingText(true);
+    } catch (_) {
+      setError(t('dm.micAccessDenied'));
+    }
+  };
+  const stopTextVoice = () => {
+    textRecorderRef.current?.stop();
+    setRecordingText(false);
+  };
+
   const handleSave = async () => {
-    if (!pendingFiles.length) { setError(t('dm.addAtLeastOneFileGeneric')); return; }
+    // Either mode is valid: real files, or typed/spoken text content — never neither.
+    if (!pendingFiles.length && !textContent.trim() && !textVoiceFile) {
+      setError(t('dm.addFilesOrTextRequired'));
+      return;
+    }
     setSaving(true); setError('');
     try {
       const formData = new FormData();
@@ -193,6 +253,9 @@ export default function RawContentForm({ open, onClose }) {
       formData.append('useCase', useCase);
       formData.append('platform', platform);
       formData.append('branchId', branchId);
+      formData.append('textContent', textContent);
+      formData.append('products', JSON.stringify(products.map((p) => ({ productId: p.productId, variantId: p.variantId }))));
+      if (textVoiceFile) formData.append('textVoice', textVoiceFile);
 
       const descriptions = [];
       const names         = [];
@@ -244,6 +307,9 @@ export default function RawContentForm({ open, onClose }) {
           onChange={(e) => setTitle(e.target.value)}
           placeholder={t('dm.batchTitlePlaceholderExample')}
           sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }} />
+
+        {/* ── Tagged Inventory varieties — branch-scoped, see productVarietyPicker.js ── */}
+        <ProductVarietyPicker value={products} onChange={setProducts} T={T} />
 
         {/* ── File picker ── */}
         <Box>
@@ -309,6 +375,49 @@ export default function RawContentForm({ open, onClose }) {
           </Box>
         )}
 
+        {/* ── Text-format content — the alternative to uploading files: type
+            it and/or record a voice message about it. Submitting requires
+            EITHER at least one file above OR something here (see handleSave). ── */}
+        <Box sx={{ p: 1.5, borderRadius: '10px', bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`,
+          display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            {t('dm.textContentSectionLabel')}
+          </Typography>
+          <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER }}>
+            {t('dm.orEnterTextInstead')}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+            <TextField size="small" fullWidth multiline minRows={3} placeholder={t('dm.textContentPlaceholder')}
+              value={textContent} onChange={(e) => setTextContent(e.target.value)}
+              sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '8px', fontSize: '0.8rem' } }} />
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flexShrink: 0 }}>
+              {textVoiceFile && !recordingText ? (
+                <>
+                  <Tooltip title={t('dm.playTextVoiceTip')}>
+                    <IconButton size="small"
+                      onClick={() => setViewerMedia({ url: URL.createObjectURL(textVoiceFile), name: t('dm.voiceDescriptionFallback'), kind: 'audio' })}
+                      sx={{ color: '#81c784' }}>
+                      <PlayCircleIcon sx={{ fontSize: 20 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={t('dm.removeTextVoiceTip')}>
+                    <IconButton size="small" onClick={() => setTextVoiceFile(null)} sx={{ color: T.ERR_CLR }}>
+                      <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              ) : (
+                <Tooltip title={recordingText ? t('dm.stopRecordingTip2') : t('dm.recordTextVoiceTip')}>
+                  <IconButton size="small" onClick={recordingText ? stopTextVoice : startTextVoice}
+                    sx={{ color: recordingText ? T.ERR_CLR : T.TEXT_TER }}>
+                    {recordingText ? <StopCircleIcon sx={{ fontSize: 18 }} /> : <MicIcon sx={{ fontSize: 18 }} />}
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
+          </Box>
+        </Box>
+
         <Divider sx={{ borderColor: T.DIVIDER }} />
 
         {/* ── Batch-level fields ── */}
@@ -342,10 +451,11 @@ export default function RawContentForm({ open, onClose }) {
             for filtering the list later. */}
         {branches.length > 0 && (
           <TextField select label={t('dm.branchLabel')} size="small" fullWidth value={branchId}
-            onChange={(e) => setBranchId(e.target.value)}
+            onChange={(e) => { setBranchId(e.target.value); setBranchTouched(true); }}
             sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' } }}
             SelectProps={{ native: true }}
-          InputLabelProps={{ shrink: true }}>
+            InputLabelProps={{ shrink: true }}
+            helperText={branches.length > 1 ? t('dm.branchPickHelper') : undefined}>
             <option value="">{t('dm.noBranchOption')}</option>
             {branches.map((b) => <option key={b._id} value={b._id}>{b.name}</option>)}
           </TextField>

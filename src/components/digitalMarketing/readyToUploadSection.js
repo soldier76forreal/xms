@@ -10,6 +10,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import AddIcon from '@mui/icons-material/Add';
+import SearchIcon from '@mui/icons-material/Search';
+import InputBase from '@mui/material/InputBase';
 
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -67,6 +69,8 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
   // user's last visit as unread (dot + tinted row) — see useUnreadRecords.js.
   const { isUnread } = useUnreadRecords('dmReadyToUpload');
 
+  const [search, setSearch]   = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -100,11 +104,17 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
     RAIL:     isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.12)',
   };
 
+  useEffect(() => {
+    const tmr = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(tmr);
+  }, [search]);
+
   const load = useCallback((pg = 1) => {
     dispatch(fetchReadyToUploadList({
       authCtx, axiosGlobal,
       params: {
         page: pg, limit: pageSize,
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(branchFilter ? { branchId: branchFilter } : {}),
         ...(platformFilter ? { platform: platformFilter } : {}),
         ...(dateFrom ? { dateFrom } : {}),
@@ -112,9 +122,9 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
       },
     }));
     setPage(pg);
-  }, [authCtx, axiosGlobal, pageSize, branchFilter, platformFilter, dateFrom, dateTo, dispatch]);
+  }, [authCtx, axiosGlobal, pageSize, debouncedSearch, branchFilter, platformFilter, dateFrom, dateTo, dispatch]);
 
-  useEffect(() => { load(1); }, [pageSize, branchFilter, platformFilter, dateFrom, dateTo, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(1); }, [pageSize, debouncedSearch, branchFilter, platformFilter, dateFrom, dateTo, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
   const clearFilters = () => { setBranchFilter(''); setPlatformFilter(''); setDateFrom(''); setDateTo(''); };
   const activeFilterCount = [branchFilter, platformFilter, dateFrom, dateTo].filter(Boolean).length;
   useEffect(() => { setHasMore(items.length < total); }, [items, total]);
@@ -153,10 +163,23 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
               onDoubleClick={resetListWidth} />
           )}
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25 }}>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25, flexWrap: 'wrap' }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
               {t('dm.readyToUploadCount', { count: total })}
             </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexGrow: 1, minWidth: 120, maxWidth: 320,
+              bgcolor: T.CTRL_BG, borderRadius: '8px', px: 1.1, height: 28, border: `1px solid ${T.BD}` }}>
+              <SearchIcon sx={{ fontSize: 14, color: T.TEXT_TER, flexShrink: 0 }} />
+              <InputBase value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('dm.searchByNamePlaceholder')}
+                sx={{ fontSize: '0.75rem', color: T.TEXT_PRI, flex: 1,
+                  '& input::placeholder': { color: T.TEXT_TER, opacity: 1 } }} />
+              {search && (
+                <IconButton size="small" onClick={() => setSearch('')} sx={{ p: 0, color: T.TEXT_TER }}>
+                  <CloseIcon sx={{ fontSize: 13 }} />
+                </IconButton>
+              )}
+            </Box>
             <Tooltip title={t('common.filters')}>
               <IconButton size="small" onClick={() => setFilterOpen(!filterOpen)}
                 sx={{ color: activeFilterCount > 0 ? T.TEXT_PRI : T.TEXT_TER,

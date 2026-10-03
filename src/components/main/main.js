@@ -20,6 +20,7 @@ import DigitalMarketing from '../digitalMarketing/digitalMarketing';
 import Tutorials from '../tutorials/tutorials';
 import JobReportsMainSection from '../users/jobReportsMainSection';
 import MyActivityPage from '../users/myActivityPage';
+import Supply from '../supply/supply';
 
 import PageSection from '../../contextApi/pageSection';
 import { usePermissions } from '../../contextApi/PermissionContext';
@@ -36,6 +37,7 @@ const PATH_TO_SECTION = {
   '/digitalMarketing': 7,
   '/tutorials': 8,
   '/jobReports': 9,
+  '/supply':     10,
 };
 
 const Main = () => {
@@ -130,6 +132,7 @@ const Main = () => {
           : renderSection === 7 ? <DigitalMarketing />
           : renderSection === 8 ? <Tutorials />
           : renderSection === 9 ? <JobReportsMainSection />
+          : renderSection === 10 ? <Supply />
           : null}
       </Box>
 

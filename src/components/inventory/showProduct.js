@@ -15,11 +15,15 @@ import ProductForm from './productForm';
 import VariantDetail from './variantDetail';
 import ChangeLog from './sections/changeLog';
 import ProductInvoices from './sections/productInvoices';
+import ProductSupply from './sections/productSupply';
 import WebsitePanel from './sections/websitePanel';
 import ProductPriceRequests from './sections/productPriceRequests';
 import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
 
-const ShowProduct = ({ productId, onBack, fullView, onToggleFullView }) => {
+// branchReadOnly: this product belongs to a branch that merely SHARED its
+// catalogue with us — everything is visible, nothing is editable, and the only
+// commercial action offered is a stock request.
+const ShowProduct = ({ productId, onBack, fullView, onToggleFullView, branchReadOnly = false, branchName = '' }) => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
@@ -122,7 +126,16 @@ const ShowProduct = ({ productId, onBack, fullView, onToggleFullView }) => {
               onRefresh={fetchMedia}
             />
 
-            <ProductInvoices productId={product._id} productCode={product.code} />
+            {/* hasForecast: a lot of this product is being prepared in Supply
+                (forecast or final-but-unreceived on any variety) — the Request
+                button then offers to reserve it before it lands. */}
+            <ProductInvoices productId={product._id} productCode={product.code}
+              readOnly={branchReadOnly} branchId={product.branchId}
+              branchName={branchName}
+              hasForecast={(variants || []).some((v) => (Number(v.supply?.forecastQty) || 0) > 0
+                || (Number(v.supply?.finalQty) || 0) > 0)} />
+
+            <ProductSupply productId={product._id} />
 
             {WEBSITE_FEATURES_ENABLED && <WebsitePanel product={product} media={media} />}
 

@@ -22,9 +22,17 @@ export const AxiosGlobalProvider = (props) =>{
     // and talks to the two HTTPS APIs below (reverse-proxied to local ports
     // 7130/7256 on the server). Local dev keeps host-based URLs so the same
     // build works via localhost or a LAN IP.
+    // Local dev ports are overridable via a gitignored .env.local, the same
+    // philosophy the backends already use for PORT — so a machine whose
+    // ephemeral port range collides with the defaults can move them without
+    // touching committed code. Production never reads these: it uses the HTTPS
+    // domains below regardless.
+    const apiPort  = process.env.REACT_APP_API_PORT  || '4789';
+    const authPort = process.env.REACT_APP_AUTH_PORT || '2681';
+
     const contextValue = {
-        defaultTargetApi: local ? `http://${host}:4789` : 'https://api.lazulitemarble.com',
-        authTargetApi:    local ? `http://${host}:2681` : 'https://auth.lazulitemarble.com',
+        defaultTargetApi: local ? `http://${host}:${apiPort}` : 'https://api.lazulitemarble.com',
+        authTargetApi:    local ? `http://${host}:${authPort}` : 'https://auth.lazulitemarble.com',
         externalLink:'https://xms.lazulitemarble.com',
         originLink:window.location.origin,
         // The SEPARATE public Next.js site (website/, Phase D) — not xms itself.

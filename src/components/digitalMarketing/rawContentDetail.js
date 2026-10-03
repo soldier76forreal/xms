@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback, useRef, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
@@ -9,6 +9,7 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
+import Chip from '@mui/material/Chip';
 import Skeleton from '@mui/material/Skeleton';
 import LinearProgress from '@mui/material/LinearProgress';
 import Menu from '@mui/material/Menu';
@@ -27,6 +28,8 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import LinkIcon from '@mui/icons-material/Link';
+import MicIcon from '@mui/icons-material/Mic';
+import StopCircleIcon from '@mui/icons-material/StopCircle';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -35,10 +38,16 @@ import { fetchRawContent, updateRawContent, deleteRawContent } from '../../store
 import RawContentChat from './rawContentChat';
 import ReadyToUploadForm from './readyToUploadForm';
 import LinkReadyToUploadDialog from './linkReadyToUploadDialog';
+import ProductVarietyPicker from './productVarietyPicker';
 import DmFileEditDialog from './dmFileEditDialog';
 import DmActivityLog from './dmActivityLog';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
+import { MediaGrid, MediaGalleryViewer, toMediaItems } from './mediaGallery';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import GridViewIcon from '@mui/icons-material/GridView';
+import ViewListIcon from '@mui/icons-material/ViewList';
 import { playbackUrl } from '../../tools/videoSource';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
@@ -97,7 +106,23 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
   const [confirmRemoveFile, setConfirmRemoveFile] = useState(null);   // fileId pending removal
   const [confirmDeleteBatch, setConfirmDeleteBatch] = useState(false);
   const [viewerMedia, setViewerMedia] = useState(null);   // { url, name, kind }
+  const [fileView, setFileView] = useState('grid');       // 'grid' | 'list'
+  const [galleryIndex, setGalleryIndex] = useState(-1);   // -1 = viewer closed
+
+  // The record's attachments, normalised once for both the grid and the viewer.
+  const mediaItems = useMemo(
+    () => toMediaItems(doc?.files, axiosGlobal.defaultTargetApi),
+    [doc?.files, axiosGlobal.defaultTargetApi]);
   const [addProgress, setAddProgress] = useState(null);   // 0-100 while "Add files" uploads
+
+  const [editingProducts, setEditingProducts] = useState(false);
+  const [productsDraft, setProductsDraft] = useState([]);
+  const [editingTextContent, setEditingTextContent] = useState(false);
+  const [textContentDraft, setTextContentDraft] = useState('');
+  const [textVoiceEditFile, setTextVoiceEditFile] = useState(null);   // a freshly-recorded replacement, pending save
+  const [recordingTextEdit, setRecordingTextEdit] = useState(false);
+  const textEditRecorderRef = useRef(null);
+  const textEditChunksRef   = useRef([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -147,6 +172,44 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
     fd.append('title', titleDraft);
     await dispatch(updateRawContent({ authCtx, axiosGlobal, id, formData: fd }));
     setEditingTitle(false);
+  };
+
+  const openEditProducts = () => { setProductsDraft(doc.products || []); setEditingProducts(true); };
+  const saveProducts = async () => {
+    const fd = new FormData();
+    fd.append('products', JSON.stringify(productsDraft.map((p) => ({ productId: p.productId, variantId: p.variantId }))));
+    await dispatch(updateRawContent({ authCtx, axiosGlobal, id, formData: fd }));
+    setEditingProducts(false);
+  };
+
+  const openEditTextContent = () => {
+    setTextContentDraft(doc.textContent || '');
+    setTextVoiceEditFile(null);
+    setEditingTextContent(true);
+  };
+  const startTextEditVoice = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      textEditChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) textEditChunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const blob = new Blob(textEditChunksRef.current, { type: 'audio/webm' });
+        setTextVoiceEditFile(new File([blob], `voice-content-${Date.now()}.webm`, { type: 'audio/webm' }));
+      };
+      recorder.start();
+      textEditRecorderRef.current = recorder;
+      setRecordingTextEdit(true);
+    } catch (_) { /* mic denied — non-fatal, same as the create form */ }
+  };
+  const stopTextEditVoice = () => { textEditRecorderRef.current?.stop(); setRecordingTextEdit(false); };
+  const saveTextContent = async () => {
+    const fd = new FormData();
+    fd.append('textContent', textContentDraft);
+    if (textVoiceEditFile) fd.append('textVoice', textVoiceEditFile);
+    await dispatch(updateRawContent({ authCtx, axiosGlobal, id, formData: fd }));
+    setEditingTextContent(false);
   };
 
   const handleDelete = async () => {
@@ -311,13 +374,128 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
           </Box>
         )}
 
+        {/* ── Tagged Inventory varieties ── */}
+        <Box sx={{ px: 3, pt: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: T.TEXT_TER, flexGrow: 1 }}>
+              {t('dm.taggedVarietiesLabel')}
+            </Typography>
+            {can('digitalMarketing:rawContent:edit') && !editingProducts && (
+              <IconButton size="small" onClick={openEditProducts} sx={{ color: T.TEXT_TER, width: 22, height: 22 }}>
+                <EditOutlinedIcon sx={{ fontSize: 13 }} />
+              </IconButton>
+            )}
+          </Box>
+          {editingProducts ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <ProductVarietyPicker value={productsDraft} onChange={setProductsDraft} T={T} />
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button size="small" variant="contained" onClick={saveProducts}
+                  sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px' }}>{t('common.save')}</Button>
+                <Button size="small" onClick={() => setEditingProducts(false)}
+                  sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>{t('common.cancel')}</Button>
+              </Box>
+            </Box>
+          ) : (doc.products || []).length > 0 ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+              {doc.products.map((p) => (
+                <Tooltip key={String(p.variantId)} title={[p.productName, p.branchName].filter(Boolean).join(' · ')}>
+                  <Chip size="small" label={p.code}
+                    sx={{ height: 24, fontSize: '0.72rem', bgcolor: T.CTRL_BG, color: T.TEXT_PRI, fontFamily: 'monospace' }} />
+                </Tooltip>
+              ))}
+            </Box>
+          ) : (
+            <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, fontStyle: 'italic' }}>
+              {t('dm.noneTaggedYet')}
+            </Typography>
+          )}
+        </Box>
+
+        {/* ── Text-format content ── */}
+        {(editingTextContent || doc.textContent || doc.textVoiceDiskName) && (
+          <Box sx={{ px: 3, pt: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+              <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: T.TEXT_TER, flexGrow: 1 }}>
+                {t('dm.textContentSectionLabel')}
+              </Typography>
+              {can('digitalMarketing:rawContent:edit') && !editingTextContent && (
+                <IconButton size="small" onClick={openEditTextContent} sx={{ color: T.TEXT_TER, width: 22, height: 22 }}>
+                  <EditOutlinedIcon sx={{ fontSize: 13 }} />
+                </IconButton>
+              )}
+            </Box>
+            {editingTextContent ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <TextField size="small" fullWidth multiline minRows={3} placeholder={t('dm.textContentPlaceholder')}
+                    value={textContentDraft} onChange={(e) => setTextContentDraft(e.target.value)}
+                    sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.CTRL_BG, borderRadius: '8px', fontSize: '0.8rem' } }} />
+                  <Tooltip title={recordingTextEdit ? t('dm.stopRecordingTip2') : t('dm.recordTextVoiceTip')}>
+                    <IconButton size="small" onClick={recordingTextEdit ? stopTextEditVoice : startTextEditVoice}
+                      sx={{ color: recordingTextEdit ? '#EA005A' : T.TEXT_TER, flexShrink: 0 }}>
+                      {recordingTextEdit ? <StopCircleIcon sx={{ fontSize: 18 }} /> : <MicIcon sx={{ fontSize: 18 }} />}
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                {textVoiceEditFile && (
+                  <Typography sx={{ fontSize: '0.7rem', color: '#81c784' }}>{t('dm.newVoiceRecordedNote')}</Typography>
+                )}
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button size="small" variant="contained" onClick={saveTextContent}
+                    sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px' }}>{t('common.save')}</Button>
+                  <Button size="small" onClick={() => setEditingTextContent(false)}
+                    sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>{t('common.cancel')}</Button>
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ p: 1.5, borderRadius: '10px', bgcolor: T.CTRL_BG, border: `1px solid ${T.BD}`,
+                display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <Typography sx={{ fontSize: '0.82rem', color: T.TEXT_SEC, whiteSpace: 'pre-wrap', wordBreak: 'break-word', flexGrow: 1 }}>
+                  {doc.textContent || ''}
+                </Typography>
+                {doc.textVoiceDiskName && (
+                  <Tooltip title={t('dm.playVoiceDescriptionTip')}>
+                    <IconButton size="small"
+                      onClick={() => viewFile(doc.textVoiceDiskName, t('dm.voiceDescriptionFallback'), 'audio')}
+                      sx={{ color: '#81c784', flexShrink: 0 }}>
+                      <PlayCircleIcon sx={{ fontSize: 20 }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
+            )}
+          </Box>
+        )}
+
         {/* ── File gallery ── */}
         <Box sx={{ px: 3, py: 2 }}>
-          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
-            color: T.TEXT_TER, mb: 1 }}>
-            {t('dm.filesLabel')}
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
+              textTransform: 'uppercase', color: T.TEXT_TER }}>
+              {t('dm.filesLabel')}
+            </Typography>
+            {/* Media grid vs the detailed list — the list keeps the per-file
+                description / replace / delete controls, the grid is for looking. */}
+            {(doc.files || []).length > 0 && (
+              <ToggleButtonGroup size="small" exclusive value={fileView}
+                onChange={(_, v) => v && setFileView(v)} sx={{ ml: 'auto' }}>
+                <ToggleButton value="grid" sx={{ px: 0.9, py: 0.15 }}>
+                  <Tooltip title={t('dm.mediaViewGrid')}><GridViewIcon sx={{ fontSize: 14 }} /></Tooltip>
+                </ToggleButton>
+                <ToggleButton value="list" sx={{ px: 0.9, py: 0.15 }}>
+                  <Tooltip title={t('dm.mediaViewList')}><ViewListIcon sx={{ fontSize: 14 }} /></Tooltip>
+                </ToggleButton>
+              </ToggleButtonGroup>
+            )}
+          </Box>
+
+          {fileView === 'grid' && mediaItems.length > 0 && (
+            <MediaGrid items={mediaItems} T={T}
+              onOpen={(it) => setGalleryIndex(mediaItems.findIndex((m) => m.id === it.id))} />
+          )}
+
+          <Box sx={{ display: fileView === 'list' ? 'flex' : 'none', flexDirection: 'column', gap: 1 }}>
             {(doc.files || []).map((f) => (
               <Box key={f.fileId} sx={{ p: 1.25, borderRadius: '10px', bgcolor: T.CTRL_BG, border: `1px solid ${T.BD}` }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -429,13 +607,17 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
         )}
       </Box>
 
-      <ReadyToUploadForm open={readyFormOpen} onClose={() => setReadyFormOpen(false)} rawContentId={doc._id} defaultBranchId={doc.branchId || ''} />
+      <ReadyToUploadForm open={readyFormOpen} onClose={() => setReadyFormOpen(false)} rawContentId={doc._id}
+        defaultBranchId={doc.branchId || ''} defaultProducts={doc.products || []} />
       <LinkReadyToUploadDialog open={linkDialogOpen} onClose={() => setLinkDialogOpen(false)} rawContentId={doc._id} T={T} isDark={isDark} />
 
       <DmFileEditDialog open={Boolean(editFile)} onClose={() => setEditFile(null)}
         file={editFile} recordId={doc._id} kind="rawContent" />
 
       <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
+
+      <MediaGalleryViewer open={galleryIndex >= 0} items={mediaItems} index={galleryIndex}
+        onIndexChange={setGalleryIndex} onClose={() => setGalleryIndex(-1)} />
 
       <ConfirmDialog
         open={Boolean(confirmRemoveFile)}

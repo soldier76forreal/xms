@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
@@ -9,6 +9,7 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
+import Chip from '@mui/material/Chip';
 import Skeleton from '@mui/material/Skeleton';
 import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
@@ -28,9 +29,15 @@ import { fetchReadyToUpload, updateReadyToUpload, deleteReadyToUpload, actions }
 import { copyText } from '../../tools/clipboard';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
+import { MediaGrid, MediaGalleryViewer, toMediaItems } from './mediaGallery';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import GridViewIcon from '@mui/icons-material/GridView';
+import ViewListIcon from '@mui/icons-material/ViewList';
 import DmFileEditDialog from './dmFileEditDialog';
 import DmActivityLog from './dmActivityLog';
 import RawContentChat from './rawContentChat';
+import ProductVarietyPicker from './productVarietyPicker';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
@@ -70,11 +77,18 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
   const [captionDirty, setCaptionDirty] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  const [fileView, setFileView] = useState('grid');       // 'grid' | 'list'
+  const [galleryIndex, setGalleryIndex] = useState(-1);   // -1 = viewer closed
+  const mediaItems = useMemo(
+    () => toMediaItems(doc?.files, axiosGlobal.defaultTargetApi),
+    [doc?.files, axiosGlobal.defaultTargetApi]);
   const [editFile, setEditFile] = useState(null);
   const [confirmRemoveFile, setConfirmRemoveFile] = useState(null);
   const [confirmDeleteRecord, setConfirmDeleteRecord] = useState(false);
   const [viewerMedia, setViewerMedia] = useState(null);
   const [addProgress, setAddProgress] = useState(null);
+  const [editingProducts, setEditingProducts] = useState(false);
+  const [productsDraft, setProductsDraft] = useState([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -108,6 +122,14 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
     fd.append('title', titleDraft);
     await dispatch(updateReadyToUpload({ authCtx, axiosGlobal, id, formData: fd }));
     setEditingTitle(false);
+  };
+
+  const openEditProducts = () => { setProductsDraft(doc.products || []); setEditingProducts(true); };
+  const saveProducts = async () => {
+    const fd = new FormData();
+    fd.append('products', JSON.stringify(productsDraft.map((p) => ({ productId: p.productId, variantId: p.variantId }))));
+    await dispatch(updateReadyToUpload({ authCtx, axiosGlobal, id, formData: fd }));
+    setEditingProducts(false);
   };
 
   const removeFile = async (fileId) => {
@@ -234,11 +256,70 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
       </Box>
 
       <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 3, py: 2 }}>
-        <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
-          color: T.TEXT_TER, mb: 1 }}>
-          {t('dm.filesLabel')}
-        </Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 1.5 }}>
+        {/* ── Tagged Inventory varieties ── */}
+        <Box sx={{ mb: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: T.TEXT_TER, flexGrow: 1 }}>
+              {t('dm.taggedVarietiesLabel')}
+            </Typography>
+            {can('digitalMarketing:readyToUpload:edit') && !editingProducts && (
+              <IconButton size="small" onClick={openEditProducts} sx={{ color: T.TEXT_TER, width: 22, height: 22 }}>
+                <EditOutlinedIcon sx={{ fontSize: 13 }} />
+              </IconButton>
+            )}
+          </Box>
+          {editingProducts ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <ProductVarietyPicker value={productsDraft} onChange={setProductsDraft} T={T} />
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button size="small" variant="contained" onClick={saveProducts}
+                  sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px' }}>{t('common.save')}</Button>
+                <Button size="small" onClick={() => setEditingProducts(false)}
+                  sx={{ fontSize: '0.72rem', textTransform: 'none', color: T.TEXT_SEC }}>{t('common.cancel')}</Button>
+              </Box>
+            </Box>
+          ) : (doc.products || []).length > 0 ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+              {doc.products.map((p) => (
+                <Tooltip key={String(p.variantId)} title={[p.productName, p.branchName].filter(Boolean).join(' · ')}>
+                  <Chip size="small" label={p.code}
+                    sx={{ height: 24, fontSize: '0.72rem', bgcolor: T.CTRL_BG, color: T.TEXT_PRI, fontFamily: 'monospace' }} />
+                </Tooltip>
+              ))}
+            </Box>
+          ) : (
+            <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, fontStyle: 'italic' }}>
+              {t('dm.noneTaggedYet')}
+            </Typography>
+          )}
+        </Box>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
+            textTransform: 'uppercase', color: T.TEXT_TER }}>
+            {t('dm.filesLabel')}
+          </Typography>
+          {(doc.files || []).length > 0 && (
+            <ToggleButtonGroup size="small" exclusive value={fileView}
+              onChange={(_, v) => v && setFileView(v)} sx={{ ml: 'auto' }}>
+              <ToggleButton value="grid" sx={{ px: 0.9, py: 0.15 }}>
+                <Tooltip title={t('dm.mediaViewGrid')}><GridViewIcon sx={{ fontSize: 14 }} /></Tooltip>
+              </ToggleButton>
+              <ToggleButton value="list" sx={{ px: 0.9, py: 0.15 }}>
+                <Tooltip title={t('dm.mediaViewList')}><ViewListIcon sx={{ fontSize: 14 }} /></Tooltip>
+              </ToggleButton>
+            </ToggleButtonGroup>
+          )}
+        </Box>
+
+        {fileView === 'grid' && mediaItems.length > 0 && (
+          <Box sx={{ mb: 1.5 }}>
+            <MediaGrid items={mediaItems} T={T}
+              onOpen={(it) => setGalleryIndex(mediaItems.findIndex((m) => m.id === it.id))} />
+          </Box>
+        )}
+
+        <Box sx={{ display: fileView === 'list' ? 'flex' : 'none', flexDirection: 'column', gap: 1, mb: 1.5 }}>
           {(doc.files || []).map((f) => (
             <Box key={f.fileId} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.1,
               borderRadius: '10px', bgcolor: T.CTRL_BG, border: `1px solid ${T.BD}` }}>
@@ -338,6 +419,9 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
         file={editFile} recordId={doc._id} kind="readyToUpload" />
 
       <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
+
+      <MediaGalleryViewer open={galleryIndex >= 0} items={mediaItems} index={galleryIndex}
+        onIndexChange={setGalleryIndex} onClose={() => setGalleryIndex(-1)} />
 
       <ConfirmDialog
         open={Boolean(confirmRemoveFile)}

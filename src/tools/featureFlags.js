@@ -7,3 +7,17 @@
 // sections are all still here, just not reachable from the UI while this
 // is false.
 export const WEBSITE_FEATURES_ENABLED = false;
+
+// Inventory's "Full Analytics" button/overlay — Phase 1 shipped, disabled for
+// this deploy at Pouriya's request. Nothing deleted; flip back to true to
+// bring it back.
+export const INVENTORY_ANALYTICS_ENABLED = false;
+
+// SMS / OTP sign-in (sms.ir). Retired at Pouriya's request — password is now
+// the only way in. The whole OTP flow is intact behind this flag: the phone and
+// code steps in logIn.js, and the /auth/requestOtp + /auth/verifyOtp routes.
+// Turning it back on means flipping this AND OTP_LOGIN_ENABLED in
+// authApi/routes/users/auth.js — the server disables those endpoints itself,
+// because an endpoint that still issues tokens is a live auth path whether or
+// not the UI links to it.
+export const SMS_OTP_LOGIN_ENABLED = false;

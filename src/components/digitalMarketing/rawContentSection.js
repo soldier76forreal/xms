@@ -11,6 +11,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MovieIcon from '@mui/icons-material/Movie';
+import SearchIcon from '@mui/icons-material/Search';
+import InputBase from '@mui/material/InputBase';
 
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -75,6 +77,8 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
   const { isUnread } = useUnreadRecords('dmRawContent');
 
   const [status, setStatus]   = useState('all');
+  const [search, setSearch]   = useState('');       // debounced below — matches by record (batch) title
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -109,21 +113,27 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
     RAIL:     isDark ? 'rgba(255,255,255,0.1)'  : 'rgba(0,0,0,0.12)',
   };
 
+  useEffect(() => {
+    const tmr = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(tmr);
+  }, [search]);
+
   const buildParams = useCallback((pg = 1) => ({
     page: pg, limit: pageSize,
+    ...(debouncedSearch ? { search: debouncedSearch } : {}),
     ...(status !== 'all' ? { status } : {}),
     ...(branchFilter ? { branchId: branchFilter } : {}),
     ...(platformFilter ? { platform: platformFilter } : {}),
     ...(dateFrom ? { dateFrom } : {}),
     ...(dateTo ? { dateTo } : {}),
-  }), [status, pageSize, branchFilter, platformFilter, dateFrom, dateTo]);
+  }), [debouncedSearch, status, pageSize, branchFilter, platformFilter, dateFrom, dateTo]);
 
   const load = useCallback((pg = 1) => {
     dispatch(fetchRawContents({ authCtx, axiosGlobal, params: buildParams(pg) }));
     setPage(pg);
   }, [authCtx, axiosGlobal, buildParams, dispatch]);
 
-  useEffect(() => { load(1); }, [status, branchFilter, platformFilter, dateFrom, dateTo, pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(1); }, [debouncedSearch, status, branchFilter, platformFilter, dateFrom, dateTo, pageSize, refreshKey]);   // eslint-disable-line react-hooks/exhaustive-deps
   const clearFilters = () => { setStatus('all'); setBranchFilter(''); setPlatformFilter(''); setDateFrom(''); setDateTo(''); };
   const activeFilterCount = [
     status !== 'all', branchFilter, platformFilter, dateFrom, dateTo,
@@ -172,9 +182,22 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
           )}
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.25, flexWrap: 'wrap' }}>
-            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
+            <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI, flexShrink: 0 }}>
               {t('dm.rawContentCount', { count: total })}
             </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexGrow: 1, minWidth: 120, maxWidth: 320,
+              bgcolor: T.CTRL_BG, borderRadius: '8px', px: 1.1, height: 28, border: `1px solid ${T.BD}` }}>
+              <SearchIcon sx={{ fontSize: 14, color: T.TEXT_TER, flexShrink: 0 }} />
+              <InputBase value={search} onChange={(e) => setSearch(e.target.value)}
+                placeholder={t('dm.searchByNamePlaceholder')}
+                sx={{ fontSize: '0.75rem', color: T.TEXT_PRI, flex: 1,
+                  '& input::placeholder': { color: T.TEXT_TER, opacity: 1 } }} />
+              {search && (
+                <IconButton size="small" onClick={() => setSearch('')} sx={{ p: 0, color: T.TEXT_TER }}>
+                  <CloseIcon sx={{ fontSize: 13 }} />
+                </IconButton>
+              )}
+            </Box>
             <Tooltip title={t('common.filters')}>
               <IconButton size="small" onClick={() => setFilterOpen(!filterOpen)}
                 sx={{ color: activeFilterCount > 0 ? T.TEXT_PRI : T.TEXT_TER,

@@ -3,6 +3,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
+import KeyIcon from '@mui/icons-material/VpnKey';
+import SetPasswordDialog from './setPasswordDialog';
 import IconButton from '@mui/material/IconButton';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -79,6 +81,7 @@ const MyProfileModal = ({ open, onClose }) => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState('');
   const [notifPrefs, setNotifPrefs] = useState(DEFAULT_NOTIF_PREFS);
@@ -408,6 +411,12 @@ const MyProfileModal = ({ open, onClose }) => {
       )}
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 0, gap: 1 }}>
+        {/* Password is the only credential now that SMS sign-in is retired. */}
+        <Button onClick={() => setPasswordOpen(true)} startIcon={<KeyIcon sx={{ fontSize: 15 }} />}
+          sx={{ mr: 'auto', color: T.TEXT_SEC, textTransform: 'none',
+            '&:hover': { color: T.TEXT_PRI, bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' } }}>
+          {t('users.pwChangeTitle')}
+        </Button>
         <Button onClick={onClose}
           sx={{ color: T.TEXT_SEC, textTransform: 'none',
             '&:hover': { color: T.TEXT_PRI, bgcolor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' } }}>
@@ -422,6 +431,15 @@ const MyProfileModal = ({ open, onClose }) => {
           {saving ? t('users.saving') : t('common.save')}
         </Button>
       </DialogActions>
+
+      {/* hasPassword is unknown from here, so the dialog asks for the current
+          one; an account without a password gets a clear error from the server
+          and its admin can set one instead. */}
+      <SetPasswordDialog
+        open={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+        mode="self"
+      />
     </Dialog>
   );
 };

@@ -21,6 +21,7 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
+import SectionBranchSelect from '../../tools/navs/sectionBranchSelect';
 import {
   fetchProducts, fetchInventoryLookups, fetchInvStats, fetchCategories, actions,
 } from '../../store/store';
@@ -37,7 +38,7 @@ import ProductForm from './productForm';
 import ImportExportDialog from './importExportDialog';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
 import WebsiteTools from './websiteTools';
-import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
+import { WEBSITE_FEATURES_ENABLED, INVENTORY_ANALYTICS_ENABLED } from '../../tools/featureFlags';
 import LanguageIcon from '@mui/icons-material/Language';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import ChromeButton from '../../tools/chromeButton';
@@ -107,6 +108,15 @@ const Inventory = () => {
   const dispatch   = useDispatch();
   const { scopeFor, can } = usePermissions();
   const { activeBranchId } = useBranch();
+
+  // Which branch this section is SHOWING. Normally the app-wide active branch,
+  // but the section's own selector can point it at a branch that shared its
+  // catalogue — read-only, enforced server-side by requireBranchRead().
+  const [viewBranchId, setViewBranchId] = useState(activeBranchId);
+  const [branchReadOnly, setBranchReadOnly] = useState(false);
+  const [viewBranchName, setViewBranchName] = useState('');
+  // Follow the global switcher whenever it moves (rail, branch dialog, …).
+  useEffect(() => { setViewBranchId(activeBranchId); setBranchReadOnly(false); setViewBranchName(''); }, [activeBranchId]);
   const [importExportOpen, setImportExportOpen] = useState(false);
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [websiteToolsOpen, setWebsiteToolsOpen] = useState(false);
@@ -177,29 +187,29 @@ const Inventory = () => {
   }, []);
 
   useEffect(() => {
-    if (!activeBranchId) return;
-    dispatch(fetchInvStats({ authCtx, axiosGlobal, params: { branchId: activeBranchId } }));
+    if (!viewBranchId) return;
+    dispatch(fetchInvStats({ authCtx, axiosGlobal, params: { branchId: viewBranchId } }));
     authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/inventory/products/creators`,
-      params: { branchId: activeBranchId } })
+      params: { branchId: viewBranchId } })
       .then((res) => setCreators(res.data.data || []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeBranchId]);
+  }, [viewBranchId]);
 
   const buildInvParams = useCallback((skip = 0) => ({
-    limit: pageSize, skip, sort: sortBy, order: 'asc', branchId: activeBranchId,
+    limit: pageSize, skip, sort: sortBy, order: 'asc', branchId: viewBranchId,
     ...(stoneFilter.length   && { stoneType: stoneFilter.join(',') }),
     ...(debouncedSearch      && { search: debouncedSearch }),
     ...(createdByFilter && !createdByDisabled && { createdBy: createdByFilter }),
     // Note: finish/cut/grade/category filters applied client-side since backend
     // doesn't yet support multi-value variant-level filters on product list
-  }), [pageSize, sortBy, stoneFilter, debouncedSearch, createdByFilter, createdByDisabled, activeBranchId]);
+  }), [pageSize, sortBy, stoneFilter, debouncedSearch, createdByFilter, createdByDisabled, viewBranchId]);
 
   useEffect(() => {
-    if (!activeBranchId) return;
+    if (!viewBranchId) return;
     dispatch(fetchProducts({ authCtx, axiosGlobal, params: buildInvParams(0) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stoneFilter, debouncedSearch, sortBy, createdByFilter, pageSize, invRefreshKey, activeBranchId]);
+  }, [stoneFilter, debouncedSearch, sortBy, createdByFilter, pageSize, invRefreshKey, viewBranchId]);
 
   useEffect(() => {
     setHasMore(invProducts.length < invTotal);
@@ -275,7 +285,14 @@ const Inventory = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          {(can('inventory:import') || can('inventory:export')) && (
+          {/* Which branch's catalogue to show — own branches, plus any that
+              shared theirs (those open read-only). */}
+          <SectionBranchSelect value={viewBranchId} readOnly={branchReadOnly}
+            onChange={({ branchId, readOnly, branchName }) => {
+              setViewBranchId(branchId); setBranchReadOnly(readOnly); setViewBranchName(branchName || '');
+            }} />
+
+          {!branchReadOnly && (can('inventory:import') || can('inventory:export')) && (
             <Button variant="outlined" startIcon={<ImportExportIcon />} size="small"
               onClick={() => setImportExportOpen(true)} sx={{ borderRadius: 2 }}>
               {t('inventory.importExportButton')}
@@ -287,10 +304,12 @@ const Inventory = () => {
               {t('inventory.websiteToolsButton')}
             </Button>
           )}
-          <Button variant="contained" startIcon={<AddIcon />} size="small"
-            onClick={handleNewProduct} sx={{ borderRadius: 2 }}>
-            {t('inventory.newProductButton')}
-          </Button>
+          {!branchReadOnly && (
+            <Button variant="contained" startIcon={<AddIcon />} size="small"
+              onClick={handleNewProduct} sx={{ borderRadius: 2 }}>
+              {t('inventory.newProductButton')}
+            </Button>
+          )}
           <SectionTutorials section="inventory" tag="inventory:product:create" />
         </Box>
       </Box>
@@ -333,7 +352,7 @@ const Inventory = () => {
 
           {/* Full Analytics button — gated by its own key, separate from
               inventory:view (see api/scripts/seedPermissions.js) */}
-          {can('inventory:analytics:view') && (
+          {INVENTORY_ANALYTICS_ENABLED && can('inventory:analytics:view') && (
             <Box sx={{ ml: { sm: 'auto' }, mt: { xs: 1, sm: 0 }, gridColumn: { xs: '1 / -1', sm: 'auto' },
               pl: { sm: 2 }, borderLeft: { sm: '1px solid' }, borderColor: { sm: 'divider' } }}>
               <ChromeButton label={t('inventory.fullAnalytics')} onClick={() => setAnalyticsOpen(true)} />
@@ -517,6 +536,8 @@ const Inventory = () => {
             onBack={() => { setSelectedProductId(null); setFullView(false); }}
             fullView={fullView}
             onToggleFullView={() => setFullView((v) => !v)}
+            branchReadOnly={branchReadOnly}
+            branchName={viewBranchName}
           />
         </Box>
       )}
@@ -527,7 +548,7 @@ const Inventory = () => {
         open={importExportOpen}
         onClose={() => setImportExportOpen(false)}
         onImportSuccess={() => dispatch(actions.invRefresh())}
-        branchId={activeBranchId}
+        branchId={viewBranchId}
       />
 
       <AnalyticsOverlay

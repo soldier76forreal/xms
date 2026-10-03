@@ -23,43 +23,57 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import SettingsIcon from '@mui/icons-material/Settings';
+import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
 import {
-  fetchMisInvoices, deleteMisInvoice, convertMisPreInvoice, downloadMisInvoicePdf, actions,
+  fetchMisInvoices, deleteMisInvoice, downloadMisInvoicePdf, actions,
 } from '../../store/store';
 
 import InvoiceCard          from './invoiceCard';
 import InvoiceDetail        from './invoiceDetail';
 import InvoiceForm          from './invoiceForm';
+import CrossBranchRequestForm from './crossBranchRequestForm';
+import StorefrontIcon       from '@mui/icons-material/Storefront';
+import AllInboxIcon         from '@mui/icons-material/AllInbox';
 import SendToDialog         from './sendToDialog';
 import DeleteInvoiceDialog  from './deleteInvoiceDialog';
 import CompanyProfileDrawer from './settings/companyProfile';
+import PackingListsSection  from './packingLists/packingListsSection';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
 import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
-import ConfirmDialog        from '../../tools/modal/confirmDialog';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect        from '../../tools/inputs/pageSizeSelect';
 import SectionTutorials      from '../tutorials/sectionTutorials';
 
 // Phase 6 — MIS / Invoices master-detail page (Session 44).
-// The three tabs (Invoice / Pre-invoice / All) are just a docType filter — ONE
-// collection behind them. Detail panel here is the light Session 44 shell;
-// Session 45 replaces it with invoiceDetail.js (header + HTML preview + activity).
-// Session 46 adds invoiceForm.js (the "New invoice / New quote" Drawer).
+// Tabs, in order: Quote · Invoice · Packing lists · Requests · All. Quote,
+// Invoice, Requests and All are filters over ONE collection — a request is an
+// inter-branch quotation (one branch asking another for stock), so Quote shows
+// the customer quotations and Requests the inter-branch ones, both filtered
+// server-side. Packing lists is its own sub-section and collection.
+// Detail = invoiceDetail.js, new/edit/convert = invoiceForm.js (Drawer).
 
 const STATUS_BY_TAB = {
-  invoice:     ['draft', 'issued', 'paid', 'partially_paid', 'cancelled'],
-  pre_invoice: ['draft', 'sent', 'accepted', 'converted', 'expired'],
-  all:         ['draft', 'sent', 'accepted', 'converted', 'expired', 'issued', 'paid', 'partially_paid', 'cancelled'],
+  quote:   ['draft', 'sent', 'accepted', 'converted', 'expired'],
+  invoice: ['draft', 'issued', 'paid', 'partially_paid', 'cancelled'],
+  request: ['requested', 'draft', 'sent', 'accepted', 'converted', 'expired'],
+  all:     ['requested', 'draft', 'sent', 'accepted', 'converted', 'expired', 'issued', 'paid', 'partially_paid', 'cancelled'],
+};
+
+// tab → list-route params (docType + tradeMode)
+const TAB_PARAMS = {
+  quote:   { docType: 'pre_invoice', tradeMode: 'customer' },
+  invoice: { docType: 'invoice' },
+  request: { docType: 'pre_invoice', tradeMode: 'interBranch' },
+  all:     { docType: 'all' },
 };
 
 const SORT_OPTIONS = [
@@ -72,6 +86,7 @@ const SORT_OPTIONS = [
 ];
 
 const STATUS_LABEL_KEYS = {
+  requested: 'mis.statusRequested',
   draft: 'mis.statusDraft', sent: 'mis.statusSent', accepted: 'mis.statusAccepted',
   converted: 'mis.statusConverted', expired: 'mis.statusExpired', issued: 'mis.statusIssued',
   paid: 'mis.statusPaid', partially_paid: 'mis.statusPartial', cancelled: 'mis.statusCancelled',
@@ -112,7 +127,11 @@ export default function Mis() {
   // last visit to MIS as unread (dot + tinted row) — see useUnreadRecords.js.
   const { isUnread } = useUnreadRecords('mis');
 
-  const [tab, setTab]                 = useState('all');            // 'invoice' | 'pre_invoice' | 'all'
+  const [tab, setTab]                 = useState('all');            // 'quote' | 'invoice' | 'request' | 'all'
+  // Session 72 (Phase 3) — which MIS sub-section is showing: the existing
+  // invoice/pre-invoice master-detail, or the new standalone Packing Lists.
+  const [misSection, setMisSection]   = useState('invoices');
+  const [openPackingListId, setOpenPackingListId] = useState(null);
   const [filter, setFilter]           = useState(DEFAULT_FILTER);
   const [filterOpen, setFilterOpen]   = useState(false);
   const [selectedDoc, setSelectedDoc] = useState(null);
@@ -133,13 +152,14 @@ export default function Mis() {
     return () => window.removeEventListener('pointerup', stop);
   }, [listResizing]);
   const [confirmDelete, setConfirmDelete]   = useState(null);   // doc pending delete
-  const [confirmConvert, setConfirmConvert] = useState(null);   // doc pending convert
   const [assignDoc, setAssignDoc]           = useState(null);   // doc pending "Send to"
   const [settingsOpen, setSettingsOpen]     = useState(false);
   const [formOpen, setFormOpen]             = useState(false);
   const [formMode, setFormMode]             = useState('new');
   const [formDocType, setFormDocType]       = useState('invoice');
   const [formDoc, setFormDoc]               = useState(null);
+  const [formPreset, setFormPreset]         = useState(null);   // Supply → new doc deep link
+  const [requestOpen, setRequestOpen]       = useState(false);  // cross-branch stock request
 
   const debouncedSearch = useDebounce(filter.search, 350);
 
@@ -159,7 +179,7 @@ export default function Mis() {
     const isDesc  = !sortVal.startsWith('-');
     const p = {
       page: pg, limit: pageSize,
-      docType: tab,
+      ...TAB_PARAMS[tab],
       sort: sortVal.replace(/^-/, ''),
       order: isDesc ? 'desc' : 'asc',
       branchId: activeBranchId,
@@ -211,10 +231,44 @@ export default function Mis() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
+  // Session 72 (Phase 3) — /mis?openPackingList=<id>, used by the invoice
+  // detail's "Packing lists" reverse-lookup chips.
+  useEffect(() => {
+    const openPlId = new URLSearchParams(location.search).get('openPackingList');
+    if (!openPlId) return;
+    setMisSection('packingLists');
+    setOpenPackingListId(openPlId);
+    history.replace('/mis');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
+  // /mis?newDoc=invoice|pre_invoice&supplyRecord=<id>&productSearch=<code>
+  // Used by the Supply record detail's "New quotation / New invoice" buttons,
+  // so the document is created already linked to that sourcing record.
+  useEffect(() => {
+    const params  = new URLSearchParams(location.search);
+    const newDoc  = params.get('newDoc');
+    if (newDoc !== 'invoice' && newDoc !== 'pre_invoice') return;
+    const supplyRecordId = params.get('supplyRecord') || null;
+    const productSearch  = params.get('productSearch') || '';
+    setMisSection('invoices');
+    setFormPreset(supplyRecordId || productSearch ? { supplyRecordId, productSearch } : null);
+    setFormMode('new'); setFormDocType(newDoc); setFormDoc(null); setFormOpen(true);
+    history.replace('/mis');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
+
   const setF = (key, value) => setFilter(f => ({ ...f, [key]: value }));
   const clearFilters = () => setFilter(DEFAULT_FILTER);
 
   const activeFilterCount = [filter.status, filter.dateFrom, filter.dateTo, filter.createdBy && !createdByDisabled].filter(Boolean).length;
+  const visibleInvoices = invoices;
+  // A status filter from another tab may not exist on this one.
+  const switchTab = (id) => {
+    setMisSection('invoices');
+    setTab(id);
+    setFilter((f) => (f.status && !STATUS_BY_TAB[id].includes(f.status) ? { ...f, status: '' } : f));
+  };
 
   const handleSelect = (doc) => {
     setSelectedDoc(doc);
@@ -228,6 +282,7 @@ export default function Mis() {
   const loadMore = () => load(page + 1);
 
   const openNewForm = (docType) => {
+    setFormPreset(null);
     setFormMode('new'); setFormDocType(docType); setFormDoc(null); setFormOpen(true);
   };
   const openEditForm = (doc) => {
@@ -245,15 +300,23 @@ export default function Mis() {
     if (selectedDoc && String(selectedDoc._id) === String(doc._id)) handleDetailClose();
   };
 
-  const handleConvert = async () => {
-    const doc = confirmConvert;
-    setConfirmConvert(null);
-    if (!doc) return;
-    await dispatch(convertMisPreInvoice({ authCtx, axiosGlobal, id: doc._id }));
+  // Converting opens the invoice form filled in from the quotation — the user
+  // completes it (customer, address, prices, shipping…) and saving creates the
+  // linked invoice. The form itself is the confirmation step.
+  const openConvertForm = (doc) => {
+    setFormPreset(null);
+    setFormMode('convert'); setFormDocType('invoice'); setFormDoc(doc); setFormOpen(true);
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: T.APP_BG, overflow: 'hidden' }}>
+    // Pinned to the viewport (below the 60px top bar): the shell only sets a
+    // MIN height, so without this the page grew to the list's length and the
+    // whole window scrolled — the list and detail never scrolled on their own
+    // and the detail's bottom bar (request status) fell below the fold.
+    // dvh where supported, so a phone's browser chrome doesn't cut it off.
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)',
+      '@supports (height: 100dvh)': { height: 'calc(100dvh - 60px)' },
+      bgcolor: T.APP_BG, overflow: 'hidden' }}>
 
       {/* ── Top bar ── */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1,
@@ -264,30 +327,42 @@ export default function Mis() {
           {t('mis.pageTitle')}
         </Typography>
 
-        {/* The three tabs — Invoice | Pre-invoice | All (just a docType filter) */}
+        {/* Tabs: Quote · Invoice · Packing lists · Requests · All */}
         <Box sx={{ display: 'flex', gap: 0.5, bgcolor: T.CTRL_BG, borderRadius: '9px',
           p: '3px', border: `1px solid ${T.BD}`, flexShrink: 0 }}>
           {[
-            { id: 'invoice',     Icon: ReceiptLongIcon,  labelKey: 'mis.invoiceType' },
-            { id: 'pre_invoice', Icon: RequestQuoteIcon, labelKey: 'mis.preInvoiceTab' },
-            { id: 'all',         Icon: null,             labelKey: 'mis.allTab' },
-          ].map(({ id, Icon, labelKey }) => (
-            <Tooltip key={id} title={isMob ? t(labelKey) : ''}>
-              <Button size="small" onClick={() => setTab(id)}
-                sx={{ minWidth: 0, height: 24, px: isMob ? '6px' : 1, py: 0, borderRadius: '7px',
-                  fontSize: '0.7rem', fontWeight: tab === id ? 700 : 400, textTransform: 'none',
-                  color: tab === id ? T.TEXT_PRI : T.TEXT_TER,
-                  bgcolor: tab === id ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
-                  '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)', color: T.TEXT_PRI },
-                  gap: isMob ? 0 : 0.5,
-                }}>
-                {Icon && <Icon sx={{ fontSize: 14 }} />}
-                {(!isMob || !Icon) && t(labelKey)}
-              </Button>
-            </Tooltip>
-          ))}
+            { id: 'quote',        Icon: RequestQuoteIcon,  labelKey: 'mis.quoteTab' },
+            { id: 'invoice',      Icon: ReceiptLongIcon,   labelKey: 'mis.invoiceType' },
+            { id: 'packingLists', Icon: LocalShippingIcon, labelKey: 'mis.plTabLabel' },
+            { id: 'request',      Icon: StorefrontIcon,    labelKey: 'mis.requestsTab' },
+            { id: 'all',          Icon: AllInboxIcon,      labelKey: 'mis.allTab' },
+          ].map(({ id, Icon, labelKey }) => {
+            const active = id === 'packingLists'
+              ? misSection === 'packingLists'
+              : misSection === 'invoices' && tab === id;
+            return (
+              <Tooltip key={id} title={isMob ? t(labelKey) : ''}>
+                <Button size="small"
+                  onClick={() => (id === 'packingLists' ? setMisSection('packingLists') : switchTab(id))}
+                  sx={{ minWidth: 0, height: 24, px: isMob ? '6px' : 1, py: 0, borderRadius: '7px',
+                    fontSize: '0.7rem', fontWeight: active ? 700 : 400, textTransform: 'none',
+                    color: active ? T.TEXT_PRI : T.TEXT_TER,
+                    bgcolor: active ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
+                    '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)', color: T.TEXT_PRI },
+                    gap: 0.5,
+                  }}>
+                  <Icon sx={{ fontSize: 14 }} />
+                  {/* Phones: icons, plus the name of the tab you're on. */}
+                  {(!isMob || active) && t(labelKey)}
+                </Button>
+              </Tooltip>
+            );
+          })}
         </Box>
 
+        {/* Invoice-specific controls. The Packing Lists tab carries its own
+            search / type filter / New button, so none of this applies there. */}
+        {misSection === 'invoices' && (<>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexGrow: 1, maxWidth: 360,
           bgcolor: T.CTRL_BG, borderRadius: '8px', px: 1.25, py: '4px',
           border: `1px solid ${T.BD}` }}>
@@ -326,34 +401,54 @@ export default function Mis() {
 
         <Box sx={{ flexGrow: 1 }} />
 
-        {can('mis:invoice:create') && (
+        {(tab === 'invoice' || tab === 'all') && can('mis:invoice:create') && (
           <Tooltip title={isMob ? t('mis.newInvoice') : ''}>
             <Button variant="contained" size="small"
               onClick={() => openNewForm('invoice')}
               sx={{ fontSize: '0.75rem', height: 30, borderRadius: '8px',
                 textTransform: 'none', fontWeight: 600, flexShrink: 0,
-                minWidth: isMob ? 30 : 'auto', px: isMob ? '5px' : undefined }}>
+                minWidth: 'auto', px: isMob ? 1 : undefined }}>
               <AddIcon sx={{ fontSize: 17 }} />
-              {!isMob && <Box component="span" sx={{ ml: 0.5 }}>{t('mis.newInvoice')}</Box>}
+              <Box component="span" sx={{ ml: 0.5 }}>{isMob ? t('mis.invoiceType') : t('mis.newInvoice')}</Box>
             </Button>
           </Tooltip>
         )}
         <SectionTutorials section="mis" tag="mis:invoice:create" />
 
-        {can('mis:preinvoice:create') && (
+        {(tab === 'quote' || tab === 'all') && can('mis:preinvoice:create') && (
           <Tooltip title={isMob ? t('mis.newQuote') : ''}>
-            <Button variant="outlined" size="small"
+            <Button variant={tab === 'quote' ? 'contained' : 'outlined'} size="small"
               onClick={() => openNewForm('pre_invoice')}
               sx={{ fontSize: '0.75rem', height: 30, borderRadius: '8px',
                 textTransform: 'none', fontWeight: 600, flexShrink: 0,
-                color: T.TEXT_SEC, borderColor: T.BD2,
-                minWidth: isMob ? 30 : 'auto', px: isMob ? '5px' : undefined }}>
+                ...(tab === 'quote' ? {} : { color: T.TEXT_SEC, borderColor: T.BD2 }),
+                minWidth: 'auto', px: isMob ? 1 : undefined }}>
               <AddIcon sx={{ fontSize: 17 }} />
-              {!isMob && <Box component="span" sx={{ ml: 0.5 }}>{t('mis.newQuote')}</Box>}
+              <Box component="span" sx={{ ml: 0.5 }}>{isMob ? t('mis.quoteTab') : t('mis.newQuote')}</Box>
             </Button>
           </Tooltip>
         )}
+        {/* Requests tab — raise a new stock request: a trimmed quotation sent
+            to a branch that has shared its Inventory/Supply with us. */}
+        {tab === 'request' && can('mis:crossBranch:quote') && can('mis:preinvoice:create') && (
+          <Tooltip title={isMob ? t('mis.newRequest') : ''}>
+            <Button variant="contained" size="small"
+              onClick={() => setRequestOpen(true)}
+              sx={{ fontSize: '0.75rem', height: 30, borderRadius: '8px',
+                textTransform: 'none', fontWeight: 600, flexShrink: 0,
+                minWidth: 'auto', px: isMob ? 1 : undefined }}>
+              <AddIcon sx={{ fontSize: 17 }} />
+              <Box component="span" sx={{ ml: 0.5 }}>{isMob ? t('supply.docKindRequest') : t('mis.newRequest')}</Box>
+            </Button>
+          </Tooltip>
+        )}
+
         <SectionTutorials section="mis" tag="mis:preinvoice:create" />
+        </>)}
+
+        {/* Keeps the settings gear right-aligned when the invoice controls above
+            are hidden. */}
+        {misSection !== 'invoices' && <Box sx={{ flexGrow: 1 }} />}
 
         {can('mis:settings:edit') && (
           <Tooltip title={t('mis.templateSettingsTitle')}>
@@ -368,6 +463,10 @@ export default function Mis() {
 
       <Divider sx={{ borderColor: T.BD }} />
 
+      {misSection === 'packingLists' ? (
+        <PackingListsSection openId={openPackingListId} onOpenIdConsumed={() => setOpenPackingListId(null)} />
+      ) : (
+      <>
       {/* ── Main content ── */}
       <Box sx={{ display: 'flex', flexGrow: 1, overflow: 'hidden' }}>
 
@@ -428,14 +527,14 @@ export default function Mis() {
                     </Box>
                   ))}
                 </Box>
-              ) : invoices.length === 0 ? (
+              ) : visibleInvoices.length === 0 ? (
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center',
                   justifyContent: 'center', py: 8, px: 3, textAlign: 'center' }}>
                   <ReceiptLongIcon sx={{ fontSize: 48, color: T.TEXT_TER, mb: 1.5 }} />
                   <Typography sx={{ fontSize: '0.875rem', color: T.TEXT_SEC, fontWeight: 600, mb: 0.5 }}>
                     {activeFilterCount > 0 || filter.search
                       ? t('mis.noDocumentsMatchFilters')
-                      : t('mis.noInvoicesYet')}
+                      : tab === 'request' ? t('mis.noRequestsYet') : t('mis.noInvoicesYet')}
                   </Typography>
                   {(activeFilterCount > 0 || filter.search) && (
                     <Button size="small" onClick={clearFilters}
@@ -446,14 +545,14 @@ export default function Mis() {
                 </Box>
               ) : (
                 <>
-                  {invoices.map(doc => (
+                  {visibleInvoices.map(doc => (
                     <InvoiceCard key={doc._id} doc={doc}
                       unread={isUnread(doc)}
                       selected={selectedDoc && String(doc._id) === String(selectedDoc._id)}
                       onSelect={handleSelect}
                       onEdit={openEditForm}
                       onPdf={handlePdf}
-                      onConvert={(d) => setConfirmConvert(d)}
+                      onConvert={openConvertForm}
                       onDelete={(d) => setConfirmDelete(d)}
                       onAssign={(d) => setAssignDoc(d)}
                     />
@@ -468,20 +567,14 @@ export default function Mis() {
         {/* ── Detail panel (invoiceDetail.js — Session 45) ── */}
         {selectedDoc && (!isMob || mobileDetail) && (
           <Box sx={{ flexGrow: 1, overflow: 'hidden', position: 'relative', bgcolor: T.PANEL_BG }}>
-            {isMob && (
-              <IconButton size="small" onClick={handleDetailClose}
-                sx={{ position: 'absolute', top: 8, left: 8, zIndex: 10,
-                  color: T.TEXT_TER, bgcolor: T.CTRL_BG, borderRadius: '8px', width: 30, height: 30 }}>
-                <ArrowBackIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            )}
             <InvoiceDetail
+              onBack={isMob ? handleDetailClose : undefined}
               key={selectedDoc._id}
               doc={selectedDoc}
               onClose={handleDetailClose}
               onEdit={openEditForm}
               onPdf={handlePdf}
-              onConvert={(d) => setConfirmConvert(d)}
+              onConvert={openConvertForm}
               onDelete={(d) => setConfirmDelete(d)}
             />
           </Box>
@@ -576,15 +669,6 @@ export default function Mis() {
         onConfirm={handleDelete}
       />
 
-      <ConfirmDialog
-        open={Boolean(confirmConvert)}
-        onClose={() => setConfirmConvert(null)}
-        onConfirm={handleConvert}
-        title={confirmConvert ? t('mis.convertConfirmTitle', { number: confirmConvert.docNumber }) : ''}
-        message={t('mis.convertConfirmMessage')}
-        confirmLabel={t('mis.convert')}
-      />
-
       {/* ── Send to — assign a document to one or more users (card menu) ── */}
       <SendToDialog
         doc={assignDoc}
@@ -599,18 +683,27 @@ export default function Mis() {
         }}
       />
 
-      {/* ── Template settings (companyProfile — admin) ── */}
-      <CompanyProfileDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-
       {/* ── New / Edit Drawer form ── */}
       <InvoiceForm
         open={formOpen}
         mode={formMode}
         docType={formDocType}
         doc={formDoc}
-        onClose={() => setFormOpen(false)}
-        onSaved={() => { if (formMode === 'edit') setSelectedDoc(null); }}
+        preset={formPreset}
+        onClose={() => { setFormOpen(false); setFormPreset(null); }}
+        onSaved={() => { if (formMode === 'edit' || formMode === 'convert') setSelectedDoc(null); }}
       />
+
+      <CrossBranchRequestForm
+        open={requestOpen}
+        onClose={() => setRequestOpen(false)}
+      />
+      </>
+      )}
+
+      {/* ── Template settings (companyProfile — admin) — always mounted,
+          regardless of which section (Invoices/Packing Lists) is active ── */}
+      <CompanyProfileDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </Box>
   );
 }
