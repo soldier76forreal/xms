@@ -660,7 +660,11 @@
     "reqStockButton": "درخواست موجودی",
     "reqForecastButton": "درخواست محموله پیش‌بینی‌شده",
     "reqForecastTip": "رزرو محموله‌ای که {{branch}} در بخش تأمین آماده می‌کند، پیش از رسیدن به انبار",
-    "thisBranch": "این شعبه"
+    "thisBranch": "این شعبه",
+    "noProductsYet": "هنوز محصولی وجود ندارد.",
+    "noMediaView": "هنوز عکس یا ویدیویی نیست.",
+    "requestFromBranchTitle": "درخواست از {{branch}}",
+    "requestFromBranchHint": "فاکتورها و پیش‌فاکتورهای این شعبه اشتراک‌گذاری نمی‌شوند. در عوض می‌توانید از آن موجودی درخواست کنید."
   },
   "mis": {
     "docTypeInvoice": "فاکتور",

@@ -171,7 +171,7 @@ function PriceDialog({ open, variant, productId, onClose }) {
 }
 
 // ── Variant Row ───────────────────────────────────────────────────────────────
-function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSingle }) {
+function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSingle, allowed, gridCols }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const authCtx     = useContext(AuthContext);
@@ -192,11 +192,13 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
       {/* Desktop row (sm+) */}
       <Box sx={{
         display: { xs: 'none', sm: 'grid' },
-        gridTemplateColumns: '32px 2.5fr 0.8fr 1fr 1fr auto',
+        gridTemplateColumns: gridCols,
         gap: 1.5, alignItems: 'center', py: 1.5, px: 2,
         '&:hover': { bgcolor: 'action.hover' }, transition: 'background 0.1s',
       }}>
-        <Checkbox size="small" checked={selected} onChange={() => onSelect(variant._id)} sx={{ p: 0.25 }} />
+        {allowed.remove && (
+          <Checkbox size="small" checked={selected} onChange={() => onSelect(variant._id)} sx={{ p: 0.25 }} />
+        )}
 
         <Box>
           <Typography variant="body2"
@@ -226,11 +228,13 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
         <Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>{formatQty(variant.quantity)}</Typography>
-            <Tooltip title={t('inventory.adjustStockTooltip')}>
-              <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setStockOpen(true)}>
-                <AddCircleOutlineIcon sx={{ fontSize: 14 }} />
-              </IconButton>
-            </Tooltip>
+            {allowed.quantity && (
+              <Tooltip title={t('inventory.adjustStockTooltip')}>
+                <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setStockOpen(true)}>
+                  <AddCircleOutlineIcon sx={{ fontSize: 14 }} />
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
           {/* Supply (Session 72) — in-progress coupe quantity, shown next to but
               never merged into the real sellable quantity above. */}
@@ -250,27 +254,33 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <Typography variant="body2">{variant.price != null ? `${variant.price} AED` : '—'}</Typography>
-          <Tooltip title={t('inventory.editPriceTooltip')}>
-            <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setPriceOpen(true)}>
-              <EditIcon sx={{ fontSize: 12 }} />
-            </IconButton>
-          </Tooltip>
+          {allowed.price && (
+            <Tooltip title={t('inventory.editPriceTooltip')}>
+              <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setPriceOpen(true)}>
+                <EditIcon sx={{ fontSize: 12 }} />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
 
         <Box sx={{ display: 'flex', gap: 0.25, alignItems: 'center' }}>
           <Tooltip title={t('inventory.viewDetailsTooltip')}>
             <IconButton size="small" onClick={handleViewDetail}><OpenInNewIcon sx={{ fontSize: 14 }} /></IconButton>
           </Tooltip>
-          <Tooltip title={t('inventory.editVariantTooltip')}>
-            <IconButton size="small" onClick={() => dispatch(actions.invSetEditVariant(variant))}>
-              <EditIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t('inventory.deleteVariantTooltip')}>
-            <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => onDeleteSingle(variant)}>
-              <DeleteIcon sx={{ fontSize: 14 }} />
-            </IconButton>
-          </Tooltip>
+          {allowed.edit && (
+            <Tooltip title={t('inventory.editVariantTooltip')}>
+              <IconButton size="small" onClick={() => dispatch(actions.invSetEditVariant(variant))}>
+                <EditIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          {allowed.remove && (
+            <Tooltip title={t('inventory.deleteVariantTooltip')}>
+              <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => onDeleteSingle(variant)}>
+                <DeleteIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
       </Box>
 
@@ -280,7 +290,9 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
         alignItems: 'flex-start', gap: 1, py: 1.25, px: 1.5,
         '&:hover': { bgcolor: 'action.hover' }, transition: 'background 0.1s',
       }}>
-        <Checkbox size="small" checked={selected} onChange={() => onSelect(variant._id)} sx={{ p: 0.25, mt: 0.25 }} />
+        {allowed.remove && (
+          <Checkbox size="small" checked={selected} onChange={() => onSelect(variant._id)} sx={{ p: 0.25, mt: 0.25 }} />
+        )}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {/* Top row: code + grade */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5, flexWrap: 'wrap' }}>
@@ -309,23 +321,31 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
             <Typography variant="caption" sx={{ fontWeight: 600 }}>
               {formatQty(variant.quantity)} {UNIT_LABELS[variant.unit] || variant.unit}
             </Typography>
-            <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setStockOpen(true)}>
-              <AddCircleOutlineIcon sx={{ fontSize: 13 }} />
-            </IconButton>
+            {allowed.quantity && (
+              <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setStockOpen(true)}>
+                <AddCircleOutlineIcon sx={{ fontSize: 13 }} />
+              </IconButton>
+            )}
             <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
               {variant.price != null ? `${variant.price} AED` : '—'}
             </Typography>
-            <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setPriceOpen(true)}>
-              <EditIcon sx={{ fontSize: 12 }} />
-            </IconButton>
+            {allowed.price && (
+              <IconButton size="small" sx={{ p: 0.25 }} onClick={() => setPriceOpen(true)}>
+                <EditIcon sx={{ fontSize: 12 }} />
+              </IconButton>
+            )}
             <Box sx={{ ml: 'auto', display: 'flex', gap: 0.25 }}>
               <IconButton size="small" onClick={handleViewDetail}><OpenInNewIcon sx={{ fontSize: 13 }} /></IconButton>
-              <IconButton size="small" onClick={() => dispatch(actions.invSetEditVariant(variant))}>
-                <EditIcon sx={{ fontSize: 13 }} />
-              </IconButton>
-              <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => onDeleteSingle(variant)}>
-                <DeleteIcon sx={{ fontSize: 13 }} />
-              </IconButton>
+              {allowed.edit && (
+                <IconButton size="small" onClick={() => dispatch(actions.invSetEditVariant(variant))}>
+                  <EditIcon sx={{ fontSize: 13 }} />
+                </IconButton>
+              )}
+              {allowed.remove && (
+                <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => onDeleteSingle(variant)}>
+                  <DeleteIcon sx={{ fontSize: 13 }} />
+                </IconButton>
+              )}
             </Box>
           </Box>
         </Box>
@@ -333,20 +353,28 @@ function VariantRow({ variant, productId, isLast, selected, onSelect, onDeleteSi
 
       {!isLast && <Divider />}
 
-      <StockDialog open={stockOpen} variant={variant} productId={productId} onClose={() => setStockOpen(false)} />
-      <PriceDialog open={priceOpen} variant={variant} productId={productId} onClose={() => setPriceOpen(false)} />
+      {allowed.quantity && (
+        <StockDialog open={stockOpen} variant={variant} productId={productId} onClose={() => setStockOpen(false)} />
+      )}
+      {allowed.price && (
+        <PriceDialog open={priceOpen} variant={variant} productId={productId} onClose={() => setPriceOpen(false)} />
+      )}
     </>
   );
 }
 
 // ── VariantsTable ─────────────────────────────────────────────────────────────
-const VariantsTable = ({ variants, productId, onAddVariant }) => {
+// allowed: { quantity, price, edit, remove } and onAddVariant come from
+// showProduct.js and are set only when this viewer may do them, so nothing they
+// can't do is offered (no checkboxes either when there's nothing to bulk-delete).
+const VariantsTable = ({ variants, productId, onAddVariant, allowed = {} }) => {
   const { t } = useTranslation();
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
 
   const active = (variants || []).filter((v) => v.status !== 'archived' && !v.deleteDate);
+  const gridCols = allowed.remove ? '32px 2.5fr 0.8fr 1fr 1fr auto' : '2.5fr 0.8fr 1fr 1fr auto';
 
   const [selected,     setSelected]     = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null); // single variant or 'bulk'
@@ -381,14 +409,16 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
 
       {/* Table header — hidden on mobile (card layout has no column headers) */}
       <Box sx={{ display: { xs: 'none', sm: 'grid' },
-        gridTemplateColumns: '32px 2.5fr 0.8fr 1fr 1fr auto',
+        gridTemplateColumns: gridCols,
         gap: 1.5, px: 2, py: 1,
         borderBottom: '1.5px solid', borderColor: 'divider',
         alignItems: 'center' }}>
-        <Checkbox size="small" sx={{ p: 0.25 }}
-          checked={active.length > 0 && selected.length === active.length}
-          indeterminate={selected.length > 0 && selected.length < active.length}
-          onChange={toggleAll} />
+        {allowed.remove && (
+          <Checkbox size="small" sx={{ p: 0.25 }}
+            checked={active.length > 0 && selected.length === active.length}
+            indeterminate={selected.length > 0 && selected.length < active.length}
+            onChange={toggleAll} />
+        )}
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
           {t('inventory.variantSkuHeader')}
         </Typography>
@@ -402,24 +432,26 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
           {t('inventory.priceLabel')}
         </Typography>
         <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'text.disabled' }}>
-          {t('common.edit')}
+          {(allowed.edit || allowed.remove) ? t('common.edit') : ''}
         </Typography>
       </Box>
       {/* Mobile select-all row */}
-      <Box sx={{
-        display: { xs: 'flex', sm: 'none' },
-        alignItems: 'center', px: 1.5, py: 0.5,
-        borderBottom: '1.5px solid', borderColor: 'divider',
-      }}>
-        <Checkbox size="small" sx={{ p: 0.25 }}
-          checked={active.length > 0 && selected.length === active.length}
-          indeterminate={selected.length > 0 && selected.length < active.length}
-          onChange={toggleAll} />
-        <Typography variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>{t('inventory.selectAll')}</Typography>
-      </Box>
+      {allowed.remove && (
+        <Box sx={{
+          display: { xs: 'flex', sm: 'none' },
+          alignItems: 'center', px: 1.5, py: 0.5,
+          borderBottom: '1.5px solid', borderColor: 'divider',
+        }}>
+          <Checkbox size="small" sx={{ p: 0.25 }}
+            checked={active.length > 0 && selected.length === active.length}
+            indeterminate={selected.length > 0 && selected.length < active.length}
+            onChange={toggleAll} />
+          <Typography variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>{t('inventory.selectAll')}</Typography>
+        </Box>
+      )}
 
       {/* Bulk action bar */}
-      {selected.length > 0 && (
+      {allowed.remove && selected.length > 0 && (
         <Box sx={{ px: 2, py: 0.75, bgcolor: 'action.selected',
           display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Typography variant="caption" sx={{ fontWeight: 600 }}>
@@ -438,18 +470,21 @@ const VariantsTable = ({ variants, productId, onAddVariant }) => {
       {/* Rows */}
       {active.length === 0 ? (
         <Box sx={{ py: 5, textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>{t('inventory.noVariantsYetTable')}</Typography>
-          <Button size="small" variant="outlined" onClick={onAddVariant}>{t('inventory.addFirstVariant')}</Button>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: onAddVariant ? 2 : 0 }}>{t('inventory.noVariantsYetTable')}</Typography>
+          {onAddVariant && (
+            <Button size="small" variant="outlined" onClick={onAddVariant}>{t('inventory.addFirstVariant')}</Button>
+          )}
         </Box>
       ) : (
         active.map((v, i) => (
           <VariantRow key={v._id} variant={v} productId={productId} isLast={i === active.length - 1}
-            selected={selected.includes(v._id)} onSelect={toggleSelect} onDeleteSingle={handleDeleteSingle} />
+            selected={selected.includes(v._id)} onSelect={toggleSelect} onDeleteSingle={handleDeleteSingle}
+            allowed={allowed} gridCols={gridCols} />
         ))
       )}
 
       {/* Footer */}
-      {active.length > 0 && (
+      {active.length > 0 && onAddVariant && (
         <>
           <Divider />
           <Box sx={{ px: 2, py: 1 }}>

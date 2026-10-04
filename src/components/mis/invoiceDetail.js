@@ -37,6 +37,7 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
 import { updateMisPayment, actions } from '../../store/store';
 import SendToDialog from './sendToDialog';
+import { getDocActions } from './docActions';
 import CopyLinkButton from '../main/copyLinkButton';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
@@ -110,7 +111,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
-  const { can }     = usePermissions();
+  const { can, ready } = usePermissions();
   const { activeBranchId } = useBranch();
   const history = useHistory();
 
@@ -145,9 +146,9 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
   const isTargetSide = isInterBranch && String(live.branchId) === String(activeBranchId);
   const canSetRequestStatus = isRequest && isTargetSide && can('mis:preinvoice:edit')
     && live.status !== 'converted' && !live.convertedToInvoiceId;
-  const canConvertDoc = Boolean(onConvert) && !isInvoice && can('mis:preinvoice:convert')
-    && live.status !== 'converted' && live.status !== 'cancelled' && !live.convertedToInvoiceId
-    && (!isInterBranch || isTargetSide);
+  // Every other action: only what this viewer can actually do (docActions.js).
+  const allowed = getDocActions(live, { can, activeBranchId });
+  const canConvertDoc = Boolean(onConvert) && allowed.convert;
 
   const loadDetail = useCallback(async (refetchDoc = true) => {
     setLoading(true);
@@ -175,7 +176,10 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authCtx, axiosGlobal, doc._id, permBase, can, previewLang]);
 
-  useEffect(() => { setRestricted(false); loadDetail(true); }, [doc._id]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // `ready`: a deep link can open this before the permission set has loaded, and
+  // loadDetail only asks for the preview when the viewer holds a permission —
+  // so it has to run again once permissions arrive.
+  useEffect(() => { setRestricted(false); loadDetail(true); }, [doc._id, ready]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (full) loadDetail(false); }, [previewLang]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSavePayment = async () => {
@@ -297,7 +301,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
 
         {/* actions */}
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1.25 }}>
-          {onEdit && can(`${permBase}:edit`) && live.status !== 'converted' && (
+          {onEdit && allowed.edit && (
             <Button size="small" variant="outlined" startIcon={<EditIcon sx={{ fontSize: 14 }} />}
               onClick={() => onEdit(live)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
@@ -329,7 +333,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               {t('mis.convertToInvoice')}
             </Button>
           )}
-          {isInvoice && can('mis:payment:edit') && (
+          {allowed.payment && (
             <Button size="small" variant="outlined" startIcon={<PaidIcon sx={{ fontSize: 14 }} />}
               onClick={() => setPayOpen(o => !o)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
@@ -337,7 +341,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               {t('mis.paymentButton')}
             </Button>
           )}
-          {can(`${permBase}:edit`) && (
+          {allowed.assign && (
             <Button size="small" variant="outlined" startIcon={<SendIcon sx={{ fontSize: 14 }} />}
               onClick={() => setAssignOpen(true)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
@@ -345,7 +349,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               {t('mis.sendToEllipsis')}
             </Button>
           )}
-          {onDelete && can(`${permBase}:delete`) && (
+          {onDelete && allowed.remove && (
             <Button size="small" startIcon={<DeleteOutlineIcon sx={{ fontSize: 14 }} />}
               onClick={() => onDelete(live)}
               sx={{ fontSize: '0.72rem', textTransform: 'none', borderRadius: '8px',
@@ -356,7 +360,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
         </Box>
 
         {/* payment quick-record (invoice only) */}
-        {payOpen && isInvoice && (
+        {payOpen && allowed.payment && (
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 1.25,
             p: 1.25, border: `1px solid ${T.BD}`, borderRadius: '10px', bgcolor: T.CTRL_BG }}>
             {[

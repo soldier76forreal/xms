@@ -91,7 +91,8 @@ export default function ProductInvoices({ productId, productCode, readOnly = fal
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authCtx, axiosGlobal, productId, typeFilter, order]);
 
-  useEffect(() => { if (can('mis:view')) load(); }, [load, can]);
+  // A shared branch's paperwork is private to it — nothing to load there.
+  useEffect(() => { if (can('mis:view') && !readOnly) load(); }, [load, can, readOnly]);
 
   // backend is the real gate; without mis:view the call 403s — don't render at all
   if (!can('mis:view')) return null;
@@ -112,6 +113,65 @@ export default function ProductInvoices({ productId, productCode, readOnly = fal
   const canRequestForecast = readOnly && hasForecast && can('mis:preinvoice:create')
     && (can('mis:crossBranch:quote') || can('inventory:forecast:request'));
   const openRequest = (source) => setRequestPreset({ branchId, branchName, source, search: productCode });
+
+  const requestButtons = (
+    <>
+      {canRequest && (
+        <Tooltip title={t('inventory.reqStockTip', { branch: branchName || t('inventory.thisBranch') })}>
+          <Button size="small" variant="contained"
+            startIcon={<StorefrontIcon sx={{ fontSize: 14 }} />}
+            onClick={() => openRequest('inventory')}
+            sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
+            {t('inventory.reqStockButton')}
+          </Button>
+        </Tooltip>
+      )}
+      {/* The lot being prepared (Supply forecast / final, not yet in the
+          warehouse) — reserve it before it lands. */}
+      {canRequestForecast && (
+        <Tooltip title={t('inventory.reqForecastTip', { branch: branchName || t('inventory.thisBranch') })}>
+          <Button size="small" variant="contained" color="warning"
+            startIcon={<TerrainIcon sx={{ fontSize: 14 }} />}
+            onClick={() => openRequest('supply')}
+            sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
+            {t('inventory.reqForecastButton')}
+          </Button>
+        </Tooltip>
+      )}
+    </>
+  );
+
+  // On a branch that only SHARED its catalogue, its invoices and quotations stay
+  // private: no list, only the requests this viewer can raise against it — or
+  // nothing at all when they can't raise any.
+  if (readOnly) {
+    if (!canRequest && !canRequestForecast) return null;
+    const branch = branchName || t('inventory.thisBranch');
+    return (
+      <Box sx={{
+        mt: 3, border: '1.5px solid', borderColor: 'divider', borderRadius: '14px',
+        bgcolor: 'background.paper', px: 2.5, py: 2,
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, textTransform: 'uppercase',
+              letterSpacing: 1, color: 'text.disabled', display: 'block' }}>
+              {t('inventory.requestFromBranchTitle', { branch })}
+            </Typography>
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
+              {t('inventory.requestFromBranchHint')}
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 0.75 }}>{requestButtons}</Box>
+        </Box>
+        <CrossBranchRequestForm
+          open={Boolean(requestPreset)}
+          onClose={() => setRequestPreset(null)}
+          preset={requestPreset}
+        />
+      </Box>
+    );
+  }
 
   const shown = expanded ? docs : docs.slice(0, PREVIEW_COUNT);
 
@@ -144,28 +204,6 @@ export default function ProductInvoices({ productId, productCode, readOnly = fal
               sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
               {t('inventory.newQuote')}
             </Button>
-          )}
-          {canRequest && (
-            <Tooltip title={t('inventory.reqStockTip', { branch: branchName || t('inventory.thisBranch') })}>
-              <Button size="small" variant="contained"
-                startIcon={<StorefrontIcon sx={{ fontSize: 14 }} />}
-                onClick={() => openRequest('inventory')}
-                sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
-                {t('inventory.reqStockButton')}
-              </Button>
-            </Tooltip>
-          )}
-          {/* The lot being prepared (Supply forecast / final, not yet in the
-              warehouse) — reserve it before it lands. */}
-          {canRequestForecast && (
-            <Tooltip title={t('inventory.reqForecastTip', { branch: branchName || t('inventory.thisBranch') })}>
-              <Button size="small" variant="contained" color="warning"
-                startIcon={<TerrainIcon sx={{ fontSize: 14 }} />}
-                onClick={() => openRequest('supply')}
-                sx={{ fontSize: '0.68rem', textTransform: 'none', borderRadius: '8px' }}>
-                {t('inventory.reqForecastButton')}
-              </Button>
-            </Tooltip>
           )}
         </Box>
       </Box>
@@ -288,13 +326,6 @@ export default function ProductInvoices({ productId, productCode, readOnly = fal
         preset={{ productSearch: productCode }}
       />
 
-      {/* Stock request — see openRequest() for how the target is chosen. */}
-      <CrossBranchRequestForm
-        open={Boolean(requestPreset)}
-        onClose={() => setRequestPreset(null)}
-        onSaved={load}
-        preset={requestPreset}
-      />
     </Box>
   );
 }

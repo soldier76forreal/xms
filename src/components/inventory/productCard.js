@@ -75,7 +75,9 @@ function MiniVariantRow({ variant }) {
   );
 }
 
-const ProductCard = ({ product, onClick, apiBase, selected, unread }) => {
+// canEdit: this viewer may edit the product (own branch + inventory:edit) — the
+// quick menu exists only for that; opening the detail has its own arrow.
+const ProductCard = ({ product, onClick, apiBase, selected, unread, canEdit = false }) => {
   const { t } = useTranslation();
   const theme    = useTheme();
   const isDark   = theme.palette.mode === 'dark';
@@ -222,9 +224,11 @@ const ProductCard = ({ product, onClick, apiBase, selected, unread }) => {
             }
           </IconButton>
           {/* Three-dot menu */}
-          <IconButton size="small" onClick={handleMenuOpen}>
-            <MoreVertIcon sx={{ fontSize: 16 }} />
-          </IconButton>
+          {canEdit && (
+            <IconButton size="small" onClick={handleMenuOpen}>
+              <MoreVertIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          )}
           {/* Arrow to detail */}
           <IconButton size="small" onClick={onClick} title={t('inventory.openDetail')}>
             <ArrowForwardIosIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
@@ -250,7 +254,7 @@ const ProductCard = ({ product, onClick, apiBase, selected, unread }) => {
       </Collapse>
 
       {/* Three-dot quick action menu */}
-      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleMenuClose}
+      <Menu anchorEl={menuAnchor} open={canEdit && Boolean(menuAnchor)} onClose={handleMenuClose}
         PaperProps={{ sx: { minWidth: 160 } }}>
         <MenuItem onClick={handleEdit} dense>
           <EditIcon sx={{ fontSize: 15, mr: 1.5, color: 'text.secondary' }} />

@@ -675,7 +675,11 @@
     "reqStockButton": "Request stock",
     "reqForecastButton": "Request forecast lot",
     "reqForecastTip": "Reserve the lot {{branch}} is preparing in Supply, before it reaches the warehouse",
-    "thisBranch": "this branch"
+    "thisBranch": "this branch",
+    "noProductsYet": "No products yet.",
+    "noMediaView": "No photos or videos yet.",
+    "requestFromBranchTitle": "Request from {{branch}}",
+    "requestFromBranchHint": "The invoices and quotations of this branch aren't shared. You can request stock from it instead."
   },
   "mis": {
     "docTypeInvoice": "invoice",

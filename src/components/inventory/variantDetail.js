@@ -45,7 +45,11 @@ function Row({ label, value }) {
   );
 }
 
-const VariantDetail = () => {
+// readOnly: the variety belongs to a branch that only SHARED its catalogue with
+// us (decided in showProduct.js) — look, don't touch: no edit, no media changes,
+// no WhatsApp share (that reads the owner's branch data) and no change history
+// (the owner's internal log).
+const VariantDetail = ({ readOnly = false }) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const open     = useSelector((s) => s.invShowVariantDetail);
@@ -53,6 +57,7 @@ const VariantDetail = () => {
   const theme    = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { can }  = usePermissions();
+  const allow    = (key) => !readOnly && can(key);
   const [shareOpen, setShareOpen] = useState(false);
 
   const handleClose = useCallback(() => {
@@ -86,7 +91,7 @@ const VariantDetail = () => {
         display: 'flex', alignItems: 'center', gap: 1 }}>
         <Box component="span" sx={{ flexGrow: 1 }}>{t('inventory.variantDetailTitle')}</Box>
         <CopyLinkButton module="inventory" entityType="variant" entityId={variant._id} />
-        {can('inventory:share:whatsapp') && (
+        {allow('inventory:share:whatsapp') && (
           <Tooltip title={t('inventory.shareButtonTip')}>
             <IconButton size="small" onClick={() => setShareOpen(true)}
               sx={{ color: 'text.secondary', width: 28, height: 28, '&:hover': { color: '#25D366' } }}>
@@ -175,26 +180,33 @@ const VariantDetail = () => {
           </Box>
         )}
 
-        <VariantMediaBatch variantId={variant._id} productId={variant.productId} variantCode={variant.code} />
+        <VariantMediaBatch variantId={variant._id} productId={variant.productId} variantCode={variant.code}
+          canEditMedia={allow('inventory:media:edit')} canSetCover={allow('inventory:edit')} canZip={!readOnly} />
 
         {/* This SKU's own change history — quantity/price/spec/status/media/import */}
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mb: 1,
-            fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
-            {t('inventory.historyLabel')}
-          </Typography>
-          <ChangeLog variantId={variant._id} />
-        </Box>
+        {!readOnly && (
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mb: 1,
+              fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+              {t('inventory.historyLabel')}
+            </Typography>
+            <ChangeLog variantId={variant._id} />
+          </Box>
+        )}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2.5 }}>
         <Button onClick={handleClose} size="small">{t('common.close')}</Button>
-        <Button onClick={handleEdit} variant="outlined" size="small" startIcon={<span style={{ fontSize: 12 }}>✎</span>}>
-          {t('common.edit')}
-        </Button>
+        {allow('inventory:edit') && (
+          <Button onClick={handleEdit} variant="outlined" size="small" startIcon={<span style={{ fontSize: 12 }}>✎</span>}>
+            {t('common.edit')}
+          </Button>
+        )}
       </DialogActions>
 
-      <ShareWhatsAppDialog open={shareOpen} onClose={() => setShareOpen(false)} variantId={variant._id} />
+      {allow('inventory:share:whatsapp') && (
+        <ShareWhatsAppDialog open={shareOpen} onClose={() => setShareOpen(false)} variantId={variant._id} />
+      )}
     </Dialog>
   );
 };

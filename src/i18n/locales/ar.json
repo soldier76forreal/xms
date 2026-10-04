@@ -684,7 +684,11 @@
     "reqStockButton": "طلب من المخزون",
     "reqForecastButton": "طلب الدفعة المتوقعة",
     "reqForecastTip": "احجز الدفعة التي يجهزها {{branch}} في التوريد قبل وصولها إلى المستودع",
-    "thisBranch": "هذا الفرع"
+    "thisBranch": "هذا الفرع",
+    "noProductsYet": "لا توجد منتجات بعد.",
+    "noMediaView": "لا توجد صور أو مقاطع فيديو بعد.",
+    "requestFromBranchTitle": "طلب من {{branch}}",
+    "requestFromBranchHint": "فواتير وعروض أسعار هذا الفرع غير مشتركة. يمكنك بدلاً من ذلك طلب المخزون منه."
   },
   "mis": {
     "docTypeInvoice": "فاتورة",

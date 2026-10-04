@@ -304,7 +304,7 @@ const Inventory = () => {
               {t('inventory.websiteToolsButton')}
             </Button>
           )}
-          {!branchReadOnly && (
+          {!branchReadOnly && can('inventory:product:create') && (
             <Button variant="contained" startIcon={<AddIcon />} size="small"
               onClick={handleNewProduct} sx={{ borderRadius: 2 }}>
               {t('inventory.newProductButton')}
@@ -485,9 +485,13 @@ const Inventory = () => {
         {filteredProducts.length === 0 ? (
           <Box sx={{ py: 8, textAlign: 'center' }}>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-              {search || hasFilters ? t('inventory.noProductsMatchFilters') : t('inventory.noProductsYetAddFirst')}
+              {search || hasFilters
+                ? t('inventory.noProductsMatchFilters')
+                : (!branchReadOnly && can('inventory:product:create')
+                  ? t('inventory.noProductsYetAddFirst')
+                  : t('inventory.noProductsYet'))}
             </Typography>
-            {!search && !hasFilters && (
+            {!search && !hasFilters && !branchReadOnly && can('inventory:product:create') && (
               <Button variant="outlined" startIcon={<AddIcon />} size="small" onClick={handleNewProduct} sx={{ mt: 1 }}>
                 {t('inventory.newProductButton')}
               </Button>
@@ -503,6 +507,7 @@ const Inventory = () => {
                 selected={product._id === selectedProductId}
                 unread={isUnread(product)}
                 onClick={() => setSelectedProductId(product._id)}
+                canEdit={!branchReadOnly && can('inventory:edit')}
               />
             ))}
             <InfiniteScrollSentinel onIntersect={loadMoreProducts} hasMore={hasMore} loading={invLoading} />

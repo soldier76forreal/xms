@@ -137,7 +137,11 @@ function UploadDialog({ open, onClose, productId, onDone }) {
 }
 
 // ── MediaGallery — product-level, accumulating gallery ─────────────────────────
-const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) => {
+// canEditMedia (upload / delete), canSetCover (an inventory:edit product change)
+// and canZip (bulk download, own-branch only on the server) come from
+// showProduct.js; anything not allowed simply isn't offered.
+const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh,
+  canEditMedia = false, canSetCover = false, canZip = false }) => {
   const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
@@ -182,12 +186,12 @@ const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) =>
         files={media}
         loading={loading}
         coverMediaId={coverMediaId}
-        onSetCover={handleSetCover}
-        onDeleteSelected={handleDeleteSelected}
-        onBulkZip={handleBulkZip}
-        emptyHint={t('inventory.noMediaYet')}
-        onEmptyClick={() => setUploadOpen(true)}
-        extraHeaderAction={
+        onSetCover={canSetCover ? handleSetCover : null}
+        onDeleteSelected={canEditMedia ? handleDeleteSelected : null}
+        onBulkZip={canZip ? handleBulkZip : null}
+        emptyHint={canEditMedia ? t('inventory.noMediaYet') : t('inventory.noMediaView')}
+        onEmptyClick={canEditMedia ? () => setUploadOpen(true) : undefined}
+        extraHeaderAction={canEditMedia && (
           <>
             <Button
               size="small"
@@ -200,10 +204,12 @@ const MediaGallery = ({ productId, coverMediaId, media, loading, onRefresh }) =>
             </Button>
             <SectionTutorials section="inventory" tag="inventory:media:edit" />
           </>
-        }
+        )}
       />
 
-      <UploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} productId={productId} onDone={onRefresh} />
+      {canEditMedia && (
+        <UploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} productId={productId} onDone={onRefresh} />
+      )}
     </Box>
   );
 };

@@ -69,7 +69,7 @@ function displayName(file) {
 }
 
 // ── per-item overflow menu (Download / Pin as cover / Delete) ─────────────────
-function ItemMenu({ file, isCover, canSetCover, onDownload, onSetCover, onDelete, anchorEl, onClose }) {
+function ItemMenu({ file, isCover, canSetCover, canDelete, onDownload, onSetCover, onDelete, anchorEl, onClose }) {
   const { t } = useTranslation();
   const kind = resolveKind(file);
   return (
@@ -86,17 +86,19 @@ function ItemMenu({ file, isCover, canSetCover, onDownload, onSetCover, onDelete
           <ListItemText>{isCover ? t('inventory.currentCover') : t('inventory.pinAsCover')}</ListItemText>
         </MenuItem>
       )}
-      <MenuItem onClick={() => { onClose(); onDelete(); }} sx={{ color: '#EA005A' }}>
-        <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: '#EA005A' }} /></ListItemIcon>
-        <ListItemText>{t('common.delete')}</ListItemText>
-      </MenuItem>
+      {canDelete && (
+        <MenuItem onClick={() => { onClose(); onDelete(); }} sx={{ color: '#EA005A' }}>
+          <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: '#EA005A' }} /></ListItemIcon>
+          <ListItemText>{t('common.delete')}</ListItemText>
+        </MenuItem>
+      )}
     </Menu>
   );
 }
 
 // ── one grid tile ──────────────────────────────────────────────────────────────
 function GalleryTile({
-  file, isCover, canSetCover, apiBase, selected, selectMode,
+  file, isCover, canSetCover, canDelete, canSelect, apiBase, selected, selectMode,
   onToggleSelect, onOpen, onDownload, onSetCover, onDeleteOne,
 }) {
   const { t } = useTranslation();
@@ -153,15 +155,18 @@ function GalleryTile({
           </Box>
         )}
 
-        {/* selection checkbox — always present so it works identically on
-            touch and mouse (no hover/long-press gesture to get wrong) */}
-        <Checkbox
-          checked={selected}
-          onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
-          icon={<Box sx={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.85)', bgcolor: 'rgba(0,0,0,0.25)' }} />}
-          checkedIcon={<CheckCircleIcon sx={{ color: 'primary.main', bgcolor: '#fff', borderRadius: '50%', fontSize: 20 }} />}
-          sx={{ position: 'absolute', top: 2, right: 2, p: 0.5 }}
-        />
+        {/* selection checkbox — present whenever there's a bulk action to
+            select for, so it works identically on touch and mouse (no
+            hover/long-press gesture to get wrong) */}
+        {canSelect && (
+          <Checkbox
+            checked={selected}
+            onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
+            icon={<Box sx={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.85)', bgcolor: 'rgba(0,0,0,0.25)' }} />}
+            checkedIcon={<CheckCircleIcon sx={{ color: 'primary.main', bgcolor: '#fff', borderRadius: '50%', fontSize: 20 }} />}
+            sx={{ position: 'absolute', top: 2, right: 2, p: 0.5 }}
+          />
+        )}
 
         {/* per-item overflow menu — wrapped in its own stopPropagation box
             because MUI's Menu renders its popup (including the backdrop you
@@ -178,7 +183,7 @@ function GalleryTile({
               '&:hover': { bgcolor: 'rgba(0,0,0,0.75)' } }}>
             <MoreVertIcon sx={{ fontSize: 16 }} />
           </IconButton>
-          <ItemMenu file={file} isCover={isCover} canSetCover={canSetCover}
+          <ItemMenu file={file} isCover={isCover} canSetCover={canSetCover} canDelete={canDelete}
             anchorEl={menuAnchor} onClose={() => setMenuAnchor(null)}
             onDownload={onDownload} onSetCover={onSetCover} onDelete={onDeleteOne} />
         </Box>
@@ -270,7 +275,7 @@ function ItemViewer({ files, index, apiBase, onClose, onIndexChange }) {
 
 // ── the grid + header + bulk toolbar (reused for both inline and fullscreen) ──
 function GalleryBody({
-  files, coverMediaId, canSetCover, apiBase, loading, emptyHint, onEmptyClick,
+  files, coverMediaId, canSetCover, canDelete, canZip, canSelect, apiBase, loading, emptyHint, onEmptyClick,
   selectMode, setSelectMode, selectedIds, setSelectedIds,
   onOpenViewer, onSetCover, onDeleteOne, onBulkDelete, onBulkZip, dispatch,
 }) {
@@ -313,12 +318,16 @@ function GalleryBody({
           <Typography sx={{ fontSize: '0.78rem', fontWeight: 600, flexGrow: 1 }}>
             {t('inventory.itemsSelected', { count: selectedIds.length })}
           </Typography>
-          <Button size="small" startIcon={<DownloadIcon sx={{ fontSize: 14 }} />} onClick={() => onBulkZip(selectedIds)}>
-            {t('inventory.bulkDownload')}
-          </Button>
-          <Button size="small" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 14 }} />} onClick={() => onBulkDelete(selectedIds)}>
-            {t('inventory.bulkDelete')}
-          </Button>
+          {canZip && (
+            <Button size="small" startIcon={<DownloadIcon sx={{ fontSize: 14 }} />} onClick={() => onBulkZip(selectedIds)}>
+              {t('inventory.bulkDownload')}
+            </Button>
+          )}
+          {canDelete && (
+            <Button size="small" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 14 }} />} onClick={() => onBulkDelete(selectedIds)}>
+              {t('inventory.bulkDelete')}
+            </Button>
+          )}
           <Button size="small" onClick={() => { setSelectedIds([]); setSelectMode(false); }}>
             {t('inventory.cancelSelection')}
           </Button>
@@ -330,8 +339,10 @@ function GalleryBody({
           <GalleryTile
             key={file._id}
             file={file}
-            isCover={canSetCover && String(file._id) === String(coverMediaId)}
+            isCover={Boolean(coverMediaId) && String(file._id) === String(coverMediaId)}
             canSetCover={canSetCover}
+            canDelete={canDelete}
+            canSelect={canSelect}
             apiBase={apiBase}
             selected={selectedIds.includes(file._id)}
             selectMode={selectMode || selectedIds.length > 0}
@@ -351,7 +362,9 @@ function GalleryBody({
 // Used by both product-level media (mediaGallery.js) and variant-level media
 // batches (variantMediaBatch.js). Pin-as-cover is available from either
 // context (any image can become the product's cover) — pass coverMediaId +
-// onSetCover to enable it, omit both to hide the action entirely.
+// onSetCover to enable it, omit both to hide the action entirely. The same goes
+// for onDeleteSelected (delete) and onBulkZip (bulk download): leave one out and
+// that action isn't offered — and with neither, there's nothing to select for.
 const InventoryGallery = ({
   files = [], loading = false, coverMediaId = null, onSetCover = null,
   onDeleteSelected, onBulkZip: onBulkZipProp, emptyHint, onEmptyClick,
@@ -362,6 +375,9 @@ const InventoryGallery = ({
   const axiosGlobal = useContext(AxiosGlobal);
   const apiBase = axiosGlobal.defaultTargetApi || '';
   const canSetCover = typeof onSetCover === 'function';
+  const canDelete = typeof onDeleteSelected === 'function';
+  const canZip = typeof onBulkZipProp === 'function';
+  const canSelect = canDelete || canZip;
 
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -404,7 +420,7 @@ const InventoryGallery = ({
   };
 
   const bodyProps = {
-    files, coverMediaId, canSetCover, apiBase, loading, emptyHint, onEmptyClick,
+    files, coverMediaId, canSetCover, canDelete, canZip, canSelect, apiBase, loading, emptyHint, onEmptyClick,
     selectMode, setSelectMode, selectedIds, setSelectedIds,
     onOpenViewer: setViewerIndex,
     onSetCover, onDeleteOne: handleBulkDelete,
@@ -430,7 +446,7 @@ const InventoryGallery = ({
         </Typography>
         {bulkBusy && <CircularProgress size={14} />}
         {extraHeaderAction}
-        {files.length > 0 && (
+        {canSelect && files.length > 0 && (
           <Button size="small" onClick={() => { setSelectMode((v) => !v); if (selectMode) setSelectedIds([]); }}
             sx={{ fontSize: '0.7rem', textTransform: 'none' }}>
             {selectMode ? t('common.cancel') : t('inventory.selectItems')}
@@ -458,7 +474,7 @@ const InventoryGallery = ({
               {t('inventory.mediaCount', { count: files.length })}
             </Typography>
             {extraHeaderAction}
-            {files.length > 0 && (
+            {canSelect && files.length > 0 && (
               <Button size="small" onClick={() => { setSelectMode((v) => !v); if (selectMode) setSelectedIds([]); }}
                 sx={{ fontSize: '0.72rem', textTransform: 'none' }}>
                 {selectMode ? t('common.cancel') : t('inventory.selectItems')}

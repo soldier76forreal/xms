@@ -65,24 +65,29 @@ const ProductHeader = ({ product, coverThumbUrl, onBack, onEdit, onAddVariant, f
             </IconButton>
           </Tooltip>
         )}
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<EditIcon sx={{ fontSize: 14 }} />}
-          onClick={onEdit}
-          sx={{ borderRadius: 2, fontSize: '0.75rem', flexShrink: 0 }}
-        >
-          {t('common.edit')}
-        </Button>
-        <Button
-          size="small"
-          variant="contained"
-          onClick={onAddVariant}
-          sx={{ borderRadius: 2, fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}
-        >
-          <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('inventory.addVariantFull')}</Box>
-          <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>{t('inventory.addVariantShort')}</Box>
-        </Button>
+        {/* onEdit / onAddVariant are only passed when this viewer may do them */}
+        {onEdit && (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<EditIcon sx={{ fontSize: 14 }} />}
+            onClick={onEdit}
+            sx={{ borderRadius: 2, fontSize: '0.75rem', flexShrink: 0 }}
+          >
+            {t('common.edit')}
+          </Button>
+        )}
+        {onAddVariant && (
+          <Button
+            size="small"
+            variant="contained"
+            onClick={onAddVariant}
+            sx={{ borderRadius: 2, fontSize: '0.75rem', flexShrink: 0, whiteSpace: 'nowrap' }}
+          >
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>{t('inventory.addVariantFull')}</Box>
+            <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>{t('inventory.addVariantShort')}</Box>
+          </Button>
+        )}
       </Box>
 
       {/* Card with accent bar + cover */}

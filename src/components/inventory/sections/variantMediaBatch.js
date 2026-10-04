@@ -163,7 +163,11 @@ function UploadBatchDialog({ open, onClose, variantId, productId, isReplace, onD
 }
 
 // ── VariantMediaBatch ──────────────────────────────────────────────────────────
-const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
+// canEditMedia (upload / replace / delete), canSetCover (an inventory:edit
+// product change) and canZip (download as zip, own-branch only on the server)
+// come from variantDetail.js; anything not allowed simply isn't offered.
+const VariantMediaBatch = ({ variantId, productId, variantCode,
+  canEditMedia = false, canSetCover = false, canZip = false }) => {
   const { t } = useTranslation();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
@@ -250,28 +254,32 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
       border: '1.5px solid', borderColor: 'divider', borderRadius: '14px',
       bgcolor: 'background.paper', p: 2.5, mt: 2,
     }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1.5, gap: 1 }}>
-        {batch.length > 0 && (
-          <Button
-            size="small" variant="outlined"
-            startIcon={downloadingAll ? <CircularProgress size={12} /> : <DownloadIcon sx={{ fontSize: 14 }} />}
-            onClick={handleDownloadAll}
-            disabled={downloadingAll}
-            sx={{ borderRadius: 2, fontSize: '0.72rem' }}
-          >
-            {t('inventory.downloadAll')}
-          </Button>
-        )}
-        <Button
-          size="small" variant="outlined"
-          color={batch.length ? 'error' : 'primary'}
-          startIcon={<UploadFileIcon sx={{ fontSize: 14 }} />}
-          onClick={() => setFormOpen(true)}
-          sx={{ borderRadius: 2, fontSize: '0.72rem' }}
-        >
-          {batch.length ? t('inventory.deleteReplace') : t('inventory.uploadBatch')}
-        </Button>
-      </Box>
+      {((canZip && batch.length > 0) || canEditMedia) && (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mb: 1.5, gap: 1 }}>
+          {canZip && batch.length > 0 && (
+            <Button
+              size="small" variant="outlined"
+              startIcon={downloadingAll ? <CircularProgress size={12} /> : <DownloadIcon sx={{ fontSize: 14 }} />}
+              onClick={handleDownloadAll}
+              disabled={downloadingAll}
+              sx={{ borderRadius: 2, fontSize: '0.72rem' }}
+            >
+              {t('inventory.downloadAll')}
+            </Button>
+          )}
+          {canEditMedia && (
+            <Button
+              size="small" variant="outlined"
+              color={batch.length ? 'error' : 'primary'}
+              startIcon={<UploadFileIcon sx={{ fontSize: 14 }} />}
+              onClick={() => setFormOpen(true)}
+              sx={{ borderRadius: 2, fontSize: '0.72rem' }}
+            >
+              {batch.length ? t('inventory.deleteReplace') : t('inventory.uploadBatch')}
+            </Button>
+          )}
+        </Box>
+      )}
 
       {meta && (
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 1.5 }}>
@@ -297,21 +305,23 @@ const VariantMediaBatch = ({ variantId, productId, variantCode }) => {
         files={batch}
         loading={loading}
         coverMediaId={coverMediaId}
-        onSetCover={handleSetCover}
-        onDeleteSelected={handleDeleteSelected}
-        onBulkZip={handleBulkZip}
-        emptyHint={t('inventory.noMediaBatchYet')}
-        onEmptyClick={() => setFormOpen(true)}
+        onSetCover={canSetCover ? handleSetCover : null}
+        onDeleteSelected={canEditMedia ? handleDeleteSelected : null}
+        onBulkZip={canZip ? handleBulkZip : null}
+        emptyHint={canEditMedia ? t('inventory.noMediaBatchYet') : t('inventory.noMediaView')}
+        onEmptyClick={canEditMedia ? () => setFormOpen(true) : undefined}
       />
 
-      <UploadBatchDialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        variantId={variantId}
-        productId={productId}
-        isReplace={batch.length > 0}
-        onDone={fetchBatch}
-      />
+      {canEditMedia && (
+        <UploadBatchDialog
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          variantId={variantId}
+          productId={productId}
+          isReplace={batch.length > 0}
+          onDone={fetchBatch}
+        />
+      )}
     </Box>
   );
 };

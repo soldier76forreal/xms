@@ -22,6 +22,7 @@ import SendIcon from '@mui/icons-material/Send';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
 import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
+import { getDocActions } from './docActions';
 
 // status → chip colour (subtle alpha tints, dark/opacity language)
 const STATUS_META = {
@@ -64,7 +65,6 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
 
   const isInvoice = doc.docType === 'invoice';
   const status    = STATUS_META[doc.status] || STATUS_META.draft;
-  const permBase  = isInvoice ? 'mis:invoice' : 'mis:preinvoice';
 
   const paidSum   = isInvoice && doc.payment
     ? (Number(doc.payment.cash) || 0) + (Number(doc.payment.chequeBank) || 0) + (Number(doc.payment.card) || 0)
@@ -75,12 +75,11 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
   const act = (fn) => (e) => { closeMenu(e); fn && fn(doc); };
 
   const isInterBranch = doc.tradeMode === 'interBranch';
-  // Only the TARGET/fulfilling branch may convert an inter-branch quote (the
-  // backend is the real gate — see POST /invoices/:id/convert's extra check —
-  // this just avoids showing an enabled button that would 403).
-  const canConvert = !isInvoice && can('mis:preinvoice:convert') &&
-    doc.status !== 'converted' && !doc.convertedToInvoiceId &&
-    (!isInterBranch || String(doc.branchId) === String(activeBranchId));
+  // Only what this viewer can actually do (docActions.js); no menu at all
+  // when that's nothing.
+  const allowed = getDocActions(doc, { can, activeBranchId });
+  const hasMenu = (allowed.edit && onEdit) || (allowed.pdf && onPdf) || (allowed.convert && onConvert)
+    || (allowed.assign && onAssign) || (allowed.remove && onDelete);
 
   return (
     <Box onClick={() => onSelect && onSelect(doc)}
@@ -145,11 +144,13 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
 
         <Box sx={{ flexGrow: 1 }} />
 
-        <IconButton size="small" onClick={openMenu} className="cardMenuBtn"
-          sx={{ width: 24, height: 24, color: T.TEXT_TER, opacity: { xs: 1, md: 0.15 },
-            transition: 'opacity 0.15s' }}>
-          <MoreVertIcon sx={{ fontSize: 15 }} />
-        </IconButton>
+        {hasMenu && (
+          <IconButton size="small" onClick={openMenu} className="cardMenuBtn"
+            sx={{ width: 24, height: 24, color: T.TEXT_TER, opacity: { xs: 1, md: 0.15 },
+              transition: 'opacity 0.15s' }}>
+            <MoreVertIcon sx={{ fontSize: 15 }} />
+          </IconButton>
+        )}
       </Box>
 
       {/* row 2 — customer + date + total */}
@@ -171,35 +172,35 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
         PaperProps={{ sx: { minWidth: 170, bgcolor: isDark ? '#181818' : 'background.paper',
           border: `1px solid ${T.BD}`, borderRadius: '10px' } }}>
 
-        {can(`${permBase}:edit`) && (
+        {allowed.edit && onEdit && (
           <MenuItem dense onClick={act(onEdit)} sx={{ fontSize: '0.78rem' }}>
             <ListItemIcon><EditIcon sx={{ fontSize: 15 }} /></ListItemIcon>
             {t('common.edit')}
           </MenuItem>
         )}
 
-        {can(`${permBase}:pdf`) && (
+        {allowed.pdf && onPdf && (
           <MenuItem dense onClick={act(onPdf)} sx={{ fontSize: '0.78rem' }}>
             <ListItemIcon><PictureAsPdfIcon sx={{ fontSize: 15 }} /></ListItemIcon>
             {t('mis.savePdf')}
           </MenuItem>
         )}
 
-        {canConvert && (
+        {allowed.convert && onConvert && (
           <MenuItem dense onClick={act(onConvert)} sx={{ fontSize: '0.78rem' }}>
             <ListItemIcon><SwapHorizIcon sx={{ fontSize: 15 }} /></ListItemIcon>
             {t('mis.convertToInvoice')}
           </MenuItem>
         )}
 
-        {can(`${permBase}:edit`) && onAssign && (
+        {allowed.assign && onAssign && (
           <MenuItem dense onClick={act(onAssign)} sx={{ fontSize: '0.78rem' }}>
             <ListItemIcon><SendIcon sx={{ fontSize: 15 }} /></ListItemIcon>
             {t('mis.sendToEllipsis')}
           </MenuItem>
         )}
 
-        {can(`${permBase}:delete`) && (
+        {allowed.remove && onDelete && (
           <MenuItem dense onClick={act(onDelete)} sx={{ fontSize: '0.78rem', color: '#EA005A' }}>
             <ListItemIcon><DeleteOutlineIcon sx={{ fontSize: 15, color: '#EA005A' }} /></ListItemIcon>
             {t('common.delete')}
