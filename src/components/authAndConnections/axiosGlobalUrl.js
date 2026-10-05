@@ -27,13 +27,13 @@ export const AxiosGlobalProvider = (props) =>{
     // ephemeral port range collides with the defaults can move them without
     // touching committed code. Production never reads these: it uses the HTTPS
     // domains below regardless.
-    const apiPort  = process.env.REACT_APP_API_PORT  || '4789';
-    const authPort = process.env.REACT_APP_AUTH_PORT || '2681';
+    const apiPort  = process.env.REACT_APP_API_PORT  || '6223';
+    const authPort = process.env.REACT_APP_AUTH_PORT || '2720';
 
     const contextValue = {
-        defaultTargetApi: local ? `http://${host}:${apiPort}` : 'https://api.lazulitemarble.com',
-        authTargetApi:    local ? `http://${host}:${authPort}` : 'https://auth.lazulitemarble.com',
-        externalLink:'https://xms.lazulitemarble.com',
+        defaultTargetApi: local ? `http://${host}:${apiPort}` : 'https://testapi.lazulitemarble.com',
+        authTargetApi:    local ? `http://${host}:${authPort}` : 'https://testauthapi.lazulitemarble.com',
+        externalLink:'https://testxms.lazulitemarble.com',
         originLink:window.location.origin,
         // The SEPARATE public Next.js site (website/, Phase D) — not xms itself.
         // Local dev runs it on :3001 (xms's own CRA dev server owns :3000).
