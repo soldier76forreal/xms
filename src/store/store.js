@@ -7,6 +7,7 @@ import { getImageSize  } from 'react-image-size';
 import fileDownload from 'js-file-download';
 import Fuse from 'fuse.js';
 import { printHtmlDocument } from '../tools/printDocument';
+import { SERVER_SIDE_PDF_ENABLED } from '../tools/featureFlags';
 
 const getRootFileEntries = (items = [], wrapAsFile = false) => {
   const rootEntry = items.find(e => e?.doc === 'root');
@@ -515,7 +516,10 @@ export const fetchMisCompanyProfile = createAsyncThunk('overallAssets/fetchMisCo
     });
     dispatch(actions.misSetCompanyProfile(response.data));
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load company settings', type: 'error' }));
+    // Never leave the PREVIOUS branch's settings in place: the form would show
+    // them as this branch's, and saving would write them over it.
+    dispatch(actions.misSetCompanyProfile(null));
+    dispatch(actions.setShowSnackBar({ status: true, msg: (err && err.response && err.response.data && err.response.data.message) || 'Failed to load company settings', type: 'error' }));
   }
 });
 
@@ -622,13 +626,42 @@ async function downloadPdfBlob(authCtx, axiosGlobal, url, fallbackName) {
   setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
 }
 
+// The same HTML the on-screen preview shows, printed by the browser's own
+// engine ("Save as PDF") — what invoices and quotations already do, and the
+// reason these don't depend on headless Chrome on the server. The server
+// templates declare their own @page size, so labels print at label size.
+async function printServerHtml(authCtx, url, params) {
+  const response = await authCtx.jwtInst({ method: 'get', url, params, responseType: 'text' });
+  if (typeof response.data !== 'string' || !response.data.trim()) throw new Error('The document came back empty');
+  printHtmlDocument(response.data);
+}
+
+// A failure message that says WHY, not just that it failed: the server's own
+// reason when it sent one, otherwise the HTTP status or the network error.
+function downloadFailure(what, err) {
+  let reason = '';
+  const data = err && err.response && err.response.data;
+  if (data) {
+    if (typeof data === 'object' && data.message) reason = data.message;
+    else if (typeof data === 'string') { try { reason = JSON.parse(data).message || ''; } catch (_) { reason = ''; } }
+  }
+  if (!reason && err && err.response) reason = `HTTP ${err.response.status}`;
+  if (!reason && err && err.message) reason = err.message;
+  return `Failed to open the ${what}${reason ? ` — ${reason}` : ''}`;
+}
+
 export const downloadMisPackingListPdf = createAsyncThunk('overallAssets/downloadMisPackingListPdf', async (theData, { dispatch }) => {
   try {
-    await downloadPdfBlob(theData.authCtx, theData.axiosGlobal,
-      `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}/pdf${theData.lang ? `?lang=${theData.lang}` : ''}`,
-      `packing-list-${theData.docNumber || theData.id}.pdf`);
+    const base = `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}`;
+    if (SERVER_SIDE_PDF_ENABLED) {
+      await downloadPdfBlob(theData.authCtx, theData.axiosGlobal,
+        `${base}/pdf${theData.lang ? `?lang=${theData.lang}` : ''}`,
+        `packing-list-${theData.docNumber || theData.id}.pdf`);
+    } else {
+      await printServerHtml(theData.authCtx, `${base}/html`, theData.lang ? { lang: theData.lang } : {});
+    }
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to download the packing list PDF', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: downloadFailure('packing list', err), type: 'error' }));
   }
 });
 
@@ -638,22 +671,30 @@ export const downloadMisPalletLabelPdf = createAsyncThunk('overallAssets/downloa
     const qs = new URLSearchParams();
     if (theData.lang) qs.set('lang', theData.lang);
     if (theData.kind) qs.set('kind', theData.kind);
-    await downloadPdfBlob(theData.authCtx, theData.axiosGlobal,
-      `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}/pallets/${encodeURIComponent(theData.palletId)}/label/pdf${qs.toString() ? `?${qs}` : ''}`,
-      `label-${theData.kind === 'short' ? 'short-' : ''}${theData.docNumber || theData.id}-${theData.palletId}.pdf`);
+    const base = `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}/pallets/${encodeURIComponent(theData.palletId)}/label`;
+    if (SERVER_SIDE_PDF_ENABLED) {
+      await downloadPdfBlob(theData.authCtx, theData.axiosGlobal,
+        `${base}/pdf${qs.toString() ? `?${qs}` : ''}`,
+        `label-${theData.kind === 'short' ? 'short-' : ''}${theData.docNumber || theData.id}-${theData.palletId}.pdf`);
+    } else {
+      await printServerHtml(theData.authCtx, `${base}/html`, Object.fromEntries(qs.entries()));
+    }
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to download the pallet label PDF', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: downloadFailure('pallet label', err), type: 'error' }));
   }
 });
 
 // Supply's printed stone sales contract (قرارداد فروش سنگ).
 export const downloadSupplyDealLetterPdf = createAsyncThunk('supply/downloadDealLetterPdf', async (theData, { dispatch }) => {
   try {
-    await downloadPdfBlob(theData.authCtx, theData.axiosGlobal,
-      `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}/pdf`,
-      `contract-${theData.number || theData.id}.pdf`);
+    const base = `${theData.axiosGlobal.defaultTargetApi}/supply/deal-letters/${theData.id}`;
+    if (SERVER_SIDE_PDF_ENABLED) {
+      await downloadPdfBlob(theData.authCtx, theData.axiosGlobal, `${base}/pdf`, `contract-${theData.number || theData.id}.pdf`);
+    } else {
+      await printServerHtml(theData.authCtx, `${base}/html`, {});
+    }
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to download the contract PDF', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: downloadFailure('contract', err), type: 'error' }));
   }
 });
 

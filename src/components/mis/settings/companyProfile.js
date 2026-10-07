@@ -15,7 +15,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AuthContext from '../../authAndConnections/auth';
 import AxiosGlobal from '../../authAndConnections/axiosGlobalUrl';
 import { useBranch } from '../../../contextApi/BranchContext';
-import { fetchMisCompanyProfile, saveMisCompanyProfile } from '../../../store/store';
+import { fetchMisCompanyProfile, saveMisCompanyProfile, actions } from '../../../store/store';
 
 // Phase 6 — companyProfile settings editor (Session 45, admin / mis:settings:edit).
 // The STATIC invoice template header/footer: seller identity + TRN, bank block,
@@ -74,9 +74,11 @@ export default function CompanyProfileDrawer({ open, onClose }) {
   const dispatch    = useDispatch();
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
-  const { activeBranchId } = useBranch();
+  const { activeBranchId, branches } = useBranch();
+  const branchName = ((branches || []).find((b) => String(b._id) === String(activeBranchId)) || {}).name || '';
 
   const profile = useSelector(s => s.misCompanyProfile);
+  const [loading, setLoading] = useState(false);
 
   const T = {
     PANEL_BG: isDark ? '#0d0d0d' : theme.palette.background.paper,
@@ -89,8 +91,18 @@ export default function CompanyProfileDrawer({ open, onClose }) {
   const [values, setValues] = useState({});
   const [saving, setSaving] = useState(false);
 
+  // Opening it, or switching branch while it is open, ALWAYS starts from a clean
+  // slate: the previous branch's settings are cleared first, so what's on screen
+  // is only ever the branch it names in the header.
   useEffect(() => {
-    if (open) dispatch(fetchMisCompanyProfile({ authCtx, axiosGlobal, branchId: activeBranchId }));
+    if (!open) return undefined;
+    let live = true;
+    setLoading(true);
+    setValues({});
+    dispatch(actions.misSetCompanyProfile(null));
+    Promise.resolve(dispatch(fetchMisCompanyProfile({ authCtx, axiosGlobal, branchId: activeBranchId })))
+      .finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, activeBranchId]);
 
@@ -99,6 +111,10 @@ export default function CompanyProfileDrawer({ open, onClose }) {
       setValues({ ...profile, phonesText: (profile.phones || []).join(', ') });
     }
   }, [profile]);
+
+  // A branch with no settings of its own is shown the shared defaults; saving
+  // is what gives it its own.
+  const inherited = Boolean(profile) && !profile.branchId;
 
   const handleSave = async () => {
     setSaving(true);
@@ -126,9 +142,16 @@ export default function CompanyProfileDrawer({ open, onClose }) {
 
       <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5,
         borderBottom: `1px solid ${T.BD}`, flexShrink: 0 }}>
-        <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI, flexGrow: 1 }}>
-          {t('mis.templateSettingsTitle')}
-        </Typography>
+        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+          <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, color: T.TEXT_PRI }}>
+            {t('mis.templateSettingsTitle')}
+          </Typography>
+          {branchName && (
+            <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC }} noWrap>
+              {t('mis.settingsForBranch', { branch: branchName })}
+            </Typography>
+          )}
+        </Box>
         <IconButton size="small" onClick={onClose} sx={{ color: T.TEXT_TER }}>
           <CloseIcon sx={{ fontSize: 16 }} />
         </IconButton>
@@ -136,7 +159,22 @@ export default function CompanyProfileDrawer({ open, onClose }) {
 
       <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 2, py: 2,
         display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-        {SECTIONS.map(section => (
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={22} /></Box>
+        )}
+        {!loading && !profile && (
+          <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, textAlign: 'center', py: 4 }}>
+            {t('mis.settingsLoadFailed')}
+          </Typography>
+        )}
+        {!loading && inherited && (
+          <Box sx={{ px: 1.25, py: 1, borderRadius: '9px', border: `1px solid ${T.BD}` }}>
+            <Typography sx={{ fontSize: '0.74rem', color: T.TEXT_SEC }}>
+              {t('mis.settingsInherited', { branch: branchName })}
+            </Typography>
+          </Box>
+        )}
+        {!loading && profile && SECTIONS.map(section => (
           <Box key={section.titleKey}>
             <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
               textTransform: 'uppercase', color: T.TEXT_TER, mb: 1.25 }}>
@@ -161,7 +199,7 @@ export default function CompanyProfileDrawer({ open, onClose }) {
       </Box>
 
       <Box sx={{ px: 2, py: 1.5, borderTop: `1px solid ${T.BD}`, display: 'flex', gap: 1, flexShrink: 0 }}>
-        <Button fullWidth variant="contained" size="small" disabled={saving} onClick={handleSave}
+        <Button fullWidth variant="contained" size="small" disabled={saving || loading || !profile} onClick={handleSave}
           sx={{ fontSize: '0.78rem', textTransform: 'none', borderRadius: '8px', fontWeight: 600 }}>
           {saving ? <CircularProgress size={14} sx={{ mr: 0.75 }} /> : null}
           {t('mis.saveSettings')}

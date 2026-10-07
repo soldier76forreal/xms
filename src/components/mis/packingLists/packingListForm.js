@@ -58,6 +58,25 @@ const deriveSqm = (it) => {
   return round2((l / 100) * (w / 100) * p);
 };
 
+// Defined at MODULE scope on purpose. A component declared inside the form body
+// is a NEW component type on every render, so React unmounts and remounts its
+// whole subtree on each keystroke — which drops focus and sends the caret out of
+// the input you are typing in (and resets tab position). Keep section/field
+// helpers out here and pass what they need as props.
+function Section({ label, hint, children, T }) {
+  return (
+    <Box sx={{ mb: 2.5 }}>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1.25 }}>
+        <Typography sx={{ fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: 1, color: T.TEXT_TER }}>{label}</Typography>
+        {hint && <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER }}>{hint}</Typography>}
+        <Box sx={{ flex: 1, height: '1px', bgcolor: T.BD }} />
+      </Box>
+      {children}
+    </Box>
+  );
+}
+
 // preset (new lists only, optional) — raised from a Supply record:
 //   supplyRecordId — the list is linked to that record (shows under it)
 //   recordTitle    — shown in the banner, so it's clear where it will land
@@ -359,18 +378,6 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
   });
   const selectOnFocus = { onFocus: (e) => e.target.select() };
 
-  const Section = ({ label, hint, children }) => (
-    <Box sx={{ mb: 2.5 }}>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 1.25 }}>
-        <Typography sx={{ fontSize: '0.66rem', fontWeight: 700, textTransform: 'uppercase',
-          letterSpacing: 1, color: T.TEXT_TER }}>{label}</Typography>
-        {hint && <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER }}>{hint}</Typography>}
-        <Box sx={{ flex: 1, height: '1px', bgcolor: T.BD }} />
-      </Box>
-      {children}
-    </Box>
-  );
-
   return (
     <Drawer anchor="right" open={open} onClose={handleClose}
       PaperProps={{ sx: { width: isXs ? '100vw' : 760, maxWidth: '100vw' } }}>
@@ -403,7 +410,7 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
         )}
 
         {/* ── Scope ── */}
-        <Section label={t('mis.plScopeSection')}>
+        <Section T={T} label={t('mis.plScopeSection')}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap',
             mb: type === 'linked' ? 1.5 : 0 }}>
             <ToggleButtonGroup size="small" exclusive value={type} disabled={isEdit}
@@ -457,7 +464,7 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
         </Section>
 
         {/* ── Driver & vehicle ── */}
-        <Section label={t('mis.plDriverSection')}>
+        <Section T={T} label={t('mis.plDriverSection')}>
           <Box sx={{ display: 'grid', gridTemplateColumns: isXs ? '1fr' : '1fr 1fr', gap: 1.25 }}>
             <TextField {...field} label={t('mis.driverFullNameField')} value={driverInfo.fullName}
               onChange={(e) => setDriverInfo((d) => ({ ...d, fullName: e.target.value }))} />
@@ -490,7 +497,7 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
         </Section>
 
         {/* ── Route & handlers ── */}
-        <Section label={t('mis.plLogisticsSection')}>
+        <Section T={T} label={t('mis.plLogisticsSection')}>
           <Box sx={{ display: 'grid', gridTemplateColumns: isXs ? '1fr' : '1fr 1fr', gap: 1.25 }}>
             <TextField {...field} label={t('mis.loadingOfficerNameField')} value={loadingOfficer.name}
               onChange={(e) => setLoadingOfficer((o) => ({ ...o, name: e.target.value }))} />
@@ -522,7 +529,7 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
         </Section>
 
         {/* ── Pallets ── */}
-        <Section label={t('mis.plPalletsSection')}
+        <Section T={T} label={t('mis.plPalletsSection')}
           hint={t('mis.plTotalsSummary', { pcs: totals.pcs, sqm: totals.sqm.toFixed(2) })}>
 
           {outOfScope.length > 0 && (

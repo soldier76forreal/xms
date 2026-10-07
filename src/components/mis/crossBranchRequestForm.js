@@ -25,6 +25,18 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import { actions } from '../../store/store';
 import CrossBranchTargetPicker from './crossBranchTargetPicker';
 
+// Defined at MODULE scope on purpose. A component declared inside another
+// component body is a NEW component type on every render, so React unmounts and
+// remounts its whole subtree each time — which drops keyboard focus (the caret
+// jumps out of the input mid-typing) and resets tab position.
+function SectionLabel({ children, T }) {
+  return (
+    <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
+      textTransform: 'uppercase', color: T.TEXT_TER, mb: 1.25 }}>
+      {children}
+    </Typography>
+  );
+}
 const STAGE_LABEL_KEY = {
   purchasing: 'supply.statusPurchasing',
   processing: 'supply.statusProcessing',
@@ -293,12 +305,6 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
   };
 
   // ── UI helpers (same as invoiceForm) ──────────────────────────────────────
-  const SectionLabel = ({ children }) => (
-    <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
-      textTransform: 'uppercase', color: T.TEXT_TER, mb: 1.25 }}>
-      {children}
-    </Typography>
-  );
   const tfSx = { '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } };
   const tfLabel = { style: { fontSize: '0.75rem' } };
 
@@ -341,7 +347,7 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
 
         {/* ── Document ── */}
         <Box>
-          <SectionLabel>{t('mis.sectionDocument')}</SectionLabel>
+          <SectionLabel T={T}>{t('mis.sectionDocument')}</SectionLabel>
           <TextField size="small" label={t('mis.fieldIssueDate')} type="date" fullWidth
             value={issueDate} onChange={(e) => setIssueDate(e.target.value)}
             InputLabelProps={{ shrink: true, ...tfLabel }}
@@ -350,7 +356,7 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
 
         {/* ── Target branch ── */}
         <Box>
-          <SectionLabel>{t('mis.sectionTargetBranch')}</SectionLabel>
+          <SectionLabel T={T}>{t('mis.sectionTargetBranch')}</SectionLabel>
           <CrossBranchTargetPicker
             branches={branches}
             branchId={targetBranchId}
@@ -386,7 +392,7 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
 
         {/* ── Line items ── */}
         <Box>
-          <SectionLabel>{t('mis.sectionLineItems')}</SectionLabel>
+          <SectionLabel T={T}>{t('mis.sectionLineItems')}</SectionLabel>
 
           <TextField size="small" fullWidth disabled={!targetBranchId}
             placeholder={targetBranchId ? t('mis.reqSearchPlaceholder') : t('mis.reqPickBranchFirst')}
@@ -575,7 +581,7 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
 
         {/* ── Notes ── */}
         <Box>
-          <SectionLabel>{t('mis.sectionNotes')}</SectionLabel>
+          <SectionLabel T={T}>{t('mis.sectionNotes')}</SectionLabel>
           <TextField size="small" fullWidth multiline minRows={3} value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t('mis.reqNotePlaceholder')}

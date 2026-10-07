@@ -1015,7 +1015,10 @@
     "stockReservedTooltip": "Accepted — its quantities are out of stock (or reserved on their lot)",
     "acceptedTakesStockHint": "Takes the quantities out of stock / the lot",
     "acceptedTakesStockNote": "Saving as Accepted takes these quantities out of stock — or out of their lot for supply lines. Moving it out of Accepted puts them back.",
-    "unacceptPutsStockBackNote": "Moving it out of Accepted puts its quantities back in stock / the lot."
+    "unacceptPutsStockBackNote": "Moving it out of Accepted puts its quantities back in stock / the lot.",
+    "settingsForBranch": "Branch: {{branch}}",
+    "settingsInherited": "{{branch}} has no settings of its own yet — these are the shared defaults. Saving gives {{branch}} its own.",
+    "settingsLoadFailed": "Couldn't load this branch's settings."
   },
   "users": {
     "justNow": "Just now",

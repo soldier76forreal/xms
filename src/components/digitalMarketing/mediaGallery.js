@@ -27,6 +27,22 @@ import { resolveMediaKind, downloadFile } from './mediaViewer';
 // the file to paint a frame — which is why videos use preload="metadata" and a
 // #t=0.1 fragment rather than downloading the whole clip up front.
 
+// Defined at MODULE scope on purpose. A component declared inside another
+// component body is a NEW component type on every render, so React unmounts and
+// remounts its whole subtree each time — which drops keyboard focus (the caret
+// jumps out of the input mid-typing) and resets tab position.
+function Placeholder({ Icon, name, T }) {
+  return (
+    <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+      justifyContent: 'center', flexDirection: 'column', gap: 0.5, px: 0.5 }}>
+      <Icon sx={{ fontSize: 22, color: T.TEXT_TER }} />
+      <Typography sx={{ fontSize: '0.58rem', color: T.TEXT_TER, textAlign: 'center',
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+        {name}
+      </Typography>
+    </Box>
+  );
+}
 const KINDS = [
   { key: 'all',   labelKey: 'dm.mediaFilterAll' },
   { key: 'image', labelKey: 'dm.mediaFilterImages' },
@@ -75,16 +91,6 @@ function Tile({ item, onOpen, onDuration, duration, T }) {
     },
   };
 
-  const Placeholder = ({ Icon }) => (
-    <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
-      justifyContent: 'center', flexDirection: 'column', gap: 0.5, px: 0.5 }}>
-      <Icon sx={{ fontSize: 22, color: T.TEXT_TER }} />
-      <Typography sx={{ fontSize: '0.58rem', color: T.TEXT_TER, textAlign: 'center',
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
-        {item.name}
-      </Typography>
-    </Box>
-  );
 
   if (item.kind === 'image' && !failed) {
     return (
@@ -133,7 +139,7 @@ function Tile({ item, onOpen, onDuration, duration, T }) {
   if (item.kind === 'audio') {
     return (
       <Box {...common}>
-        <Placeholder Icon={AudiotrackIcon} />
+        <Placeholder Icon={AudiotrackIcon} name={item.name} T={T} />
         {duration > 0 && (
           <Box sx={{ position: 'absolute', left: 4, bottom: 4, px: 0.5, py: '1px',
             borderRadius: '4px', bgcolor: 'rgba(0,0,0,0.6)' }}>
@@ -150,7 +156,7 @@ function Tile({ item, onOpen, onDuration, duration, T }) {
 
   return (
     <Box {...common}>
-      <Placeholder Icon={item.kind === 'pdf' ? PictureAsPdfIcon : InsertDriveFileIcon} />
+      <Placeholder Icon={item.kind === 'pdf' ? PictureAsPdfIcon : InsertDriveFileIcon} name={item.name} T={T} />
     </Box>
   );
 }

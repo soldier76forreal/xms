@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useMemo } from 'react';
+import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Drawer from '@mui/material/Drawer';
@@ -190,6 +190,14 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   // here must never permanently lock the rest of the form; the server still
   // enforces the real guard at submit time (see the 409 handling below).
   const [phoneCheck, setPhoneCheck] = useState({ status: 'idle', match: null });
+  // The number the last duplicate check was run for, so the debounced check and
+  // the Tab-key check never repeat each other.
+  const lastCheckedPhone = useRef(null);
+  const phoneDebounce = useRef(null);
+  const phoneInputRef = useRef(null);
+  // Set when Tab was pressed in the phone field before the rest of the form
+  // existed: once the check clears, focus moves to the first revealed field.
+  const [pendingFocus, setPendingFocus] = useState(false);
 
   // Reset form when customer or open changes
   useEffect(() => {
@@ -200,6 +208,8 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
       setProdSearch('');
       setProdResults([]);
       setPhoneCheck({ status: 'idle', match: null });
+      lastCheckedPhone.current = null;
+      setPendingFocus(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, customer?._id]);
@@ -211,29 +221,67 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   // `mode` (the prop, not the later-derived `isEdit`) since both of those are
   // declared further down this component — `form` and `mode` are the only
   // things this early in the body that already hold the same information.
+  const runPhoneCheck = async (phone) => {
+    setPhoneCheck({ status: 'checking', match: null });
+    let next;
+    try {
+      const res = await authCtx.jwtInst({
+        method: 'get',
+        url: `${axiosGlobal.defaultTargetApi}/crm/customers/check-phone`,
+        params: { phoneNumber: phone, ...(mode === 'edit' && customer?._id ? { excludeId: customer._id } : {}) },
+      });
+      next = res.data?.exists
+        ? { status: 'duplicate', match: res.data.customer || null }
+        : { status: 'clear', match: null };
+    } catch (_) {
+      next = { status: 'error', match: null };
+    }
+    lastCheckedPhone.current = phone;
+    setPhoneCheck(next);
+    return next;
+  };
+
   useEffect(() => {
     const phone = form.values.phoneNumber?.trim();
-    if (!phone) { setPhoneCheck({ status: 'idle', match: null }); return; }
+    if (!phone) { lastCheckedPhone.current = null; setPhoneCheck({ status: 'idle', match: null }); return undefined; }
+    if (lastCheckedPhone.current === phone) return undefined;   // already checked (e.g. by Tab)
     setPhoneCheck({ status: 'checking', match: null });
-    const timer = setTimeout(async () => {
-      try {
-        const res = await authCtx.jwtInst({
-          method: 'get',
-          url: `${axiosGlobal.defaultTargetApi}/crm/customers/check-phone`,
-          params: { phoneNumber: phone, ...(mode === 'edit' && customer?._id ? { excludeId: customer._id } : {}) },
-        });
-        setPhoneCheck(res.data?.exists
-          ? { status: 'duplicate', match: res.data.customer || null }
-          : { status: 'clear', match: null });
-      } catch (_) {
-        setPhoneCheck({ status: 'error', match: null });
-      }
-    }, 400);
+    // Skip a number that was already checked in the meantime: re-checking it
+    // would flip phoneVerified off and unmount the form (and its focus).
+    const timer = setTimeout(() => { if (lastCheckedPhone.current !== phone) runPhoneCheck(phone); }, 400);
+    phoneDebounce.current = timer;
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.values.phoneNumber, mode, customer?._id]);
 
   const phoneVerified = phoneCheck.status === 'clear' || phoneCheck.status === 'error';
+
+  // Keyboard flow: Tab out of the phone field checks the number RIGHT AWAY
+  // instead of waiting for the debounce, and — once it clears — moves focus to
+  // the first field of the section that just appeared. Without this, Tab landed
+  // on the footer buttons because the fields below didn't exist yet.
+  const handlePhoneKeyDown = async (e) => {
+    if (e.key !== 'Tab' || e.shiftKey) return;
+    const phone = form.values.phoneNumber?.trim();
+    if (!phone || phoneVerified) return;      // nothing typed, or the form is already open
+    e.preventDefault();
+    clearTimeout(phoneDebounce.current);     // the keystroke's debounce is superseded
+    const result = await runPhoneCheck(phone);
+    if (result.status === 'clear' || result.status === 'error') setPendingFocus(true);
+  };
+
+  useEffect(() => {
+    if (!pendingFocus || !phoneVerified) return;
+    const phoneInput = phoneInputRef.current;
+    const scope = phoneInput && (phoneInput.closest('.MuiDrawer-paper') || document);
+    if (scope) {
+      const fields = [...scope.querySelectorAll('input:not([type=hidden]):not([disabled]):not([readonly]), textarea:not([disabled])')];
+      const next = fields[fields.indexOf(phoneInput) + 1];
+      if (next) next.focus();
+    }
+    setPendingFocus(false);
+  }, [pendingFocus, phoneVerified]);
+
 
   // Product search (debounced) — scoped to the currently active branch, since
   // Inventory is fully branch-isolated (interested products must come from the
@@ -511,6 +559,8 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
             <TextField label={`${t('auth.phoneNumber')} *`} size="small" sx={{ ...fieldSx, flexGrow: 1 }}
               value={values.phoneNumber}
               autoFocus={!isEdit}
+              inputRef={phoneInputRef}
+              onKeyDown={handlePhoneKeyDown}
               onChange={e => { handleChange('phoneNumber', e.target.value); setDupError(null); }}
               onBlur={() => handleBlur('phoneNumber')}
               error={!!fieldError('phoneNumber') || !!dupError || phoneCheck.status === 'duplicate'}

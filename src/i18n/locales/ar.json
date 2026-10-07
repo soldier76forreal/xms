@@ -1024,7 +1024,10 @@
     "stockReservedTooltip": "مقبول — كمياته خارج المخزون (أو محجوزة على دفعتها)",
     "acceptedTakesStockHint": "يُخرج الكميات من المخزون / الدفعة",
     "acceptedTakesStockNote": "الحفظ بحالة «مقبول» يُخرج هذه الكميات من المخزون — أو من دفعتها لبنود التوريد. نقله من «مقبول» يعيدها.",
-    "unacceptPutsStockBackNote": "نقله من «مقبول» يعيد كمياته إلى المخزون / الدفعة."
+    "unacceptPutsStockBackNote": "نقله من «مقبول» يعيد كمياته إلى المخزون / الدفعة.",
+    "settingsForBranch": "الفرع: {{branch}}",
+    "settingsInherited": "{{branch}} ليس لديه إعدادات خاصة به بعد — هذه هي الإعدادات الافتراضية المشتركة. الحفظ يمنح {{branch}} إعداداته الخاصة.",
+    "settingsLoadFailed": "تعذّر تحميل إعدادات هذا الفرع."
   },
   "users": {
     "justNow": "الآن",

@@ -29,6 +29,18 @@ import { createSupplyDealLetter, updateSupplyDealLetter } from '../../store/stor
 // different jobs: the operational coupe/forecast data, and the contract that
 // gets signed. Everything on the Contract tabs is optional — a deal letter is
 // usable as an internal record long before anyone prints a contract from it.
+// Defined at MODULE scope on purpose. A component declared inside another
+// component body is a NEW component type on every render, so React unmounts and
+// remounts its whole subtree each time — which drops keyboard focus (the caret
+// jumps out of the input mid-typing) and resets tab position.
+function SubHead({ children, T }) {
+  return (
+    <Typography sx={{ fontSize: '0.64rem', fontWeight: 700, textTransform: 'uppercase',
+      letterSpacing: 1, color: T.TEXT_TER, mt: 0.5 }}>
+      {children}
+    </Typography>
+  );
+}
 export default function DealLetterForm({ open, onClose, supplyId, productId, dealLetter = null }) {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -209,12 +221,6 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
   const tabSx = { minHeight: 38, textTransform: 'none', fontSize: '0.76rem', fontWeight: 600,
     color: T.TEXT_TER, '&.Mui-selected': { color: T.TEXT_PRI } };
 
-  const SubHead = ({ children }) => (
-    <Typography sx={{ fontSize: '0.64rem', fontWeight: 700, textTransform: 'uppercase',
-      letterSpacing: 1, color: T.TEXT_TER, mt: 0.5 }}>
-      {children}
-    </Typography>
-  );
 
   return (
     <Drawer anchor="right" open={open} onClose={handleClose}
@@ -256,7 +262,7 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
 
           {/* The coupe's seller IS the contract's فروشنده, so the two live
               together here rather than on a separate tab. */}
-          <SubHead>{t('supply.contractSellerSection')}</SubHead>
+          <SubHead T={T}>{t('supply.contractSellerSection')}</SubHead>
           <Box sx={{ display: 'grid', gridTemplateColumns: isXs ? '1fr' : '1fr 1fr', gap: 1.5 }}>
             <TextField {...field} label={t('supply.sellerNameLabel')} value={sellerName}
               required onChange={(e) => { setSellerName(e.target.value); setError(''); }} />
@@ -270,14 +276,14 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
           <TextField {...field} label={t('supply.contractSellerAddress')} value={contract.seller.addressPhone}
             onChange={(e) => setCSeller('addressPhone', e.target.value)} fullWidth multiline minRows={2} />
 
-          <SubHead>{t('supply.coupeSectionLabel')}</SubHead>
+          <SubHead T={T}>{t('supply.coupeSectionLabel')}</SubHead>
           <TextField {...field} label={t('supply.coupeSpecLabel')} value={coupeSpec}
             onChange={(e) => setCoupeSpec(e.target.value)} multiline minRows={2} fullWidth
             placeholder={t('supply.coupeSpecPlaceholder')} />
           <TextField {...field} label={t('supply.sellerNotesLabel')} value={sellerNotes}
             onChange={(e) => setSellerNotes(e.target.value)} multiline minRows={2} fullWidth />
 
-          <SubHead>{t('supply.contractBuyerSection')}</SubHead>
+          <SubHead T={T}>{t('supply.contractBuyerSection')}</SubHead>
           <TextField {...field} label={t('supply.contractBuyerName')} value={contract.buyer.name}
             onChange={(e) => setCBuyer('name', e.target.value)} fullWidth
             helperText={t('supply.contractBuyerNameHelper')} />
@@ -402,7 +408,7 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
 
         {/* ── 2 · totals & terms ── */}
         {tab === 2 && (<>
-          <SubHead>{t('supply.contractTotalsSection')}</SubHead>
+          <SubHead T={T}>{t('supply.contractTotalsSection')}</SubHead>
           <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', px: 1.5, py: 1.25,
             borderRadius: '10px', bgcolor: T.CTRL_BG, border: `1px solid ${T.BD}` }}>
             <Chip size="small" label={`${t('supply.colSqm')} ${fmt(totals.sqm)}`} sx={{ height: 22, fontSize: '0.66rem' }} />
@@ -424,7 +430,7 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
           <TextField {...field} label={t('supply.contractPaymentTerms')} value={contract.paymentTerms}
             onChange={(e) => setC('paymentTerms', e.target.value)} fullWidth multiline minRows={3} />
 
-          <SubHead>{t('supply.contractArticleBlanks')}</SubHead>
+          <SubHead T={T}>{t('supply.contractArticleBlanks')}</SubHead>
           <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, lineHeight: 1.6 }}>
             {t('supply.contractArticleBlanksHelper')}
           </Typography>

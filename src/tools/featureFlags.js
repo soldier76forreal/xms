@@ -21,3 +21,13 @@ export const INVENTORY_ANALYTICS_ENABLED = false;
 // because an endpoint that still issues tokens is a live auth path whether or
 // not the UI links to it.
 export const SMS_OTP_LOGIN_ENABLED = false;
+
+// Packing lists, pallet labels and the supply contract print through the
+// BROWSER's own print engine ("Save as PDF"), exactly like invoices and
+// quotations (tools/printDocument.js) — the production server can't run
+// headless Chrome reliably, so a server-rendered PDF fails there ("Failed to
+// download…"). Nothing is deleted: the server /pdf routes and the blob-download
+// path below are intact. Flip to true once the server has a real (non-snap)
+// Chrome — set PUPPETEER_EXECUTABLE_PATH, see api/utils/pdfRenderer.js — to get
+// server-rendered PDF files again.
+export const SERVER_SIDE_PDF_ENABLED = false;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useMemo } from 'react';
+import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
@@ -51,6 +51,18 @@ import CrossBranchTargetPicker from './crossBranchTargetPicker';
 // NOTE: no payment section here BY DESIGN — payment figures move only through
 // PUT /:id/payment (mis:payment:edit), covered by the detail quick-record.
 
+// Defined at MODULE scope on purpose. A component declared inside another
+// component body is a NEW component type on every render, so React unmounts and
+// remounts its whole subtree each time — which drops keyboard focus (the caret
+// jumps out of the input mid-typing) and resets tab position.
+function SectionLabel({ children, T }) {
+  return (
+    <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
+      textTransform: 'uppercase', color: T.TEXT_TER, mb: 1.25 }}>
+      {children}
+    </Typography>
+  );
+}
 const STATUS_BY_TYPE = {
   invoice:     ['draft', 'issued', 'paid', 'partially_paid', 'cancelled'],
   pre_invoice: ['draft', 'sent', 'accepted', 'expired'],
@@ -131,6 +143,10 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   const isInvoice = activeType === 'invoice';
   // The full quotation/request being edited or converted (list rows are partial).
   const [sourceDoc, setSourceDoc] = useState(null);
+  // The ACTIVE branch's own accounting defaults (VAT rate, quotation validity).
+  // Every branch keeps its own — a KSA invoice must not start at the UAE's 5%.
+  const [branchProfile, setBranchProfile] = useState(null);
+  const vatEdited = useRef(false);   // the user typed a VAT rate: never overwrite it
 
   const form = useForm(
     { issueDate: toDateInput(new Date()), status: 'draft',
@@ -211,6 +227,34 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
   const arraysDirty = `${JSON.stringify(lines)}` !== arraysBaseline;
   const anyDirty    = isDirty || arraysDirty;
+
+  // ── this branch's defaults ───────────────────────────────────────────────────
+  // Only a NEW document starts from them; an edited or converted one keeps the
+  // rate it was issued with.
+  useEffect(() => {
+    if (!open || isEdit || isConvert) return undefined;
+    let cancelled = false;
+    vatEdited.current = false;
+    setBranchProfile(null);
+    authCtx.jwtInst({
+      method: 'get',
+      url: `${axiosGlobal.defaultTargetApi}/mis/company-profile`,
+      params: activeBranchId ? { branchId: activeBranchId } : {},
+    })
+      .then((res) => { if (!cancelled) setBranchProfile(res.data || null); })
+      .catch(() => { if (!cancelled) setBranchProfile(null); });   // the form still works with the built-in 5%
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isEdit, isConvert, activeBranchId]);
+
+  useEffect(() => {
+    if (!branchProfile || isEdit || isConvert || vatEdited.current) return;
+    const rate = Number(branchProfile.vatRate);
+    if (!Number.isFinite(rate)) return;
+    setField('vatRate', rate);
+    setLines((ls) => ls.map((l) => ({ ...l, vatRate: rate })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchProfile]);
 
   // ── prefill / reset on open ──────────────────────────────────────────────────
   useEffect(() => {
@@ -429,6 +473,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
   // vatRate change applies to all lines (single-rate document, per-line stored)
   const handleVatChange = (v) => {
+    vatEdited.current = true;
     setField('vatRate', v);
     setLines(ls => ls.map(l => ({ ...l, vatRate: Number(v) || 0 })));
   };
@@ -547,12 +592,6 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   };
 
   // ── UI helpers ───────────────────────────────────────────────────────────────
-  const SectionLabel = ({ children }) => (
-    <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1,
-      textTransform: 'uppercase', color: T.TEXT_TER, mb: 1.25 }}>
-      {children}
-    </Typography>
-  );
 
   const tfSx = { '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } };
   const tfInput = { style: { fontSize: '0.8rem' } };
@@ -616,7 +655,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
           {/* ── Document ── */}
           <Box>
-            <SectionLabel>{t('mis.sectionDocument')}</SectionLabel>
+            <SectionLabel T={T}>{t('mis.sectionDocument')}</SectionLabel>
             <Box sx={{ display: 'flex', gap: 1.5 }}>
               <TextField size="small" label={t('mis.fieldIssueDate')} type="date" fullWidth
                 value={values.issueDate}
@@ -658,7 +697,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
           {/* ── Customer (CRM picker) — hidden for an inter-branch quote ── */}
           {!isInterBranch && (
           <Box>
-            <SectionLabel>{t('mis.sectionCustomer')}{!isInvoice ? t('mis.optionalSuffix') : ''}</SectionLabel>
+            <SectionLabel T={T}>{t('mis.sectionCustomer')}{!isInvoice ? t('mis.optionalSuffix') : ''}</SectionLabel>
 
             {values.customerId ? (
               <Box sx={{ mb: 1.5, border: `1px solid ${T.BD}`, borderRadius: '10px', bgcolor: T.CTRL_BG, overflow: 'hidden' }}>
@@ -770,7 +809,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
           {/* ── The two branches of an existing request / inter-branch doc ── */}
           {isInterBranch && (isEdit || isConvert) && (
           <Box>
-            <SectionLabel>{t('mis.sectionBranches')}</SectionLabel>
+            <SectionLabel T={T}>{t('mis.sectionBranches')}</SectionLabel>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1.25,
               border: `1px solid ${T.BD}`, borderRadius: '10px', bgcolor: T.CTRL_BG }}>
               <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -797,7 +836,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
           {/* ── Target branch (Session 72, inter-branch quote only) ── */}
           {isInterBranch && !isEdit && !isConvert && (
           <Box>
-            <SectionLabel>{t('mis.sectionTargetBranch')}</SectionLabel>
+            <SectionLabel T={T}>{t('mis.sectionTargetBranch')}</SectionLabel>
             <CrossBranchTargetPicker
               branches={crossBranchBranches}
               branchId={targetBranchId}
@@ -810,7 +849,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
           {/* ── Line items (Inventory picker) ── */}
           <Box>
-            <SectionLabel>{t('mis.sectionLineItems')}</SectionLabel>
+            <SectionLabel T={T}>{t('mis.sectionLineItems')}</SectionLabel>
 
             <TextField size="small" fullWidth placeholder={t('mis.searchInventoryPlaceholder')}
               value={prodSearch} onChange={(e) => setProdSearch(e.target.value)}
@@ -965,7 +1004,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
           {/* ── Totals & VAT ── */}
           <Box>
-            <SectionLabel>{t('mis.sectionTotalsVat')}</SectionLabel>
+            <SectionLabel T={T}>{t('mis.sectionTotalsVat')}</SectionLabel>
             <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
               <TextField size="small" label={t('mis.fieldVatRate')} type="number" value={values.vatRate}
                 onChange={(e) => handleVatChange(e.target.value)}
@@ -980,8 +1019,10 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
               {!isInvoice && (
                 <TextField size="small" label={t('mis.fieldValidityDays')} type="number" value={values.validityDays}
                   onChange={(e) => setField('validityDays', e.target.value)}
+                  placeholder={branchProfile && branchProfile.quotationValidityDefaultDays != null
+                    ? String(branchProfile.quotationValidityDefaultDays) : ''}
                   inputProps={{ min: 0, style: { fontSize: '0.8rem' } }}
-                  InputLabelProps={tfLabel} sx={{ ...tfSx, flex: 1 }} />
+                  InputLabelProps={{ ...tfLabel, shrink: true }} sx={{ ...tfSx, flex: 1 }} />
               )}
             </Box>
 
@@ -1014,7 +1055,7 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
           {/* ── Notes ── */}
           <Box>
-            <SectionLabel>{t('mis.sectionNotes')}</SectionLabel>
+            <SectionLabel T={T}>{t('mis.sectionNotes')}</SectionLabel>
             <TextField size="small" fullWidth multiline minRows={2} value={values.notes}
               onChange={(e) => setField('notes', e.target.value)}
               placeholder={t('mis.internalNotesPlaceholder')}

@@ -24,6 +24,22 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 // (dataviz skill: dark set passes CVD in the 6–8 band, light set has 3 sub-3:1
 // hues → both require secondary encoding, which we supply via 2px segment gaps
 // AND a fully direct-labelled legend below the bar).
+// Defined at MODULE scope on purpose. A component declared inside another
+// component body is a NEW component type on every render, so React unmounts and
+// remounts its whole subtree each time — which drops keyboard focus (the caret
+// jumps out of the input mid-typing) and resets tab position.
+function HeaderStat({ value, label, T }) {
+  return (
+    <Box>
+      <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: T.TEXT_PRI, lineHeight: 1.1 }}>
+        {value}
+      </Typography>
+      <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.8, mt: 0.25 }}>
+        {label}
+      </Typography>
+    </Box>
+  );
+}
 const CATEGORIES = [
   { key: 'image',    labelKey: 'files.catImages',    dark: '#3987e5', light: '#2a78d6', Icon: ImageIcon },
   { key: 'video',    labelKey: 'files.catVideos',    dark: '#008300', light: '#008300', Icon: MovieIcon },
@@ -91,16 +107,6 @@ export default function StorageManagement({ open, onClose }) {
     .map((c) => ({ ...c, pct: total ? (c.size / total) * 100 : 0 }));
   const present = rows.filter((r) => r.size > 0 || r.count > 0);
 
-  const HeaderStat = ({ value, label }) => (
-    <Box>
-      <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: T.TEXT_PRI, lineHeight: 1.1 }}>
-        {value}
-      </Typography>
-      <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, textTransform: 'uppercase', letterSpacing: 0.8, mt: 0.25 }}>
-        {label}
-      </Typography>
-    </Box>
-  );
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={isXs}
@@ -132,9 +138,9 @@ export default function StorageManagement({ open, onClose }) {
 
           {/* Headline totals */}
           <Box sx={{ display: 'flex', gap: 4 }}>
-            <HeaderStat value={formatBytes(total)} label={t('files.totalUsedLabel')} />
+            <HeaderStat T={T} value={formatBytes(total)} label={t('files.totalUsedLabel')} />
             <Box sx={{ width: '1px', bgcolor: T.DIVIDER }} />
-            <HeaderStat value={(stats.totalCount || 0).toLocaleString()} label={t('files.filesCountLabel')} />
+            <HeaderStat T={T} value={(stats.totalCount || 0).toLocaleString()} label={t('files.filesCountLabel')} />
           </Box>
 
           {present.length === 0 ? (
