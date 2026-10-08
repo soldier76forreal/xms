@@ -30,7 +30,7 @@ import { uploadBlogInlineImage } from '../../store/store';
 // ONLY way to produce markup here, there's no "raw HTML" escape hatch. The
 // server still sanitizes on write (see api/utils/sanitizeHtml.js) as
 // defense against a direct API call bypassing this editor entirely.
-export default function RichTextEditor({ value, onChange, dir = 'ltr', placeholder }) {
+export default function RichTextEditor({ value, onChange, dir = 'ltr', placeholder, minHeight = 220 }) {
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const dispatch    = useDispatch();
@@ -55,7 +55,7 @@ export default function RichTextEditor({ value, onChange, dir = 'ltr', placehold
     content: value || '',
     onUpdate: ({ editor: e }) => onChange(e.getHTML()),
     editorProps: {
-      attributes: { dir, style: 'min-height:220px;outline:none;' },
+      attributes: { dir, style: `min-height:${minHeight}px;outline:none;` },
     },
   });
 
@@ -71,8 +71,8 @@ export default function RichTextEditor({ value, onChange, dir = 'ltr', placehold
 
   useEffect(() => {
     if (!editor) return;
-    editor.setOptions({ editorProps: { attributes: { dir, style: 'min-height:220px;outline:none;' } } });
-  }, [editor, dir]);
+    editor.setOptions({ editorProps: { attributes: { dir, style: `min-height:${minHeight}px;outline:none;` } } });
+  }, [editor, dir, minHeight]);
 
   if (!editor) return null;
 

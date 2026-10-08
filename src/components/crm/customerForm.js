@@ -80,7 +80,7 @@ const ATTRACTED_BY_OPTIONS = [
 ];
 
 // initial form values — mirrors the customer model fields we care about
-const buildInitial = (customer) => {
+const buildInitial = (customer, defaultBranchId = '') => {
   if (!customer) {
     // Default country code = UAE
     const defaultCC = COUNTRIES.find(c => c.code === 'AE') || COUNTRIES[0];
@@ -99,6 +99,7 @@ const buildInitial = (customer) => {
       tags: [],
       interestedProducts: [],
       explanations: '',
+      branchId: defaultBranchId || '',
     };
   }
   const pi = customer.personalInformation || {};
@@ -138,6 +139,7 @@ const buildInitial = (customer) => {
     tags:         customer.tags   || [],
     interestedProducts: customer.interestedProducts || [],
     explanations: customer.explanations || '',
+    branchId: customer.branchId ? String(customer.branchId) : (defaultBranchId || ''),
   };
 };
 
@@ -150,7 +152,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const dispatch    = useDispatch();
-  const { activeBranchId } = useBranch();
+  const { activeBranchId, branches } = useBranch();
 
   const T = {
     BG:       isDark ? '#0d0d0d' : theme.palette.background.paper,
@@ -172,7 +174,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
     phoneNumber: [required(t('crm.errPhoneNumberRequired'))],
   });
 
-  const form = useForm(buildInitial(customer), buildSchema());
+  const form = useForm(buildInitial(customer, activeBranchId), buildSchema());
 
   const [saving,       setSaving]       = useState(false);
   const [dupError,     setDupError]     = useState(null);
@@ -202,7 +204,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
   // Reset form when customer or open changes
   useEffect(() => {
     if (open) {
-      form.setValues(buildInitial(customer));
+      form.setValues(buildInitial(customer, activeBranchId));
       setDupError(null);
       setTagInput('');
       setProdSearch('');
@@ -212,7 +214,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
       setPendingFocus(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, customer?._id]);
+  }, [open, customer?._id, activeBranchId]);
 
   // Debounced — fires as the phone number is typed (mirrors the product-search
   // debounce below), not just on blur, so the gate opens as soon as possible.
@@ -282,26 +284,26 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
     setPendingFocus(false);
   }, [pendingFocus, phoneVerified]);
 
-
   // Product search (debounced) — scoped to the currently active branch, since
   // Inventory is fully branch-isolated (interested products must come from the
   // branch the user is actually working in, not every branch's catalog).
   useEffect(() => {
-    if (!prodSearch.trim() || !activeBranchId) { setProdResults([]); return; }
+    const lookupBranchId = form.values.branchId || activeBranchId;
+    if (!prodSearch.trim() || !lookupBranchId) { setProdResults([]); return; }
     const timer = setTimeout(async () => {
       setProdLoading(true);
       try {
         const res = await authCtx.jwtInst({
           method: 'get',
           url: `${axiosGlobal.defaultTargetApi}/crm/products-lookup`,
-          params: { search: prodSearch, branchId: activeBranchId },
+          params: { search: prodSearch, branchId: lookupBranchId },
         });
         setProdResults(Array.isArray(res.data) ? res.data : []);
       } catch (_) {}
       setProdLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [prodSearch, activeBranchId, authCtx, axiosGlobal]);
+  }, [prodSearch, form.values.branchId, activeBranchId, authCtx, axiosGlobal]);
 
   // Cities for the selected country
   const cityOptions = useMemo(() => {
@@ -369,6 +371,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
         productCode: variant ? variant.code : prod.code,
         productName: prod.name,
         ...(variant ? { variantId: variant._id } : {}),
+        branchId: values.branchId || activeBranchId || null,
         note: '',
       },
     ]);
@@ -435,11 +438,17 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
       commChannels:      values.commChannels,
       commHandles:       values.commHandles,
       status:            values.status,
+      branchId:          values.branchId || null,
       tags:              values.tags,
       interestedProducts: values.interestedProducts.map(ip => ({
         productId: ip.productId,
         ...(ip.variantId ? { variantId: ip.variantId } : {}),
+        ...(ip.branchId ? { branchId: ip.branchId } : {}),
         note: ip.note || '',
+        source: ip.source || 'xms',
+        addedToWebsitePurchaseList: !!ip.addedToWebsitePurchaseList,
+        ...(ip.requestedQuantity != null ? { requestedQuantity: ip.requestedQuantity } : {}),
+        ...(ip.addedAt ? { addedAt: ip.addedAt } : {}),
       })),
       explanations: values.explanations,
     };
@@ -655,6 +664,18 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
             ))}
           </TextField>
 
+          <TextField label={t('crm.customerBranch')} size="small" fullWidth select
+            value={values.branchId || ''}
+            onChange={e => handleChange('branchId', e.target.value)}
+            sx={{ ...fieldSx, mb: 1.5 }}>
+            <MenuItem value=""><em>{t('crm.notSetPlaceholder')}</em></MenuItem>
+            {(branches || []).map(branch => (
+              <MenuItem key={branch._id} value={branch._id} sx={{ fontSize: '0.85rem' }}>
+                {branch.name}
+              </MenuItem>
+            ))}
+          </TextField>
+
           {/* ── 2. Contact & channels ── */}
           <SectionHeader label={t('crm.sectionContact')} T={T} />
 
@@ -799,6 +820,12 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
                   {ip.productName && ip.productCode !== ip.productName && (
                     <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 0.5 }}>
                       {ip.productName}{ip.variantId ? t('crm.specificVarietySuffix') : t('crm.anyVarietySuffix')}
+                    </Typography>
+                  )}
+                  {ip.addedToWebsitePurchaseList && (
+                    <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_SEC, mb: 0.5, fontWeight: 700 }}>
+                      {t('crm.websitePurchaseListInterest')}
+                      {ip.requestedQuantity != null ? ` - ${ip.requestedQuantity}` : ''}
                     </Typography>
                   )}
                   <TextField size="small" fullWidth placeholder={t('crm.notePlaceholderOptional')}

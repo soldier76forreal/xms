@@ -12,6 +12,7 @@ const GRADES = {
   Q:  { name:'Super',    rank:5 },
   QS: { name:'Super+',   rank:6 },
   W:  { name:'Momtaz',   rank:4 },
+  WS: { name:'Momtaz+',  rank:4 },
   E:  { name:'Grade 1',  rank:3 },
   R:  { name:'Grade 2',  rank:2 },
   T:  { name:'Grade 3',  rank:1 },
@@ -65,6 +66,41 @@ export function parseStoneCode(rawCode) {
     finish:     finish || null,
     finishName: FINISH_NAMES[finish] || null,
     parseWarnings: warnings,
+  };
+}
+
+// The inverse of parseStoneCode: specification -> code (XX##GLLLLWWTT[VC][FU][PH]).
+// `code` stays '' while anything is wrong; `errors` names every field that is.
+export function buildStoneCode(spec = {}) {
+  const errors = {};
+  const productCode = String(spec.productCode || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}\d{2}$/.test(productCode)) errors.productCode = true;
+
+  const grade = String(spec.grade || '').trim().toUpperCase();
+  if (!/^[A-Z]{1,2}$/.test(grade)) errors.grade = true;
+
+  let lengthTenths = 0;
+  let widthCm = 0;
+  if (!spec.unsized) {
+    const length = Number(spec.lengthCm);
+    lengthTenths = Math.round(length * 10);
+    if (!(length > 0) || lengthTenths < 1 || lengthTenths > 9999) errors.lengthCm = true;
+    widthCm = Number(spec.widthCm);
+    if (!Number.isInteger(widthCm) || widthCm < 1 || widthCm > 99) errors.widthCm = true;
+  }
+  const thicknessMm = Number(spec.thicknessMm);
+  if (!Number.isInteger(thicknessMm) || thicknessMm < 1 || thicknessMm > 99) errors.thicknessMm = true;
+
+  const pick = (value, allowed) => (allowed.includes(String(value || '').toUpperCase()) ? String(value).toUpperCase() : '');
+  const cut = pick(spec.cut, ['V', 'C']);
+  const fill = pick(spec.fill, ['F', 'U']);
+  const finish = pick(spec.finish, ['P', 'H']);
+
+  if (Object.keys(errors).length) return { code: '', errors };
+  const pad = (n, width) => String(n).padStart(width, '0');
+  return {
+    code: `${productCode}${grade}${pad(lengthTenths, 4)}${pad(widthCm, 2)}${pad(thicknessMm, 2)}${cut}${fill}${finish}`,
+    errors: {},
   };
 }
 

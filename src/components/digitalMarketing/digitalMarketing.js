@@ -8,6 +8,7 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LinkIcon from '@mui/icons-material/Link';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import ArticleIcon from '@mui/icons-material/Article';
+import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useHistory } from 'react-router-dom';
@@ -17,6 +18,7 @@ import ReadyToUploadSection from './readyToUploadSection';
 import LinkPageSection from './linkPageSection';
 import WhatsappShareSection from './whatsappShareSection';
 import BlogSection from './blogSection';
+import ProductContentSection from './productContentSection';
 import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
 
 // The Blog tab only exists to author content for the public website's
@@ -28,6 +30,7 @@ const TABS = [
   { id: 'readyToUpload', Icon: CloudUploadIcon, labelKey: 'dm.tabReadyToUpload' },
   { id: 'linkPages',     Icon: LinkIcon,        labelKey: 'dm.tabLinkPages' },
   { id: 'whatsappShares', Icon: WhatsAppIcon,   labelKey: 'dm.tabWhatsappShares' },
+  { id: 'productContent', Icon: Inventory2OutlinedIcon, labelKey: 'dm.tabProductContent' },
   ...(WEBSITE_FEATURES_ENABLED ? [{ id: 'blog', Icon: ArticleIcon, labelKey: 'dm.tabBlog' }] : []),
 ];
 
@@ -123,6 +126,8 @@ export default function DigitalMarketing() {
           ? <LinkPageSection />
           : tab === 'whatsappShares'
           ? <WhatsappShareSection />
+          : tab === 'productContent'
+          ? <ProductContentSection />
           : <BlogSection />}
       </Box>
     </Box>

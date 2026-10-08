@@ -27,6 +27,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
+import StraightenIcon from '@mui/icons-material/Straighten';
 import PersonIcon from '@mui/icons-material/Person';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
@@ -41,6 +42,7 @@ import ConfirmDialog from '../../tools/modal/confirmDialog';
 import COUNTRIES from '../crm/util/countryData';
 import CustomerForm from '../crm/customerForm';
 import CrossBranchTargetPicker from './crossBranchTargetPicker';
+import SpecCodeBuilder from '../inventory/specCodeBuilder';
 
 // Phase 6 — invoice / pre-invoice Drawer form (Session 46).
 // Sectioned + validated via the shared useForm hook (scalars) with manual
@@ -206,6 +208,9 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
   // Session 72 — populated instead of prodResults when isInterBranch &&
   // crossBranchSource==='supply' (a flat shape, not nested product+variants).
   const [supplyResults, setSupplyResults] = useState([]);
+  // the other way to a variety: enter its specification, get the code (inventory/specCodeBuilder.js)
+  const [specOpen, setSpecOpen] = useState(false);
+  const [lookupVersion, setLookupVersion] = useState(0);   // bumped when the builder adds a variety, so the list below refreshes
 
   // picked customer's shipping address (from CRM customer.address[0]) + add-address dialog
   const [custAddress, setCustAddress] = useState(null);
@@ -224,6 +229,8 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
     () => new Set(lines.map(l => l.variantId ? `v:${l.variantId}` : `p:${l.productId}`)),
     [lines]
   );
+
+  const usedCodes = useMemo(() => new Set(lines.map((l) => String(l.code || '').toUpperCase())), [lines]);
 
   const arraysDirty = `${JSON.stringify(lines)}` !== arraysBaseline;
   const anyDirty    = isDirty || arraysDirty;
@@ -382,7 +389,26 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
       setProdLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debProdSearch, open, isInterBranch, targetBranchId, crossBranchSource]);
+  }, [debProdSearch, open, isInterBranch, targetBranchId, crossBranchSource, lookupVersion]);
+
+  // Inventory products + their varieties for the specification builder: the same
+  // source the typed search uses (own catalogue, or the branch being asked).
+  const searchForBuilder = async (term) => {
+    const viaCrossBranch = isInterBranch && String(targetBranchId) !== String(activeBranchId);
+    const url = viaCrossBranch
+      ? `${axiosGlobal.defaultTargetApi}/mis/cross-branch/inventory`
+      : `${axiosGlobal.defaultTargetApi}/mis/products-lookup`;
+    const params = viaCrossBranch
+      ? { search: String(term || '').trim(), branchId: targetBranchId, requestingBranchId: activeBranchId }
+      : { search: String(term || '').trim(), branchId: activeBranchId };
+    const res = await authCtx.jwtInst({ method: 'get', url, params });
+    return res.data || [];
+  };
+  const builderViaCrossBranch = isInterBranch && String(targetBranchId) !== String(activeBranchId);
+  // supply lines come from deal letters, not from a specification; and an inter-branch
+  // request needs its target chosen first
+  const builderAvailable = !isInterBranch
+    || (Boolean(targetBranchId) && !(builderViaCrossBranch && crossBranchSource === 'supply'));
 
   const formatAddress = (a) => {
     if (!a) return '';
@@ -870,7 +896,30 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
                 ) : undefined,
                 style: { fontSize: '0.8rem' },
               }}
-              sx={{ ...tfSx, mb: prodResults.length ? 0.5 : 1.5 }} />
+              sx={{ ...tfSx, mb: prodResults.length ? 0.5 : 0.5 }} />
+
+            {builderAvailable && (
+              <>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.75 }}>
+                  <Button size="small" onClick={() => setSpecOpen((o) => !o)} startIcon={<StraightenIcon sx={{ fontSize: 14 }} />}
+                    aria-expanded={specOpen}
+                    sx={{ fontSize: '0.68rem', textTransform: 'none', color: specOpen ? T.TEXT_PRI : T.TEXT_TER }}>
+                    {specOpen ? t('inventory.specHide') : t('inventory.specToggle')}
+                  </Button>
+                </Box>
+                {specOpen && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <SpecCodeBuilder searchProducts={searchForBuilder}
+                      canCreate={!builderViaCrossBranch && can('inventory:subproduct:create')}
+                      noPermissionHint={builderViaCrossBranch ? t('inventory.specOtherBranch') : t('inventory.specCannotAdd')}
+                      usedCodes={usedCodes}
+                      onUse={(product, variant) => addLine(product, variant)}
+                      onCreated={() => setLookupVersion((n) => n + 1)} />
+                  </Box>
+                )}
+              </>
+            )}
+            {!builderAvailable && <Box sx={{ mb: 1 }} />}
 
             {prodResults.length > 0 && (
               <Box sx={{ mb: 1.5, border: `1px solid ${T.BD}`, borderRadius: '10px',

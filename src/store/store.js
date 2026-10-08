@@ -1209,6 +1209,142 @@ export const uploadBlogInlineImage = createAsyncThunk('overallAssets/uploadBlogI
   }
 });
 
+export const fetchProductContents = createAsyncThunk('overallAssets/fetchProductContents', async (theData, { dispatch }) => {
+  dispatch(actions.dmProductContentSetLoading(true));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content`,
+      params: theData.params || {},
+    });
+    dispatch(actions.dmProductContentSetList({ data: response.data.data, total: response.data.total }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load product content', type: 'error' }));
+  } finally {
+    dispatch(actions.dmProductContentSetLoading(false));
+  }
+});
+
+export const fetchProductContent = createAsyncThunk('overallAssets/fetchProductContent', async (theData, { dispatch }) => {
+  dispatch(actions.dmProductContentSetSelectedErrorStatus(null));
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content/${theData.id}`,
+      params: theData.params || {},
+    });
+    dispatch(actions.dmProductContentSetSelected(response.data));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.dmProductContentSetSelectedErrorStatus(err?.response?.status || null));
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to load product content', type: 'error' }));
+    throw err;
+  }
+});
+
+export const createProductContent = createAsyncThunk('overallAssets/createProductContent', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content`,
+      data: theData.data,
+    });
+    dispatch(actions.dmProductContentUpsert(response.data));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Product content created', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to create product content', type: 'error' }));
+    throw err;
+  }
+});
+
+export const updateProductContent = createAsyncThunk('overallAssets/updateProductContent', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'put',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content/${theData.id}`,
+      data: theData.data,
+    });
+    dispatch(actions.dmProductContentUpsert(response.data));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Product content updated', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to update product content', type: 'error' }));
+    throw err;
+  }
+});
+
+export const deleteProductContent = createAsyncThunk('overallAssets/deleteProductContent', async (theData, { dispatch }) => {
+  try {
+    await theData.authCtx.jwtInst({
+      method: 'delete',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content/${theData.id}`,
+    });
+    dispatch(actions.dmProductContentRemove(theData.id));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Product content deleted', type: 'success' }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete product content', type: 'error' }));
+  }
+});
+
+export const fetchProductContentTaxonomy = createAsyncThunk('overallAssets/fetchProductContentTaxonomy', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'get',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content/taxonomy`,
+      params: theData.params || {},
+    });
+    dispatch(actions.dmProductTaxonomySetList(response.data.data || []));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Failed to load product categories/tags', type: 'error' }));
+  }
+});
+
+export const createProductContentTaxonomy = createAsyncThunk('overallAssets/createProductContentTaxonomy', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'post',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content/taxonomy`,
+      data: theData.data,
+    });
+    dispatch(actions.dmProductTaxonomyUpsert(response.data));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Category/tag saved', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to save category/tag', type: 'error' }));
+    throw err;
+  }
+});
+
+export const updateProductContentTaxonomy = createAsyncThunk('overallAssets/updateProductContentTaxonomy', async (theData, { dispatch }) => {
+  try {
+    const response = await theData.authCtx.jwtInst({
+      method: 'put',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content/taxonomy/${theData.id}`,
+      data: theData.data,
+    });
+    dispatch(actions.dmProductTaxonomyUpsert(response.data));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Category/tag updated', type: 'success' }));
+    return response.data;
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to update category/tag', type: 'error' }));
+    throw err;
+  }
+});
+
+export const deleteProductContentTaxonomy = createAsyncThunk('overallAssets/deleteProductContentTaxonomy', async (theData, { dispatch }) => {
+  try {
+    await theData.authCtx.jwtInst({
+      method: 'delete',
+      url: `${theData.axiosGlobal.defaultTargetApi}/digitalMarketing/product-content/taxonomy/${theData.id}`,
+    });
+    dispatch(actions.dmProductTaxonomyRemove(theData.id));
+    dispatch(actions.setShowSnackBar({ status: true, msg: 'Category/tag deleted', type: 'success' }));
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to delete category/tag', type: 'error' }));
+  }
+});
+
 export const fetchWhatsappShares = createAsyncThunk('overallAssets/fetchWhatsappShares', async (theData, { dispatch }) => {
   dispatch(actions.dmWhatsappSetLoading(true));
   try {
@@ -2120,6 +2256,12 @@ const dataSlice = createSlice({
     dmBlogPostsLoading: false,
     dmSelectedBlogPost: null,
     dmSelectedBlogPostErrorStatus: null,
+    dmProductContents: [],
+    dmProductContentsTotal: 0,
+    dmProductContentsLoading: false,
+    dmSelectedProductContent: null,
+    dmSelectedProductContentErrorStatus: null,
+    dmProductTaxonomy: [],
     dmRefreshKey: 0,
     //------------------------------tutorial center
     tutorials: [],
@@ -2819,6 +2961,61 @@ const dataSlice = createSlice({
         if (state.dmSelectedBlogPost && String(state.dmSelectedBlogPost._id) === String(action.payload._id)) {
           state.dmSelectedBlogPost = action.payload;
         }
+      },
+      dmProductContentSetList(state, action) {
+        state.dmProductContents      = action.payload.data || [];
+        state.dmProductContentsTotal = action.payload.total || 0;
+      },
+      dmProductContentSetLoading(state, action) {
+        state.dmProductContentsLoading = action.payload;
+      },
+      dmProductContentSetSelected(state, action) {
+        state.dmSelectedProductContent = action.payload;
+      },
+      dmProductContentSetSelectedErrorStatus(state, action) {
+        state.dmSelectedProductContentErrorStatus = action.payload;
+      },
+      dmProductContentRemove(state, action) {
+        state.dmProductContents = state.dmProductContents.filter(d => String(d._id) !== String(action.payload));
+        state.dmProductContentsTotal = Math.max(0, state.dmProductContentsTotal - 1);
+        if (state.dmSelectedProductContent && String(state.dmSelectedProductContent._id) === String(action.payload)) {
+          state.dmSelectedProductContent = null;
+        }
+      },
+      dmProductContentUpsert(state, action) {
+        const idx = state.dmProductContents.findIndex(d => String(d._id) === String(action.payload._id));
+        const listItem = {
+          _id: action.payload._id,
+          code: action.payload.code,
+          title: action.payload.title,
+          titleAr: action.payload.titleAr,
+          titleFa: action.payload.titleFa,
+          slug: action.payload.slug,
+          status: action.payload.status,
+          categories: action.payload.categories || [],
+          tags: action.payload.tags || [],
+          updateDate: action.payload.updateDate,
+          source: action.payload.source,
+        };
+        if (idx >= 0) state.dmProductContents[idx] = listItem;
+        else {
+          state.dmProductContents = [listItem, ...state.dmProductContents];
+          state.dmProductContentsTotal += 1;
+        }
+        if (state.dmSelectedProductContent && String(state.dmSelectedProductContent._id) === String(action.payload._id)) {
+          state.dmSelectedProductContent = action.payload;
+        }
+      },
+      dmProductTaxonomySetList(state, action) {
+        state.dmProductTaxonomy = action.payload || [];
+      },
+      dmProductTaxonomyUpsert(state, action) {
+        const idx = state.dmProductTaxonomy.findIndex(d => String(d._id) === String(action.payload._id));
+        if (idx >= 0) state.dmProductTaxonomy[idx] = action.payload;
+        else state.dmProductTaxonomy = [...state.dmProductTaxonomy, action.payload];
+      },
+      dmProductTaxonomyRemove(state, action) {
+        state.dmProductTaxonomy = state.dmProductTaxonomy.filter(d => String(d._id) !== String(action.payload));
       },
       dmWhatsappSetList(state, action) {
         state.dmWhatsappShares      = action.payload.data;

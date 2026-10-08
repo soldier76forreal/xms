@@ -17,6 +17,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import StraightenIcon from '@mui/icons-material/Straighten';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -24,6 +25,7 @@ import { useBranch } from '../../contextApi/BranchContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { actions } from '../../store/store';
 import CrossBranchTargetPicker from './crossBranchTargetPicker';
+import SpecCodeBuilder from '../inventory/specCodeBuilder';
 
 // Defined at MODULE scope on purpose. A component declared inside another
 // component body is a NEW component type on every render, so React unmounts and
@@ -95,6 +97,8 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
   const [debSearch, setDebSearch] = useState('');
   const [prodResults, setProdResults] = useState([]);
   const [supplyResults, setSupplyResults] = useState([]);
+  // the other way to a variety: enter its specification, get the code (inventory/specCodeBuilder.js)
+  const [specOpen, setSpecOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [lines, setLines] = useState([]);
   const [notes, setNotes] = useState('');
@@ -115,7 +119,7 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
   useLayoutEffect(() => {
     if (open && !wasOpen.current) {
       setOpened(preset || null);
-      setError(''); setIssueDate(today()); setNotes('');
+      setError(''); setIssueDate(today()); setNotes(''); setSpecOpen(false);
       setProdResults([]); setSupplyResults([]);
       setTargetBranchId(preset?.branchId ? String(preset.branchId) : '');
       setSource(preset?.source === 'supply' || !can('mis:crossBranch:quote') ? 'supply' : 'inventory');
@@ -202,6 +206,21 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
     }]);
     setError('');
   };
+
+  // Products + their varieties for the specification builder: the same cross-branch catalogue
+  // the search above reads. It only LOOKS — a variety is never added to another branch's
+  // catalogue from here, so the builder is given canCreate={false}.
+  const searchForBuilder = async (term) => {
+    const res = await authCtx.jwtInst({
+      method: 'get',
+      url: `${axiosGlobal.defaultTargetApi}/mis/cross-branch/inventory`,
+      params: { search: String(term || '').trim(), branchId: targetBranchId, requestingBranchId: activeBranchId },
+    });
+    return Array.isArray(res.data) ? res.data : (res.data?.data || []);
+  };
+  // lots come from deal letters, not from a specification — the finder is for shelf stock
+  const builderAvailable = Boolean(targetBranchId) && source === 'inventory';
+  const usedCodes = useMemo(() => new Set(lines.map((l) => String(l.code || '').toUpperCase())), [lines]);
 
   // What the lot can still give: the server's figure, net of what's already
   // promised to accepted quotations / requests.
@@ -362,7 +381,7 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
             branchId={targetBranchId}
             locked={locked}
             lockedName={opened?.branchName}
-            onBranchChange={(id) => { setTargetBranchId(id); setLines([]); setProdResults([]); setSupplyResults([]); setError(''); }}
+            onBranchChange={(id) => { setTargetBranchId(id); setLines([]); setProdResults([]); setSupplyResults([]); setError(''); setSpecOpen(false); }}
             source={source}
             onSourceChange={(s) => { setSource(s); setProdResults([]); setSupplyResults([]); }}
             allowInventory={inventoryAllowed}
@@ -414,7 +433,27 @@ export default function CrossBranchRequestForm({ open, onClose, preset = null, o
               ) : undefined,
               style: { fontSize: '0.8rem' },
             }}
-            sx={{ ...tfSx, mb: (prodResults.length || supplyResults.length) ? 0.5 : 1.5 }} />
+            sx={{ ...tfSx, mb: (builderAvailable || prodResults.length || supplyResults.length) ? 0.5 : 1.5 }} />
+
+          {builderAvailable && (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.75 }}>
+                <Button size="small" onClick={() => setSpecOpen((o) => !o)} startIcon={<StraightenIcon sx={{ fontSize: 14 }} />}
+                  aria-expanded={specOpen}
+                  sx={{ fontSize: '0.68rem', textTransform: 'none', color: specOpen ? T.TEXT_PRI : T.TEXT_TER }}>
+                  {specOpen ? t('inventory.specHide') : t('inventory.specToggle')}
+                </Button>
+              </Box>
+              {specOpen && (
+                <Box sx={{ mb: 1.5 }}>
+                  <SpecCodeBuilder searchProducts={searchForBuilder} canCreate={false}
+                    noPermissionHint={t('inventory.specOtherBranch')}
+                    usedCodes={usedCodes}
+                    onUse={(product, variant) => addLine(product, variant)} />
+                </Box>
+              )}
+            </>
+          )}
 
           {/* Inventory results — product header + its varieties, as in the quotation */}
           {prodResults.length > 0 && (

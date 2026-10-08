@@ -119,6 +119,8 @@ const BranchForm = ({ open, onClose, onSave, branch, allBranches = [] }) => {
   const [address,         setAddress]         = useState('');
   const [phone,           setPhone]           = useState('');
   const [instagramHandle, setInstagramHandle] = useState('');
+  const [websiteSlug, setWebsiteSlug] = useState('');
+  const [flagFile, setFlagFile] = useState(null);
   const [misTemplates, setMisTemplates] = useState({ ...EMPTY_TEMPLATES });
   const [crossBranchAccess, setCrossBranchAccess] = useState([]);   // branch ids
   const [saving,      setSaving]      = useState(false);
@@ -140,15 +142,18 @@ const BranchForm = ({ open, onClose, onSave, branch, allBranches = [] }) => {
       setDescription(branch.description || '');
       setCountry(COUNTRIES.find((c) => c.code === branch.country) || null);
       setStatus(branch.status || 'active');
-      setNotifyUsers((branch.priceRequestNotifyUsers || []).map(String));
+      setNotifyUsers((branch.associates || branch.priceRequestNotifyUsers || []).map(String));
       setAddress(branch.address || '');
       setPhone(branch.phone || '');
       setInstagramHandle(String(branch.instagramHandle || '').replace(/^@/, ''));
+      setWebsiteSlug(branch.websiteSlug || branch.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || '');
+      setFlagFile(null);
       setMisTemplates({ ...EMPTY_TEMPLATES, ...(branch.misTemplates || {}) });
       setCrossBranchAccess((branch.crossBranchAccess || []).map(String));
     } else {
       setName(''); setDescription(''); setCountry(null); setStatus('active'); setNotifyUsers([]);
       setAddress(''); setPhone(''); setInstagramHandle('');
+      setWebsiteSlug(''); setFlagFile(null);
       setMisTemplates({ ...EMPTY_TEMPLATES });
       setCrossBranchAccess([]);
     }
@@ -160,16 +165,25 @@ const BranchForm = ({ open, onClose, onSave, branch, allBranches = [] }) => {
     try {
       const data = {
         name: name.trim(), description: description.trim(), status, country: country?.code || null,
+        associates: notifyUsers,
         priceRequestNotifyUsers: notifyUsers,
         address: address.trim(), phone: phone.trim(),
         instagramHandle: instagramHandle.trim().replace(/^@/, ''),
+        websiteSlug: websiteSlug.trim(),
         misTemplates,
         crossBranchAccess,
       };
-      if (isNew) {
-        await authCtx.jwtInst({ method: 'post', url: `${axiosGlobal.defaultTargetApi}/branches`, data });
-      } else {
-        await authCtx.jwtInst({ method: 'put', url: `${axiosGlobal.defaultTargetApi}/branches/${branch._id}`, data });
+      const saved = isNew
+        ? await authCtx.jwtInst({ method: 'post', url: `${axiosGlobal.defaultTargetApi}/branches`, data })
+        : await authCtx.jwtInst({ method: 'put', url: `${axiosGlobal.defaultTargetApi}/branches/${branch._id}`, data });
+      if (flagFile) {
+        const image = new FormData();
+        image.append('flag', flagFile);
+        await authCtx.jwtInst({
+          method: 'post',
+          url: `${axiosGlobal.defaultTargetApi}/branches/${saved.data._id}/flag`,
+          data: image,
+        });
       }
       dispatch(actions.setShowSnackBar({ status: true,
         msg: isNew ? t('users.branchCreated') : t('users.branchUpdated'), type: 'success' }));
@@ -335,6 +349,24 @@ const BranchForm = ({ open, onClose, onSave, branch, allBranches = [] }) => {
             inputProps={{ dir: 'ltr', autoCapitalize: 'none', spellCheck: false }}
             helperText={instagramHandle ? `instagram.com/${instagramHandle}` : t('users.branchInstagramHelper')}
             sx={inputSx} />
+          <TextField label={t('users.branchWebsiteSlugLabel')} size="small" fullWidth
+            value={websiteSlug} placeholder="ksa"
+            onChange={e => setWebsiteSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+            inputProps={{ dir: 'ltr', autoCapitalize: 'none', spellCheck: false }}
+            helperText={websiteSlug ? `lazulitemarble.com/${websiteSlug}/ · lazulitemarble.com/${websiteSlug}/ar/` : t('users.branchWebsiteSlugHelper')}
+            sx={inputSx} />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+            {branch?.flagImage && !flagFile && (
+              <Box component="img" src={`${axiosGlobal.defaultTargetApi}${branch.flagImage}`}
+                alt="" sx={{ width: 48, height: 36, objectFit: 'contain' }} />
+            )}
+            <Button component="label" variant="outlined" size="small" sx={{ textTransform: 'none' }}>
+              {t('users.branchFlagUpload')}
+              <input hidden type="file" accept="image/png,image/jpeg,image/webp"
+                onChange={e => setFlagFile(e.target.files?.[0] || null)} />
+            </Button>
+            {flagFile && <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC }}>{flagFile.name}</Typography>}
+          </Box>
         </>)}
 
         {/* ── Tab 2 — documents ── */}
@@ -550,7 +582,10 @@ const BranchesManager = ({ onSelect, selectedId, editRequest }) => {
                   bgcolor: T.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: country ? '1.05rem' : undefined }}>
-                  {country ? country.flag : <StoreIcon sx={{ fontSize: 16, color: T.TEXT_SEC }} />}
+                  {branch.flagImage
+                    ? <Box component="img" src={`${axiosGlobal.defaultTargetApi}${branch.flagImage}`}
+                        alt="" sx={{ width: 24, height: 18, objectFit: 'contain' }} />
+                    : country ? country.flag : <StoreIcon sx={{ fontSize: 16, color: T.TEXT_SEC }} />}
                 </Box>
 
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>

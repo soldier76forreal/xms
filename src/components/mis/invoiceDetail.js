@@ -29,6 +29,9 @@ import SendIcon from '@mui/icons-material/Send';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
 import RestoreIcon from '@mui/icons-material/Restore';
 import TerrainIcon from '@mui/icons-material/Terrain';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import TimerOffIcon from '@mui/icons-material/TimerOff';
+import UndoIcon from '@mui/icons-material/Undo';
 import { useHistory } from 'react-router-dom';
 
 import AuthContext from '../authAndConnections/auth';
@@ -43,6 +46,7 @@ import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import UserAvatar from '../main/userAvatar';
 import PackingListsForInvoice from './packingLists/packingListsForInvoice';
 import DocPreviewFrame from '../../tools/docPreviewFrame';
+import OfferCountdown from './offerCountdown';
 
 // Phase 6 — MIS invoice/pre-invoice detail container (Session 45).
 // Header (number/type/status/customer/total + actions) · live document preview
@@ -93,6 +97,11 @@ const ACTIVITY_META = {
   stock_restored:    { labelKey: 'mis.activityStockRestored',     Icon: RestoreIcon },
   assigned:          { labelKey: 'mis.activitySentToUsers',       Icon: SendIcon },
   deleted:           { labelKey: 'mis.activityDeleted',           Icon: DeleteOutlineIcon },
+  // a quotation made for a customer's website purchase request
+  website_offer_sent:      { labelKey: 'mis.activityWebsiteOfferSent',      Icon: SendIcon },
+  website_offer_accepted:  { labelKey: 'mis.activityWebsiteOfferAccepted',  Icon: CheckCircleOutlineIcon },
+  website_offer_expired:   { labelKey: 'mis.activityWebsiteOfferExpired',   Icon: TimerOffIcon },
+  website_offer_withdrawn: { labelKey: 'mis.activityWebsiteOfferWithdrawn', Icon: UndoIcon },
 };
 
 const fmtMoney = (n) => (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -234,6 +243,13 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               {t(status.labelKey)}
             </Typography>
           </Box>
+          {live.priceRequestId && (
+            <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: '#4dd0e122' }}>
+              <Typography sx={{ fontSize: '0.62rem', fontWeight: 700, color: '#4dd0e1' }}>
+                {t('mis.websiteBadge')}
+              </Typography>
+            </Box>
+          )}
           {/* Stock taken out: a paid invoice, or an accepted quotation / request
               (and the invoice it was converted into). */}
           {live.stockDecremented && (
@@ -278,6 +294,15 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
             {fmtMoney(live.grandTotal)} AED
           </Box>
         </Typography>
+
+        {/* An offer for a website request that the customer can still accept. */}
+        {live.priceRequestId && !isInvoice && live.status === 'sent' && live.validUntil
+          && new Date(live.validUntil) > new Date() && (
+          <Typography sx={{ fontSize: '0.74rem', color: T.TEXT_SEC, mt: 0.5 }}>
+            {t('mis.offerExpiresIn')}{' '}
+            <OfferCountdown validUntil={live.validUntil} onExpire={() => loadDetail(true)} />
+          </Typography>
+        )}
 
         {/* The supply record this was raised against, by its code. The record
             lives in this doc's (fulfilling) branch — it opens from there. */}

@@ -1,70 +1,26 @@
-# Getting Started with Create React App
+# XMS
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+XMS is the internal React application for inventory, CRM, digital marketing, branches, and requests. Its website-facing data is served by the sibling `api/` project. The public Next.js site is in `../website/`.
 
-## Available Scripts
+## Run locally
 
-In the project directory, you can run:
+Install dependencies with `npm install`, then run `npm start` from this directory. The app uses Create React App. Set `PORT` if port 3000 is occupied by the public website. On Windows PowerShell, use `npm.cmd` if execution policy blocks `npm.ps1`.
 
-### `npm start`
+The browser needs the XMS API and auth services. Configure their local ports with `REACT_APP_API_PORT` and `REACT_APP_AUTH_PORT` in `.env.local`; the API's own `PORT` must match the API port. Start the API with its database and run the auth service separately. The public website also needs its XMS API base/port configured to reach the same API. Do not commit credentials or local environment files.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Useful commands: `npm run build` for a production bundle, and `npm test` for the CRA test runner.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Website-connected workflows
 
-### `npm test`
+- **Digital Marketing > Product Content:** Manage records by product code, including English/Arabic/Persian content, images, categories, tags, and SEO fields. Content is shared across branches; live varieties, dimensions, and stock come from each branch's inventory. Raw Content and Ready to Upload remain separate sections.
+- **People > Branches:** Set each branch's website slug, country, contact phone, optional flag image, and one or more associates. The public site uses the slug for paths such as `/ksa/` and `/ksa/ar/`, displays the configured flag/phone, and queries that branch's inventory. A flag upload is stored by the API and falls back to the site's country flag when absent.
+- **CRM > Customers:** Website purchase-request submissions are associated with their selected branch. A visitor's verified email identifies the customer record used for their request-only portal.
+- **MIS > Requests > Customer-branch requests:** Staff see requests for their active branch, can search/filter them, review product varieties and requested amounts, and send a response that is emailed to the customer. This is separate from inter-branch requests. Associate notifications use each branch's configured associates.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+The public site's `/my-account/` page is only for a customer to view their own requests and responses. It does not expose the XMS workspace, inventory administration, or a general customer account.
 
-### `npm run build`
+## Data boundaries
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Product content is keyed by product code, but availability is calculated from the selected branch's live inventory. Do not treat local seed data as production data: a local database may have a stocked `Main Branch` without a country, while the online environment has no Main Branch. The default website branch remains UAE; its public availability must reflect the actual UAE branch data.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Implementation entry points: `src/components/digitalMarketing/digitalMarketing.js`, `src/components/mis/mis.js`, `src/components/authAndConnections/axiosGlobalUrl.js`, and the sibling API routes under `../api/routes/public/website.js`, `../api/routes/digitalMarketing/productContent.js`, and `../api/routes/priceRequests/main.js`.

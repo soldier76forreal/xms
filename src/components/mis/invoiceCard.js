@@ -127,6 +127,15 @@ export default function InvoiceCard({ doc, selected, unread, onSelect, onEdit, o
           </Box>
         )}
 
+        {/* made for a customer's website purchase request */}
+        {doc.priceRequestId && (
+          <Box sx={{ px: 0.75, py: '1px', borderRadius: '5px', bgcolor: '#4dd0e122', flexShrink: 0 }}>
+            <Typography sx={{ fontSize: '0.6rem', fontWeight: 700, color: '#4dd0e1' }}>
+              {t('mis.websiteBadge')}
+            </Typography>
+          </Box>
+        )}
+
         {isInvoice && paidSum > 0 && (
           <PaidIcon sx={{ fontSize: 13, color: doc.status === 'paid' ? '#81c784' : '#ffb74d', flexShrink: 0 }} />
         )}

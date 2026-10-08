@@ -18,10 +18,13 @@ import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import StraightenIcon from '@mui/icons-material/Straighten';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { createSupplyDealLetter, updateSupplyDealLetter } from '../../store/store';
+import { usePermissions } from '../../contextApi/PermissionContext';
+import { actions, createSupplyDealLetter, updateSupplyDealLetter } from '../../store/store';
+import SpecCodeBuilder from '../inventory/specCodeBuilder';
 
 // A deal letter tracks ONE coupe purchase for its parent supply record's
 // product, AND is the source of the printed stone sales contract
@@ -49,6 +52,7 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
   const dispatch = useDispatch();
   const authCtx = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const { can } = usePermissions();
 
   const isEdit = Boolean(dealLetter);
 
@@ -76,6 +80,9 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
   const [sellerNotes, setSellerNotes] = useState('');
   const [variantOptions, setVariantOptions] = useState([]);
   const [variantLoading, setVariantLoading] = useState(false);
+  const [product, setProduct] = useState(null);              // the record's product, as the variety lookup describes it
+  const [lookupVersion, setLookupVersion] = useState(0);     // bumped when the builder adds a variety, so the list refreshes
+  const [specOpen, setSpecOpen] = useState(false);           // the other way to a variety: its specification
   const [lines, setLines] = useState([]);
   const [contract, setContract] = useState(EMPTY_CONTRACT);
   const [saving, setSaving] = useState(false);
@@ -84,7 +91,7 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
   // ── hydrate ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
-    setError(''); setTab(0);
+    setError(''); setTab(0); setSpecOpen(false);
     if (dealLetter) {
       setCoupeSpec(dealLetter.coupeSpec || '');
       setSellerName(dealLetter.coupeSeller?.name || '');
@@ -119,12 +126,15 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
     if (!open || !productId) return;
     setVariantLoading(true);
     authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/supply/variants-lookup`, params: { productId } })
-      .then((res) => setVariantOptions(res.data.data || []))
-      .catch(() => setVariantOptions([]))
+      .then((res) => { setVariantOptions(res.data.data || []); setProduct(res.data.product || null); })
+      .catch(() => { setVariantOptions([]); setProduct(null); })
       .finally(() => setVariantLoading(false));
-  }, [open, productId, authCtx, axiosGlobal]);
+  }, [open, productId, lookupVersion, authCtx, axiosGlobal]);
 
   const availableOptions = variantOptions.filter((v) => !lines.some((l) => l.variantId === String(v._id)));
+  // what the specification builder works on: this record's product, with the varieties it has now
+  const fixedProduct = useMemo(() => (product ? { ...product, variants: variantOptions } : null), [product, variantOptions]);
+  const usedCodes = useMemo(() => new Set(lines.map((l) => String(l.code || '').toUpperCase())), [lines]);
 
   // ── line helpers ──────────────────────────────────────────────────────────
   // A new line seeds نوع سنگ and the dimensions from the variant's parsed stone
@@ -139,6 +149,15 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
       widthCm: variant.spec?.widthCm ?? '',
       lengthCm: variant.spec?.lengthCm ?? '',
     }]);
+  };
+  // a variety found / added by the specification builder: one the letter already has is not added twice
+  const useBuiltVariety = (builtProduct, variant) => {
+    if (!variant) return;
+    if (lines.some((l) => l.variantId === String(variant._id))) {
+      dispatch(actions.setShowSnackBar({ status: true, type: 'info', msg: `${variant.code} — ${t('inventory.specAlreadyUsed')}` }));
+      return;
+    }
+    addLine(variant);
   };
   const removeLine = (variantId) => setLines((p) => p.filter((l) => l.variantId !== variantId));
   const setLineField = (variantId, key, value) =>
@@ -314,6 +333,24 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
                   <>{variantLoading ? <CircularProgress size={14} /> : null}{params.InputProps.endAdornment}</>
                 ) }} />
             )} />
+
+          {fixedProduct && (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -1 }}>
+                <Button size="small" onClick={() => setSpecOpen((o) => !o)} startIcon={<StraightenIcon sx={{ fontSize: 14 }} />}
+                  aria-expanded={specOpen}
+                  sx={{ fontSize: '0.68rem', textTransform: 'none', color: specOpen ? T.TEXT_PRI : T.TEXT_TER }}>
+                  {specOpen ? t('inventory.specHide') : t('inventory.specToggle')}
+                </Button>
+              </Box>
+              {specOpen && (
+                <SpecCodeBuilder fixedProduct={fixedProduct} showInventory={false}
+                  canCreate={can('inventory:subproduct:create')} noPermissionHint={t('inventory.specCannotAdd')}
+                  usedCodes={usedCodes} onUse={useBuiltVariety}
+                  onCreated={() => setLookupVersion((n) => n + 1)} />
+              )}
+            </>
+          )}
 
           {lines.length === 0 ? (
             <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_TER, py: 2, textAlign: 'center' }}>

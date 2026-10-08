@@ -35,6 +35,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { usePermissions } from '../../contextApi/PermissionContext';
+import { useBranch } from '../../contextApi/BranchContext';
 import { actions, fetchCrmCustomers } from '../../store/store';
 
 import CustomerCard          from './customerCard';
@@ -139,6 +140,7 @@ export default function Crm() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const debouncedSearch = useDebounce(filter.search, 350);
+  const { activeBranchId } = useBranch();
 
   const T = {
     APP_BG:   isDark ? '#060606' : theme.palette.background.default,
@@ -169,8 +171,9 @@ export default function Crm() {
     if (filter.dateFrom)        p.dateFrom   = filter.dateFrom;
     if (filter.dateTo)          p.dateTo     = filter.dateTo;
     if (filter.createdBy && !createdByDisabled) p.createdBy = filter.createdBy;
+    if (activeBranchId)         p.branchId   = activeBranchId;
     return p;
-  }, [filter, debouncedSearch, pageSize, createdByDisabled]);
+  }, [filter, debouncedSearch, pageSize, createdByDisabled, activeBranchId]);
 
   useEffect(() => {
     authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/crm/customers/creators` })
@@ -193,7 +196,7 @@ export default function Crm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch, filter.type, filter.country, filter.channels.join(','),
       filter.status, filter.tags, filter.dateFrom, filter.dateTo, filter.sort,
-      filter.createdBy, pageSize, refreshKey]);
+      filter.createdBy, pageSize, refreshKey, activeBranchId]);
 
   useEffect(() => {
     setHasMore(customers.length < total);

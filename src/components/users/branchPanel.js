@@ -114,7 +114,7 @@ const BranchPanel = ({ branch, onEdit }) => {
   const counts = stats?.counts || {};
   const members = stats?.members || [];
   const sharedWith = stats?.sharedWith || [];
-  const notifyUsers = branch.priceRequestNotifyUsers || [];
+  const notifyUsers = branch.associates || branch.priceRequestNotifyUsers || [];
   const hasContact = branch.address || branch.phone || branch.instagramHandle;
 
   const igHandle = String(branch.instagramHandle || '').replace(/^@/, '');
@@ -128,7 +128,10 @@ const BranchPanel = ({ branch, onEdit }) => {
           bgcolor: T.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: country ? '1.4rem' : undefined, opacity: archived ? 0.5 : 1 }}>
-          {country ? country.flag : <StoreIcon sx={{ fontSize: 22, color: T.TEXT_SEC }} />}
+          {branch.flagImage
+            ? <Box component="img" src={`${axiosGlobal.defaultTargetApi}${branch.flagImage}`}
+                alt="" sx={{ width: 32, height: 24, objectFit: 'contain' }} />
+            : country ? country.flag : <StoreIcon sx={{ fontSize: 22, color: T.TEXT_SEC }} />}
         </Box>
 
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>

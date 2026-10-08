@@ -21,11 +21,15 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import StraightenIcon from '@mui/icons-material/Straighten';
 
 import AuthContext from '../../authAndConnections/auth';
 import AxiosGlobal from '../../authAndConnections/axiosGlobalUrl';
 import { useBranch } from '../../../contextApi/BranchContext';
+import { usePermissions } from '../../../contextApi/PermissionContext';
 import { saveMisPackingList } from '../../../store/store';
+import SpecCodeBuilder from '../../inventory/specCodeBuilder';
+import { parseStoneCode } from '../../inventory/util/codeParser';
 
 const EMPTY_ITEM = { code: '', lengthCm: '', widthCm: '', thicknessCm: '', pcs: '', sqm: '', sqmTouched: false };
 const EMPTY_PALLET = { palletId: '', reference: '', productCode: '', processingType: '', items: [{ ...EMPTY_ITEM }] };
@@ -57,6 +61,11 @@ const deriveSqm = (it) => {
   if (!l || !w || !p) return null;
   return round2((l / 100) * (w / 100) * p);
 };
+
+// A row nobody has filled in yet: no sizes / counts, and no code beyond the pallet's own.
+const isBlankRow = (it, pallet) => !String(it.pcs || '') && !String(it.sqm || '')
+  && !String(it.lengthCm || '') && !String(it.widthCm || '')
+  && (!String(it.code || '').trim() || String(it.code).trim() === String(pallet.productCode || '').trim());
 
 // Defined at MODULE scope on purpose. A component declared inside the form body
 // is a NEW component type on every render, so React unmounts and remounts its
@@ -90,6 +99,7 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
   const authCtx = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { activeBranchId } = useBranch();
+  const { can } = usePermissions();
 
   const isEdit = Boolean(packingList);
 
@@ -115,6 +125,7 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
   const [shippingDestination, setShippingDestination] = useState('');
   const [standardThicknessCm, setStandardThicknessCm] = useState('');
   const [pallets, setPallets] = useState([{ ...EMPTY_PALLET }]);
+  const [specPallet, setSpecPallet] = useState(null);   // index of the pallet whose specification finder is open
   const [status, setStatus] = useState('draft');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -123,7 +134,7 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
   // ── hydrate ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
-    setError('');
+    setError(''); setSpecPallet(null);
     if (packingList) {
       setType(packingList.type);
       setDriverInfo({ fullName: '', nationalId: '', smartNumber: '', phone: '', iban: '', ...packingList.driverInfo });
@@ -246,7 +257,7 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
     items: [{ ...EMPTY_ITEM, thicknessCm: standardThicknessCm }],
   }]);
 
-  const duplicatePallet = (idx) => setPallets((ps) => {
+  const duplicatePallet = (idx) => { setSpecPallet(null); setPallets((ps) => {
     const src = ps[idx];
     const copy = {
       ...src,
@@ -255,9 +266,9 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
       items: src.items.map((it) => ({ ...it })),
     };
     return [...ps.slice(0, idx + 1), copy, ...ps.slice(idx + 1)];
-  });
+  }); };
 
-  const removePallet = (idx) => setPallets((ps) => ps.filter((_, i) => i !== idx));
+  const removePallet = (idx) => { setSpecPallet(null); setPallets((ps) => ps.filter((_, i) => i !== idx)); };
   const setPalletField = (idx, key, value) =>
     setPallets((ps) => ps.map((p, i) => (i === idx ? { ...p, [key]: value } : p)));
 
@@ -266,6 +277,37 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
       ? { ...p, items: [...p.items, { ...EMPTY_ITEM, thicknessCm: standardThicknessCm, code: p.productCode || '' }] }
       : p
   )));
+
+  // Products + their varieties for the specification builder: this branch's own catalogue.
+  const searchForBuilder = async (term) => {
+    const res = await authCtx.jwtInst({
+      method: 'get', url: `${axiosGlobal.defaultTargetApi}/mis/products-lookup`,
+      params: { search: String(term || '').trim(), branchId: activeBranchId },
+    });
+    return res.data || [];
+  };
+
+  // A variety from the specification builder becomes an item of that pallet: it fills the
+  // pallet's empty row (or adds one) with the variety's code and its own size. An unsized slab
+  // brings only its thickness — the real cut is typed, as for any other row.
+  const addBuiltItem = (pIdx, product, variant) => {
+    const parsed = parseStoneCode(variant.code);
+    const sized = parsed && parsed.valid && !parsed.unsized;
+    setPallets((ps) => ps.map((p, i) => {
+      if (i !== pIdx) return p;
+      const blankAt = p.items.findIndex((it) => isBlankRow(it, p));
+      const base = blankAt >= 0 ? p.items[blankAt] : { ...EMPTY_ITEM, thicknessCm: standardThicknessCm };
+      const item = {
+        ...base,
+        code: variant.code,
+        ...(sized ? { lengthCm: String(parsed.lengthCm), widthCm: String(parsed.widthCm) } : {}),
+        ...(parsed && parsed.valid ? { thicknessCm: String(parsed.thicknessMm / 10) } : {}),
+        sqmTouched: false,
+      };
+      const items = blankAt >= 0 ? p.items.map((it, j) => (j === blankAt ? item : it)) : [...p.items, item];
+      return { ...p, productCode: p.productCode || product.code, items };
+    }));
+  };
 
   const removeItem = (pIdx, iIdx) => setPallets((ps) => ps.map((p, i) => (
     i === pIdx ? { ...p, items: p.items.filter((_, j) => j !== iIdx) } : p
@@ -668,6 +710,13 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
                         sx={{ fontSize: '0.66rem', textTransform: 'none', color: T.TEXT_SEC }}>
                         {t('mis.addItemRowButton')}
                       </Button>
+                      <Button size="small" startIcon={<StraightenIcon sx={{ fontSize: 13 }} />}
+                        onClick={() => setSpecPallet((cur) => (cur === pIdx ? null : pIdx))}
+                        aria-expanded={specPallet === pIdx}
+                        sx={{ fontSize: '0.66rem', textTransform: 'none',
+                          color: specPallet === pIdx ? T.TEXT_PRI : T.TEXT_SEC }}>
+                        {specPallet === pIdx ? t('inventory.specHide') : t('inventory.specToggle')}
+                      </Button>
                       <Box sx={{ ml: 'auto', display: 'flex', gap: 1.5, pr: 3.5 }}>
                         <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_SEC }}>
                           {t('mis.plColPcs')} <b style={{ color: T.TEXT_PRI }}>{pt.pcs}</b>
@@ -677,6 +726,14 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
                         </Typography>
                       </Box>
                     </Box>
+                    {specPallet === pIdx && (
+                      <Box sx={{ mt: 1 }}>
+                        <SpecCodeBuilder searchProducts={searchForBuilder} showInventory={false}
+                          canCreate={can('inventory:subproduct:create')} noPermissionHint={t('inventory.specCannotAdd')}
+                          usedCodes={new Set(pallet.items.map((it) => String(it.code || '').toUpperCase()))}
+                          onUse={(product, variant) => addBuiltItem(pIdx, product, variant)} />
+                      </Box>
+                    )}
                   </Box>
                 </Box>
               );

@@ -26,6 +26,8 @@ import { usePermissions } from '../../../contextApi/PermissionContext';
 import { downloadMisInvoicePdf } from '../../../store/store';
 import InvoiceDetailDialog from '../../mis/invoiceDetailDialog';
 import InvoiceForm from '../../mis/invoiceForm';
+import { useBranch } from '../../../contextApi/BranchContext';
+import { OFFER_STATE_COLOR, OFFER_STATE_KEY } from '../../mis/websiteOfferPanel';
 
 const PRICE_REQUEST_STATUS_META = {
   new:       { labelKey: 'crm.priceRequestStatusNew',       color: '#64b5f6' },
@@ -72,6 +74,7 @@ export default function RequestsTab({ customer }) {
   const authCtx     = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const { can }     = usePermissions();
+  const { branches } = useBranch();
 
   const T = {
     BD:       isDark ? 'rgba(255,255,255,0.07)' : theme.palette.divider,
@@ -186,6 +189,7 @@ export default function RequestsTab({ customer }) {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
         {priceRequests.map((pr) => {
           const status = PRICE_REQUEST_STATUS_META[pr.status] || PRICE_REQUEST_STATUS_META.new;
+          const requestBranch = branches.find((branch) => String(branch._id) === String(pr.branchId));
           return (
             <Box key={pr._id} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5,
               px: 1.5, py: 1, border: `1px solid ${T.BD}`, borderRadius: '10px' }}>
@@ -195,10 +199,18 @@ export default function RequestsTab({ customer }) {
                     {t(status.labelKey)}
                   </Typography>
                 </Box>
+                {pr.offer && (
+                  <Box sx={{ px: 0.6, py: '1px', borderRadius: '5px', flexShrink: 0,
+                    bgcolor: `${OFFER_STATE_COLOR[pr.offer.state]}22` }}>
+                    <Typography sx={{ fontSize: '0.58rem', fontWeight: 700, color: OFFER_STATE_COLOR[pr.offer.state] }}>
+                      {t('mis.offerNumber', { number: pr.offer.docNumber })} · {t(OFFER_STATE_KEY[pr.offer.state])}
+                    </Typography>
+                  </Box>
+                )}
                 <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, flexGrow: 1 }}>
-                  {fmtDate(pr.insertDate)}
+                  {[requestBranch?.name, fmtDate(pr.insertDate)].filter(Boolean).join(' - ')}
                 </Typography>
-                {canRespond && pr.status !== 'responded' && (
+                {canRespond && pr.status !== 'responded' && !pr.offer && (
                   <Button size="small" startIcon={<ReplyIcon sx={{ fontSize: 13 }} />}
                     onClick={() => { setReplyTarget(pr); setReplyBody(''); }}
                     sx={{ fontSize: '0.66rem', textTransform: 'none', minWidth: 0, px: 1 }}>
@@ -218,6 +230,13 @@ export default function RequestsTab({ customer }) {
               {(pr.city || pr.country || pr.phone) && (
                 <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC }}>
                   {[pr.city, pr.country].filter(Boolean).join(', ')}{pr.phone ? ` · ${pr.phone}` : ''}
+                </Typography>
+              )}
+              {pr.receivingAddress?.address && (
+                <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_SEC }}>
+                  <Box component="span" sx={{ fontWeight: 700 }}>{t('crm.receivingLoadAddress')}: </Box>
+                  {[pr.receivingAddress.address, pr.receivingAddress.city, pr.receivingAddress.country]
+                    .filter(Boolean).join(', ')}
                 </Typography>
               )}
               {pr.response?.body && (

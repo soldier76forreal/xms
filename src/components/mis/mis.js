@@ -40,6 +40,7 @@ import InvoiceCard          from './invoiceCard';
 import InvoiceDetail        from './invoiceDetail';
 import InvoiceForm          from './invoiceForm';
 import CrossBranchRequestForm from './crossBranchRequestForm';
+import WebsiteRequestsSection from './websiteRequestsSection';
 import StorefrontIcon       from '@mui/icons-material/Storefront';
 import AllInboxIcon         from '@mui/icons-material/AllInbox';
 import SendToDialog         from './sendToDialog';
@@ -128,6 +129,7 @@ export default function Mis() {
   const { isUnread } = useUnreadRecords('mis');
 
   const [tab, setTab]                 = useState('all');            // 'quote' | 'invoice' | 'request' | 'all'
+  const [requestSource, setRequestSource] = useState('website');
   // Session 72 (Phase 3) — which MIS sub-section is showing: the existing
   // invoice/pre-invoice master-detail, or the new standalone Packing Lists.
   const [misSection, setMisSection]   = useState('invoices');
@@ -362,7 +364,7 @@ export default function Mis() {
 
         {/* Invoice-specific controls. The Packing Lists tab carries its own
             search / type filter / New button, so none of this applies there. */}
-        {misSection === 'invoices' && (<>
+        {misSection === 'invoices' && (tab !== 'request' || requestSource === 'interBranch') && (<>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexGrow: 1, maxWidth: 360,
           bgcolor: T.CTRL_BG, borderRadius: '8px', px: 1.25, py: '4px',
           border: `1px solid ${T.BD}` }}>
@@ -463,8 +465,19 @@ export default function Mis() {
 
       <Divider sx={{ borderColor: T.BD }} />
 
+      {misSection === 'invoices' && tab === 'request' && (
+        <Box sx={{ display: 'flex', gap: 0.5, px: 2, py: 1, borderBottom: '1px solid ' + T.BD }}>
+          <Button size="small" variant={requestSource === 'website' ? 'contained' : 'text'}
+            onClick={() => setRequestSource('website')}>{t('mis.websiteRequestsTab')}</Button>
+          <Button size="small" variant={requestSource === 'interBranch' ? 'contained' : 'text'}
+            onClick={() => setRequestSource('interBranch')}>{t('mis.interBranchRequestsTab')}</Button>
+        </Box>
+      )}
+
       {misSection === 'packingLists' ? (
         <PackingListsSection openId={openPackingListId} onOpenIdConsumed={() => setOpenPackingListId(null)} />
+      ) : tab === 'request' && requestSource === 'website' ? (
+        <WebsiteRequestsSection key={activeBranchId || 'none'} />
       ) : (
       <>
       {/* ── Main content ── */}
