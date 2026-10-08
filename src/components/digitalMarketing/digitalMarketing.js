@@ -3,12 +3,15 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Tooltip from '@mui/material/Tooltip';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import MovieIcon from '@mui/icons-material/Movie';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import LinkIcon from '@mui/icons-material/Link';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import ArticleIcon from '@mui/icons-material/Article';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
+import InsightsIcon from '@mui/icons-material/Insights';
 import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useHistory } from 'react-router-dom';
@@ -19,6 +22,7 @@ import LinkPageSection from './linkPageSection';
 import WhatsappShareSection from './whatsappShareSection';
 import BlogSection from './blogSection';
 import ProductContentSection from './productContentSection';
+import WebsiteAnalyticsSection from './websiteAnalyticsSection';
 import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
 
 // The Blog tab only exists to author content for the public website's
@@ -31,6 +35,7 @@ const TABS = [
   { id: 'linkPages',     Icon: LinkIcon,        labelKey: 'dm.tabLinkPages' },
   { id: 'whatsappShares', Icon: WhatsAppIcon,   labelKey: 'dm.tabWhatsappShares' },
   { id: 'productContent', Icon: Inventory2OutlinedIcon, labelKey: 'dm.tabProductContent' },
+  { id: 'analytics',      Icon: InsightsIcon,    labelKey: 'dm.tabAnalytics' },
   ...(WEBSITE_FEATURES_ENABLED ? [{ id: 'blog', Icon: ArticleIcon, labelKey: 'dm.tabBlog' }] : []),
 ];
 
@@ -92,29 +97,55 @@ export default function DigitalMarketing() {
             {t('nav.digitalMarketing')}
           </Typography>
         )}
-        {/* overflowX fallback keeps every tab reachable even if a future 4th
-            tab (or a long translated label) still doesn't fit — icon-only on
-            mobile already keeps this well under any phone's width, but this
-            is what actually fixed the bug: buttons were getting clipped by
-            an ancestor's overflow:hidden with no scroll escape hatch at all. */}
-        <Box sx={{ display: 'flex', gap: 0.5, bgcolor: T.CTRL_BG, borderRadius: '9px',
-          p: '3px', border: `1px solid ${T.BD}`, flexShrink: 1, minWidth: 0, ml: isMob ? 0 : 1,
-          overflowX: 'auto', '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none' }}>
-          {TABS.map(({ id, Icon, labelKey }) => (
-            <Tooltip key={id} title={isMob ? t(labelKey) : ''}>
-              <Button onClick={() => setTab(id)}
-                startIcon={isMob ? null : <Icon sx={{ fontSize: 14 }} />}
-                sx={{ minWidth: 0, height: 26, flexShrink: 0, px: isMob ? 0 : 1.25, py: 0, borderRadius: '7px',
-                  width: isMob ? 34 : 'auto',
-                  fontSize: '0.72rem', fontWeight: tab === id ? 700 : 400, textTransform: 'none',
-                  color: tab === id ? T.TEXT_PRI : T.TEXT_TER,
-                  bgcolor: tab === id ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
-                  '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)', color: T.TEXT_PRI } }}>
-                {isMob ? <Icon sx={{ fontSize: 16 }} /> : t(labelKey)}
-              </Button>
-            </Tooltip>
-          ))}
-        </Box>
+        {/* On a phone the six sections became six anonymous icons in a strip that
+            had to scroll: you could not tell where you were without tapping. A
+            menu says the section's name, shows the rest with their icons, and
+            takes one tap either way. The pill group stays on wider screens, with
+            an overflowX escape hatch so a long translated label can never clip. */}
+        {isMob ? (
+          <Select value={tab} onChange={(e) => setTab(e.target.value)} size="small" fullWidth
+            inputProps={{ 'aria-label': t('dm.sectionPickerLabel') }}
+            renderValue={(value) => {
+              const current = TABS.find((x) => x.id === value) || TABS[0];
+              return (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                  <current.Icon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />
+                  <Typography sx={{ fontSize: '0.8rem', fontWeight: 700, color: T.TEXT_PRI }} noWrap>
+                    {t(current.labelKey)}
+                  </Typography>
+                </Box>
+              );
+            }}
+            sx={{ height: 34, bgcolor: T.CTRL_BG, borderRadius: '9px',
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
+              '& .MuiSelect-select': { py: 0, display: 'flex', alignItems: 'center' },
+              '& .MuiSvgIcon-root.MuiSelect-icon': { color: T.TEXT_TER } }}>
+            {TABS.map(({ id, Icon, labelKey }) => (
+              <MenuItem key={id} value={id} sx={{ fontSize: '0.82rem', gap: 1 }}>
+                <Icon sx={{ fontSize: 17, color: tab === id ? T.TEXT_PRI : T.TEXT_TER }} />
+                {t(labelKey)}
+              </MenuItem>
+            ))}
+          </Select>
+        ) : (
+          <Box sx={{ display: 'flex', gap: 0.5, bgcolor: T.CTRL_BG, borderRadius: '9px',
+            p: '3px', border: `1px solid ${T.BD}`, flexShrink: 1, minWidth: 0, ml: 1,
+            overflowX: 'auto', '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none' }}>
+            {TABS.map(({ id, Icon, labelKey }) => (
+              <Tooltip key={id} title="">
+                <Button onClick={() => setTab(id)}
+                  startIcon={<Icon sx={{ fontSize: 14 }} />}
+                  sx={{ minWidth: 0, height: 26, flexShrink: 0, px: 1.25, py: 0, borderRadius: '7px',
+                    fontSize: '0.72rem', fontWeight: tab === id ? 700 : 400, textTransform: 'none',
+                    color: tab === id ? T.TEXT_PRI : T.TEXT_TER,
+                    bgcolor: tab === id ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
+                    '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)', color: T.TEXT_PRI } }}>
+                  {t(labelKey)}
+                </Button>
+              </Tooltip>
+            ))}
+          </Box>
+        )}
       </Box>
 
       <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
@@ -128,6 +159,8 @@ export default function DigitalMarketing() {
           ? <WhatsappShareSection />
           : tab === 'productContent'
           ? <ProductContentSection />
+          : tab === 'analytics'
+          ? <WebsiteAnalyticsSection />
           : <BlogSection />}
       </Box>
     </Box>

@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, useCallback } from 'react';
+import { useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useTheme, useMediaQuery } from '@mui/material';
@@ -89,8 +89,16 @@ export default function PackingListDetail({ packingListId, onBack }) {
   // The record opens as the DOCUMENT — the same HTML the PDF export renders
   // from (GET /:id/html), so what's on screen is what gets printed. An iframe
   // src can't carry the JWT, so the markup is fetched and injected via srcDoc.
+  //
+  // `previewFor` is the record+language the markup on screen belongs to. Without it
+  // the previous record's document stayed up under the new record's header while the
+  // next fetch ran — and a slower earlier response could overwrite a newer one.
+  const previewFor = useRef('');
   const loadPreview = useCallback(async () => {
     if (!packingListId) return;
+    const key = `${packingListId}|${lang}`;
+    previewFor.current = key;
+    setPreviewHtml('');
     setPreviewLoading(true);
     try {
       const res = await authCtx.jwtInst({
@@ -98,11 +106,12 @@ export default function PackingListDetail({ packingListId, onBack }) {
         url: `${axiosGlobal.defaultTargetApi}/mis/packing-lists/${packingListId}/html`,
         params: { lang }, responseType: 'text',
       });
+      if (previewFor.current !== key) return;   // another record was opened meanwhile
       setPreviewHtml(typeof res.data === 'string' ? res.data : '');
     } catch (_) {
-      setPreviewHtml('');
+      if (previewFor.current === key) setPreviewHtml('');
     } finally {
-      setPreviewLoading(false);
+      if (previewFor.current === key) setPreviewLoading(false);
     }
   }, [authCtx, axiosGlobal, packingListId, lang]);
 

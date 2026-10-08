@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
@@ -159,7 +159,14 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
   const allowed = getDocActions(live, { can, activeBranchId });
   const canConvertDoc = Boolean(onConvert) && allowed.convert;
 
+  // Which document+language the preview on screen belongs to. Without it the previous
+  // document stayed up under the new one's header while this ran, and a slower earlier
+  // response could land after a newer one.
+  const previewFor = useRef('');
   const loadDetail = useCallback(async (refetchDoc = true) => {
+    const key = `${doc._id}|${previewLang}`;
+    previewFor.current = key;
+    if (refetchDoc) setPreviewHtml('');
     setLoading(true);
     try {
       const [detailRes, htmlRes] = await Promise.all([
@@ -171,6 +178,7 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
               params: { lang: previewLang }, responseType: 'text' })
           : Promise.resolve({ data: '' }),
       ]);
+      if (previewFor.current !== key) return;   // another document was opened meanwhile
       setFull(detailRes.data);
       setPreviewHtml(typeof htmlRes.data === 'string' ? htmlRes.data : '');
       const p = detailRes.data?.payment || {};
@@ -179,9 +187,9 @@ export default function InvoiceDetail({ doc, onClose, onEdit, onPdf, onConvert, 
       // A short-link/notification deep link can hand this component a doc the
       // viewer isn't scoped/permitted to see — show the full-page Restricted
       // Access screen instead of a blank/broken detail.
-      if (err?.response?.status === 403) setRestricted(true);
+      if (err?.response?.status === 403 && previewFor.current === key) setRestricted(true);
     }
-    setLoading(false);
+    if (previewFor.current === key) setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authCtx, axiosGlobal, doc._id, permBase, can, previewLang]);
 

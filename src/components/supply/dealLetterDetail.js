@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect, useCallback } from 'react';
+import { useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import Box from '@mui/material/Box';
@@ -85,7 +85,13 @@ export default function DealLetterDetail({ dealLetterId, onClose, readOnly = fal
   // src can't carry the JWT — same approach as the invoice and packing-list
   // previews. Declared before the early returns below: hooks must run on every
   // render, including the loading one.
+  // `previewFor` is the deal letter the contract on screen belongs to: without it the
+  // previous record's contract stayed up while the next one loaded.
+  const previewFor = useRef('');
   const loadPreview = useCallback(async () => {
+    const key = String(dealLetterId || '');
+    previewFor.current = key;
+    setPreviewHtml('');
     if (!dealLetterId) return;
     setPreviewLoading(true);
     try {
@@ -94,11 +100,12 @@ export default function DealLetterDetail({ dealLetterId, onClose, readOnly = fal
         url: `${axiosGlobal.defaultTargetApi}/supply/deal-letters/${dealLetterId}/html`,
         responseType: 'text',
       });
+      if (previewFor.current !== key) return;   // another deal letter was opened meanwhile
       setPreviewHtml(typeof res.data === 'string' ? res.data : '');
     } catch (_) {
-      setPreviewHtml('');
+      if (previewFor.current === key) setPreviewHtml('');
     } finally {
-      setPreviewLoading(false);
+      if (previewFor.current === key) setPreviewLoading(false);
     }
   }, [authCtx, axiosGlobal, dealLetterId]);
 
