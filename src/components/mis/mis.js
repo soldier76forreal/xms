@@ -40,8 +40,10 @@ import InvoiceCard          from './invoiceCard';
 import InvoiceDetail        from './invoiceDetail';
 import InvoiceForm          from './invoiceForm';
 import CrossBranchRequestForm from './crossBranchRequestForm';
-import WebsiteRequestsSection from './websiteRequestsSection';
+import WebsiteRequestsSection, { PRICE_REQUEST_STATUSES, priceRequestStatusKey } from './websiteRequestsSection';
 import StorefrontIcon       from '@mui/icons-material/Storefront';
+import PersonOutlineIcon    from '@mui/icons-material/PersonOutline';
+import SwapHorizIcon        from '@mui/icons-material/SwapHoriz';
 import AllInboxIcon         from '@mui/icons-material/AllInbox';
 import SendToDialog         from './sendToDialog';
 import DeleteInvoiceDialog  from './deleteInvoiceDialog';
@@ -162,6 +164,10 @@ export default function Mis() {
   const [formDoc, setFormDoc]               = useState(null);
   const [formPreset, setFormPreset]         = useState(null);   // Supply → new doc deep link
   const [requestOpen, setRequestOpen]       = useState(false);  // cross-branch stock request
+  // Customer (website) requests are a different resource from inter-branch ones, but they
+  // are filtered from the same place in the top bar, so the two read as one section.
+  const [webReqSearch, setWebReqSearch]     = useState('');
+  const [webReqStatus, setWebReqStatus]     = useState('');
 
   const debouncedSearch = useDebounce(filter.search, 350);
 
@@ -448,6 +454,39 @@ export default function Mis() {
         <SectionTutorials section="mis" tag="mis:preinvoice:create" />
         </>)}
 
+        {/* Customer requests have their own resource and their own filters, but they sit
+            in the same place as the invoice search so the two request kinds read alike. */}
+        {misSection === 'invoices' && tab === 'request' && requestSource === 'website' && (<>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexGrow: 1, maxWidth: 360,
+            bgcolor: T.CTRL_BG, borderRadius: '8px', px: 1.25, py: '4px',
+            border: `1px solid ${T.BD}` }}>
+            <SearchIcon sx={{ fontSize: 16, color: T.TEXT_TER, flexShrink: 0 }} />
+            <InputBase value={webReqSearch} onChange={(e) => setWebReqSearch(e.target.value)}
+              placeholder={t('mis.websiteRequestSearch')}
+              sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, flex: 1,
+                '& input::placeholder': { color: T.TEXT_TER } }} />
+            {webReqSearch && (
+              <IconButton size="small" onClick={() => setWebReqSearch('')} sx={{ p: 0, color: T.TEXT_TER }}>
+                <CloseIcon sx={{ fontSize: 14 }} />
+              </IconButton>
+            )}
+          </Box>
+
+          <Select value={webReqStatus} size="small" displayEmpty
+            onChange={(e) => setWebReqStatus(e.target.value)}
+            inputProps={{ 'aria-label': t('common.status') }}
+            sx={{ fontSize: '0.72rem', height: 32, color: webReqStatus ? T.TEXT_PRI : T.TEXT_TER,
+              '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
+              '& .MuiSvgIcon-root': { color: T.TEXT_TER } }}>
+            <MenuItem value="" sx={{ fontSize: '0.75rem' }}>{t('common.all')}</MenuItem>
+            {PRICE_REQUEST_STATUSES.map((s) => (
+              <MenuItem key={s} value={s} sx={{ fontSize: '0.75rem' }}>{t(priceRequestStatusKey(s))}</MenuItem>
+            ))}
+          </Select>
+
+          <Box sx={{ flexGrow: 1 }} />
+        </>)}
+
         {/* Keeps the settings gear right-aligned when the invoice controls above
             are hidden. */}
         {misSection !== 'invoices' && <Box sx={{ flexGrow: 1 }} />}
@@ -465,19 +504,40 @@ export default function Mis() {
 
       <Divider sx={{ borderColor: T.BD }} />
 
+      {/* A customer's request and another branch's request are different things, so they
+          are separate lists - but they are siblings here, in the same pill group the
+          section's own tabs use. */}
       {misSection === 'invoices' && tab === 'request' && (
-        <Box sx={{ display: 'flex', gap: 0.5, px: 2, py: 1, borderBottom: '1px solid ' + T.BD }}>
-          <Button size="small" variant={requestSource === 'website' ? 'contained' : 'text'}
-            onClick={() => setRequestSource('website')}>{t('mis.websiteRequestsTab')}</Button>
-          <Button size="small" variant={requestSource === 'interBranch' ? 'contained' : 'text'}
-            onClick={() => setRequestSource('interBranch')}>{t('mis.interBranchRequestsTab')}</Button>
+        <Box sx={{ px: 2, py: 1, borderBottom: `1px solid ${T.BD}` }}>
+          <Box sx={{ display: 'inline-flex', gap: 0.5, bgcolor: T.CTRL_BG, borderRadius: '9px',
+            p: '3px', border: `1px solid ${T.BD}` }}>
+            {[
+              { id: 'website', Icon: PersonOutlineIcon, labelKey: 'mis.websiteRequestsTab' },
+              { id: 'interBranch', Icon: SwapHorizIcon, labelKey: 'mis.interBranchRequestsTab' },
+            ].map(({ id, Icon, labelKey }) => {
+              const active = requestSource === id;
+              return (
+                <Button key={id} size="small" onClick={() => setRequestSource(id)}
+                  sx={{ minWidth: 0, height: 24, px: 1, py: 0, borderRadius: '7px',
+                    fontSize: '0.7rem', fontWeight: active ? 700 : 400, textTransform: 'none',
+                    color: active ? T.TEXT_PRI : T.TEXT_TER,
+                    bgcolor: active ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)') : 'transparent',
+                    '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)', color: T.TEXT_PRI },
+                    gap: 0.5 }}>
+                  <Icon sx={{ fontSize: 14 }} />
+                  {t(labelKey)}
+                </Button>
+              );
+            })}
+          </Box>
         </Box>
       )}
 
       {misSection === 'packingLists' ? (
         <PackingListsSection openId={openPackingListId} onOpenIdConsumed={() => setOpenPackingListId(null)} />
       ) : tab === 'request' && requestSource === 'website' ? (
-        <WebsiteRequestsSection key={activeBranchId || 'none'} />
+        <WebsiteRequestsSection key={activeBranchId || 'none'}
+          search={webReqSearch} status={webReqStatus} />
       ) : (
       <>
       {/* ── Main content ── */}

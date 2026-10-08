@@ -117,7 +117,12 @@ export default function ProductPagePreview({
       setBust((n) => n + 1);
       setError('');
     } catch (err) {
-      setError((err && err.response && err.response.data && err.response.data.message) || t('dm.pcPreviewFailed'));
+      // Say WHY. A bare "couldn't load" hides the common case: an API that is running
+      // older code than the app and has no preview route yet (HTTP 404).
+      const res = err && err.response;
+      const detail = (res && res.data && res.data.message)
+        || (res ? `HTTP ${res.status}` : (err && err.message) || '');
+      setError(detail ? `${t('dm.pcPreviewFailed')} — ${detail}` : t('dm.pcPreviewFailed'));
       setPhase('error');
     } finally {
       pushing.current = false;
