@@ -69,6 +69,11 @@ export default function SpecCodeBuilder({
     TEXT_TER: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.4)',
   };
   const field = { '& .MuiOutlinedInput-root': { bgcolor: T.CTRL_BG, borderRadius: '8px', fontSize: '0.8rem' }, '& .MuiInputLabel-root': { fontSize: '0.78rem' } };
+  // A menu belongs above whatever surface opened it. This builder is used inside drawers
+  // that are themselves raised over a dialog, where a default-level popper would paint
+  // underneath them - invisibly, with no error (the MUI portal trap in CLAUDE.md).
+  const above = { zIndex: (th) => th.zIndex.modal + 2 };
+  const menuAbove = { MenuProps: { sx: above } };
 
   // The product is the host's (fixedProduct, read straight from props so a refreshed variety
   // list reaches us) or the one picked here.
@@ -192,6 +197,7 @@ export default function SpecCodeBuilder({
       {!fixedProduct && (
         <Autocomplete size="small" options={product && !options.some((o) => String(o._id) === String(product._id)) ? [product, ...options] : options}
           loading={loadingProducts} value={product} filterOptions={(x) => x}
+          slotProps={{ popper: { sx: above } }}
           getOptionLabel={(p) => (p ? `${p.name || p.code} (${p.code})` : '')}
           isOptionEqualToValue={(a, b) => String(a._id) === String(b._id)}
           onChange={(e, p) => { setPicked(p); setError(''); }}
@@ -211,7 +217,7 @@ export default function SpecCodeBuilder({
       {product && (
         <>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 1, alignItems: 'start' }}>
-            <TextField select size="small" label={t('inventory.specQuality')} value={spec.grade} onChange={set('grade')} sx={field}>
+            <TextField select size="small" label={t('inventory.specQuality')} value={spec.grade} onChange={set('grade')} sx={field} SelectProps={menuAbove}>
               {GRADE_CODES.map((g) => <MenuItem key={g} value={g} sx={{ fontSize: '0.8rem' }}>{g} - {GRADES[g].name}</MenuItem>)}
             </TextField>
             <TextField size="small" type="number" label={t('inventory.specLength')} value={spec.lengthCm} onChange={set('lengthCm')}
@@ -228,15 +234,15 @@ export default function SpecCodeBuilder({
             control={<Checkbox size="small" checked={spec.unsized} onChange={(e) => { setError(''); setSpec((s) => ({ ...s, unsized: e.target.checked })); }} />}
             label={t('inventory.specUnsized')} />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1 }}>
-            <TextField select size="small" label={t('inventory.specCut')} value={spec.cut} onChange={set('cut')} sx={field}>
+            <TextField select size="small" label={t('inventory.specCut')} value={spec.cut} onChange={set('cut')} sx={field} SelectProps={menuAbove}>
               <MenuItem value={ALL} sx={{ fontSize: '0.8rem' }}>{t('inventory.specNotSpecified')}</MenuItem>
               {Object.entries(CUT_NAMES).map(([k, name]) => <MenuItem key={k} value={k} sx={{ fontSize: '0.8rem' }}>{name}</MenuItem>)}
             </TextField>
-            <TextField select size="small" label={t('inventory.specFill')} value={spec.fill} onChange={set('fill')} sx={field}>
+            <TextField select size="small" label={t('inventory.specFill')} value={spec.fill} onChange={set('fill')} sx={field} SelectProps={menuAbove}>
               <MenuItem value={ALL} sx={{ fontSize: '0.8rem' }}>{t('inventory.specNotSpecified')}</MenuItem>
               {Object.entries(FILL_NAMES).map(([k, name]) => <MenuItem key={k} value={k} sx={{ fontSize: '0.8rem' }}>{name}</MenuItem>)}
             </TextField>
-            <TextField select size="small" label={t('inventory.specFinish')} value={spec.finish} onChange={set('finish')} sx={field}>
+            <TextField select size="small" label={t('inventory.specFinish')} value={spec.finish} onChange={set('finish')} sx={field} SelectProps={menuAbove}>
               <MenuItem value={ALL} sx={{ fontSize: '0.8rem' }}>{t('inventory.specNotSpecified')}</MenuItem>
               {Object.entries(FINISH_NAMES).map(([k, name]) => <MenuItem key={k} value={k} sx={{ fontSize: '0.8rem' }}>{name}</MenuItem>)}
             </TextField>
@@ -298,7 +304,7 @@ export default function SpecCodeBuilder({
                     </Typography>
                     {canCreate ? (
                       <>
-                        <TextField select size="small" value={unit} onChange={(e) => setUnit(e.target.value)} label={t('inventory.specUnit')} sx={{ ...field, width: 92 }}>
+                        <TextField select size="small" value={unit} onChange={(e) => setUnit(e.target.value)} label={t('inventory.specUnit')} sx={{ ...field, width: 92 }} SelectProps={menuAbove}>
                           {[...new Set([product.defaultUnit, ...UNITS].filter(Boolean))].map((u) => <MenuItem key={u} value={u} sx={{ fontSize: '0.8rem' }}>{u}</MenuItem>)}
                         </TextField>
                         <Button size="small" variant="contained" disabled={busy} onClick={createAndUse}

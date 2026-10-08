@@ -242,7 +242,13 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
 
 
   return (
+    // This drawer opens from INSIDE the deal letter detail, which is itself a Dialog.
+    // A Drawer sits at theme.zIndex.drawer (1200) and a Dialog at modal (1300), so without
+    // this it opened behind the dialog it was launched from. Raising it means every
+    // portalled child inside it (the variety picker, the specification builder's menus)
+    // has to be raised too - see the MUI portal z-index trap in CLAUDE.md.
     <Drawer anchor="right" open={open} onClose={handleClose}
+      sx={{ zIndex: (th) => th.zIndex.modal + 1 }}
       PaperProps={{ sx: { width: isXs ? '100vw' : 780, maxWidth: '100vw' } }}>
 
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -324,6 +330,7 @@ export default function DealLetterForm({ open, onClose, supplyId, productId, dea
         {tab === 1 && (<>
           <Autocomplete
             options={availableOptions} loading={variantLoading} value={null}
+            slotProps={{ popper: { sx: { zIndex: (th) => th.zIndex.modal + 2 } } }}
             onChange={(_, v) => addLine(v)}
             getOptionLabel={(o) => o?.code || ''}
             isOptionEqualToValue={(o, v) => String(o._id) === String(v?._id)}
