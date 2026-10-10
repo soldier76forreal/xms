@@ -55,6 +55,7 @@ import SidebarResizer from '../../tools/navs/sidebarResizer';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect        from '../../tools/inputs/pageSizeSelect';
 import SectionTutorials      from '../tutorials/sectionTutorials';
+import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
 
 // Phase 6 — MIS / Invoices master-detail page (Session 44).
 // Tabs, in order: Quote · Invoice · Packing lists · Requests · All. Quote,
@@ -131,7 +132,9 @@ export default function Mis() {
   const { isUnread } = useUnreadRecords('mis');
 
   const [tab, setTab]                 = useState('all');            // 'quote' | 'invoice' | 'request' | 'all'
-  const [requestSource, setRequestSource] = useState('website');
+  // Customer-branch requests come from the public website; with that switched off
+  // (featureFlags.js) the Requests tab only ever shows the inter-branch list.
+  const [requestSource, setRequestSource] = useState(WEBSITE_FEATURES_ENABLED ? 'website' : 'interBranch');
   // Session 72 (Phase 3) — which MIS sub-section is showing: the existing
   // invoice/pre-invoice master-detail, or the new standalone Packing Lists.
   const [misSection, setMisSection]   = useState('invoices');
@@ -507,7 +510,7 @@ export default function Mis() {
       {/* A customer's request and another branch's request are different things, so they
           are separate lists - but they are siblings here, in the same pill group the
           section's own tabs use. */}
-      {misSection === 'invoices' && tab === 'request' && (
+      {misSection === 'invoices' && tab === 'request' && WEBSITE_FEATURES_ENABLED && (
         <Box sx={{ px: 2, py: 1, borderBottom: `1px solid ${T.BD}` }}>
           <Box sx={{ display: 'inline-flex', gap: 0.5, bgcolor: T.CTRL_BG, borderRadius: '9px',
             p: '3px', border: `1px solid ${T.BD}` }}>

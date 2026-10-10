@@ -28,6 +28,7 @@ import InvoiceDetailDialog from '../../mis/invoiceDetailDialog';
 import InvoiceForm from '../../mis/invoiceForm';
 import { useBranch } from '../../../contextApi/BranchContext';
 import { OFFER_STATE_COLOR, OFFER_STATE_KEY } from '../../mis/websiteOfferPanel';
+import { WEBSITE_FEATURES_ENABLED } from '../../../tools/featureFlags';
 
 const PRICE_REQUEST_STATUS_META = {
   new:       { labelKey: 'crm.priceRequestStatusNew',       color: '#64b5f6' },
@@ -180,7 +181,9 @@ export default function RequestsTab({ customer }) {
     />
   );
 
-  const priceRequestsBlock = priceRequests.length > 0 && (
+  // Website purchase requests — only while the public website is switched on
+  // (featureFlags.js); replying to one needs the /price-requests API behind it.
+  const priceRequestsBlock = WEBSITE_FEATURES_ENABLED && priceRequests.length > 0 && (
     <Box sx={{ px: 2.5, pb: 1.5 }}>
       <Typography sx={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
         color: T.TEXT_TER, mb: 1 }}>

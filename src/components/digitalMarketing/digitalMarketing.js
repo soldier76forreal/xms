@@ -25,8 +25,10 @@ import ProductContentSection from './productContentSection';
 import WebsiteAnalyticsSection from './websiteAnalyticsSection';
 import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
 
-// The Blog tab only exists to author content for the public website's
-// /blog route — hidden while that site isn't live (see featureFlags.js).
+// Three of these tabs exist only to feed the public website — Product Content
+// authors its product pages, Analytics reports on its traffic, Blog writes its
+// /blog route — so all three are hidden while that site isn't live (see
+// featureFlags.js, and api/featureFlags.js for the endpoints behind them).
 // Link Pages/WhatsApp Share are unrelated standalone features, not part of
 // the website project, and stay on regardless.
 const TABS = [
@@ -34,9 +36,11 @@ const TABS = [
   { id: 'readyToUpload', Icon: CloudUploadIcon, labelKey: 'dm.tabReadyToUpload' },
   { id: 'linkPages',     Icon: LinkIcon,        labelKey: 'dm.tabLinkPages' },
   { id: 'whatsappShares', Icon: WhatsAppIcon,   labelKey: 'dm.tabWhatsappShares' },
-  { id: 'productContent', Icon: Inventory2OutlinedIcon, labelKey: 'dm.tabProductContent' },
-  { id: 'analytics',      Icon: InsightsIcon,    labelKey: 'dm.tabAnalytics' },
-  ...(WEBSITE_FEATURES_ENABLED ? [{ id: 'blog', Icon: ArticleIcon, labelKey: 'dm.tabBlog' }] : []),
+  ...(WEBSITE_FEATURES_ENABLED ? [
+    { id: 'productContent', Icon: Inventory2OutlinedIcon, labelKey: 'dm.tabProductContent' },
+    { id: 'analytics',      Icon: InsightsIcon,    labelKey: 'dm.tabAnalytics' },
+    { id: 'blog',           Icon: ArticleIcon,     labelKey: 'dm.tabBlog' },
+  ] : []),
 ];
 
 // Phase 8 — Digital Marketing. Two sub-sections: Raw Contents (batch upload +
