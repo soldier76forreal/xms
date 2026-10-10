@@ -1,12 +1,13 @@
-// Single on/off switch for the public-website integration (Website Tools,
-// the product Website/Price Requests tabs, the DM Blog CMS tab) — the
-// public Next.js site (website/) isn't finished yet, so these are hidden
-// for this deploy rather than half-shipped in front of real users. Flip
-// back to true (and nothing else) once the public site is ready to launch.
-// Nothing is deleted — the backend routes/models and these frontend
-// sections are all still here, just not reachable from the UI while this
-// is false.
-export const WEBSITE_FEATURES_ENABLED = false;
+// Single on/off switch for the public-website integration: Inventory's
+// Website Tools panel and product price-request panel, Digital Marketing's
+// Product Content / Analytics / Blog tabs, the MIS Customer-branch requests
+// pill, and the website purchase-request block on a CRM customer's Requests
+// tab. Setting this to false hides all of them without deleting anything.
+// It has a server half — WEBSITE_API_ENABLED in api/featureFlags.js, which
+// unmounts the endpoints these screens call. KEEP THE TWO IN STEP: this one
+// on its own means screens whose requests answer 503, and the server one on
+// its own just leaves endpoints nothing is calling.
+export const WEBSITE_FEATURES_ENABLED = true;
 
 // Inventory's "Full Analytics" button/overlay — Phase 1 shipped, disabled for
 // this deploy at Pouriya's request. Nothing deleted; flip back to true to
