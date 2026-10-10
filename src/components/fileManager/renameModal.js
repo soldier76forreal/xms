@@ -85,7 +85,7 @@ export default function RenameModal(props) {
         <TextField autoFocus fullWidth size="small" placeholder={t('files.newNamePlaceholder')}
           value={props.renameFolder}
           onChange={(e) => { props.setRenameFolder(e.target.value); setError(''); }}
-          onKeyDown={(e) => e.key === 'Enter' && renameFolder()}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); renameFolder(); } }}
           sx={{
             '& .MuiOutlinedInput-root': {
               bgcolor: T.INPUT_BG, borderRadius: '10px', color: T.TEXT_PRI,

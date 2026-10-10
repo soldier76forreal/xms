@@ -62,7 +62,7 @@ function TaxonomyPanel({ items, canManage, onCreate, onUpdate, onDelete, addLabe
     <Box>
       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
         <TextField size="small" fullWidth value={newName} onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && newName.trim()) { e.preventDefault(); handleCreate(); } }}
           placeholder={addLabel} disabled={!canManage} />
         <Button size="small" variant="outlined" onClick={handleCreate}
           disabled={!canManage || !newName.trim() || busy}
@@ -85,7 +85,7 @@ function TaxonomyPanel({ items, canManage, onCreate, onUpdate, onDelete, addLabe
                 <>
                   <TextField size="small" autoFocus fullWidth value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(item._id); if (e.key === 'Escape') setEditingId(null); }} />
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(item._id); } if (e.key === 'Escape') setEditingId(null); }} />
                   <IconButton size="small" onClick={() => saveEdit(item._id)} sx={{ color: 'success.main' }}>
                     <CheckIcon sx={{ fontSize: 16 }} />
                   </IconButton>

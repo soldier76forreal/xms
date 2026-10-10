@@ -389,7 +389,7 @@ export default function ProductGalleryManager({ value, onChange, title }) {
       {urlOpen && (
         <Box sx={{ display: 'flex', gap: 1, mb: 1.25 }}>
           <TextField size="small" fullWidth autoFocus value={urlText} onChange={(e) => { setUrlText(e.target.value); setUrlError(''); }}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && urlText.trim()) { e.preventDefault(); addUrl(); } }}
             placeholder={t('dm.pcGalleryUrlPlaceholder')} error={Boolean(urlError)} helperText={urlError} />
           <Button variant="contained" size="small" onClick={addUrl} sx={{ textTransform: 'none', height: 40 }}>{t('dm.pcGalleryUrlAdd')}</Button>
         </Box>

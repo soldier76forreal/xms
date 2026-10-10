@@ -23,6 +23,7 @@ import PublicLinkPage from './components/digitalMarketing/publicLinkPage';
 import RestrictedAccessScreen from './components/main/restrictedAccessScreen';
 import { useHistory, useLocation, Link } from "react-router-dom";
 import SnackBar from './tools/navs/snackBar';
+import useEnterAdvancesFields from './tools/enterAdvancesFields';
 import GhostBanner from './components/main/ghostBanner';
 import PwaInstallPrompt from './tools/navs/pwaInstallPrompt';
 import EnableNotificationsPrompt from './tools/navs/enableNotificationsPrompt';
@@ -249,6 +250,9 @@ const ThemedApp = () => {
 };
 
 function App() {
+  // Enter moves to the next field in every form, app-wide (tools/enterAdvancesFields.js).
+  useEnterAdvancesFields();
+
   // service worker reg — once on mount, not every render; logs the real reason
   // on failure (e.g. a server rewrite serving index.html for /serviceWorker.js
   // instead of the actual script — a MIME-type mismatch the browser rejects).

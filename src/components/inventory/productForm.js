@@ -309,7 +309,7 @@ const ProductForm = () => {
             size="small"
             value={newCatName}
             onChange={(e) => setNewCatName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleCreateCategory(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && newCatName.trim()) { e.preventDefault(); handleCreateCategory(); } }}
             sx={{ flex: 1 }}
             error={catNameExists}
             helperText={catNameExists ? t('inventory.categoryExists') : ''}

@@ -172,7 +172,7 @@ export default function SetPasswordDialog({
         <TextField size="small" fullWidth type={show ? 'text' : 'password'}
           label={t('users.pwConfirm')} value={confirm}
           onChange={(e) => { setConfirm(e.target.value); setError(''); }}
-          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave(); } }}
           error={mismatch} helperText={mismatch ? t('users.pwMismatch') : ' '}
           inputProps={{ dir: 'ltr' }} sx={inputSx} />
 

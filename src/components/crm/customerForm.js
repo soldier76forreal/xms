@@ -258,12 +258,15 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
 
   const phoneVerified = phoneCheck.status === 'clear' || phoneCheck.status === 'error';
 
-  // Keyboard flow: Tab out of the phone field checks the number RIGHT AWAY
+  // Keyboard flow: leaving the phone field by key checks the number RIGHT AWAY
   // instead of waiting for the debounce, and — once it clears — moves focus to
   // the first field of the section that just appeared. Without this, Tab landed
   // on the footer buttons because the fields below didn't exist yet.
+  // Enter is here for the same reason: it is how the app moves between fields
+  // now (tools/enterAdvancesFields.js), and preventDefault below is what tells
+  // that shared listener this key is already taken care of.
   const handlePhoneKeyDown = async (e) => {
-    if (e.key !== 'Tab' || e.shiftKey) return;
+    if ((e.key !== 'Tab' && e.key !== 'Enter') || e.shiftKey) return;
     const phone = form.values.phoneNumber?.trim();
     if (!phone || phoneVerified) return;      // nothing typed, or the form is already open
     e.preventDefault();
@@ -950,7 +953,7 @@ const CustomerForm = ({ open, mode = 'new', customer, onClose, onSave }) => {
               border: `1px solid ${T.BD}` }}>
               <InputBase value={tagInput}
                 onChange={e => setTagInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+                onKeyDown={e => { if (e.key === 'Enter' && tagInput.trim()) { e.preventDefault(); addTag(); } }}
                 placeholder={t('crm.addTagPlaceholder')}
                 sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, flex: 1,
                   '& input::placeholder': { color: T.TEXT_TER } }} />

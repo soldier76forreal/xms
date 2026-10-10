@@ -95,7 +95,7 @@ export default function NewFileModal(props) {
         <TextField autoFocus fullWidth size="small" placeholder={t('files.folderNamePlaceholder')}
           value={theName}
           onChange={(e) => { setTheName(e.target.value); setError(''); }}
-          onKeyDown={(e) => e.key === 'Enter' && newFile()}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); newFile(); } }}
           sx={{
             '& .MuiOutlinedInput-root': {
               bgcolor: T.INPUT_BG, borderRadius: '10px', color: T.TEXT_PRI,
