@@ -9,6 +9,13 @@
 // its own just leaves endpoints nothing is calling.
 export const WEBSITE_FEATURES_ENABLED = true;
 
+// The website's blog, and the Digital Marketing tab that writes it. The blog was taken off
+// the public site, so authoring it has nowhere to go — the tab is hidden and the API answers
+// 404 (WEBSITE_BLOG_ENABLED in api/featureFlags.js, and in the website's environment).
+// blogSection.js, the thunks and the posts in the database are all untouched: turn the three
+// flags on together to bring the blog back.
+export const BLOG_ENABLED = false;
+
 // Inventory's "Full Analytics" button/overlay — Phase 1 shipped, disabled for
 // this deploy at Pouriya's request. Nothing deleted; flip back to true to
 // bring it back.

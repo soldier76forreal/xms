@@ -6,6 +6,8 @@ import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import MenuItem from '@mui/material/MenuItem';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import Autocomplete from '@mui/material/Autocomplete';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -120,11 +122,18 @@ const BranchForm = ({ open, onClose, onSave, branch, allBranches = [] }) => {
   const [phone,           setPhone]           = useState('');
   const [instagramHandle, setInstagramHandle] = useState('');
   const [websiteSlug, setWebsiteSlug] = useState('');
+  const [websiteDefault, setWebsiteDefault] = useState(false);
   const [flagFile, setFlagFile] = useState(null);
   const [misTemplates, setMisTemplates] = useState({ ...EMPTY_TEMPLATES });
   const [crossBranchAccess, setCrossBranchAccess] = useState([]);   // branch ids
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState('');
+
+  // The branch currently marked, when it is a different one - turning the switch on moves it.
+  const currentDefaultElsewhere = useMemo(
+    () => allBranches.find((b) => b.websiteDefault && String(b._id) !== String(branch?._id)),
+    [allBranches, branch],
+  );
 
   const userDirectory = useSelector((s) => s.userDirectory) || {};
   const directoryOptions = Object.keys(userDirectory);
@@ -147,6 +156,7 @@ const BranchForm = ({ open, onClose, onSave, branch, allBranches = [] }) => {
       setPhone(branch.phone || '');
       setInstagramHandle(String(branch.instagramHandle || '').replace(/^@/, ''));
       setWebsiteSlug(branch.websiteSlug || branch.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || '');
+    setWebsiteDefault(Boolean(branch.websiteDefault));
       setFlagFile(null);
       setMisTemplates({ ...EMPTY_TEMPLATES, ...(branch.misTemplates || {}) });
       setCrossBranchAccess((branch.crossBranchAccess || []).map(String));
@@ -170,6 +180,7 @@ const BranchForm = ({ open, onClose, onSave, branch, allBranches = [] }) => {
         address: address.trim(), phone: phone.trim(),
         instagramHandle: instagramHandle.trim().replace(/^@/, ''),
         websiteSlug: websiteSlug.trim(),
+        websiteDefault,
         misTemplates,
         crossBranchAccess,
       };
@@ -355,6 +366,23 @@ const BranchForm = ({ open, onClose, onSave, branch, allBranches = [] }) => {
             inputProps={{ dir: 'ltr', autoCapitalize: 'none', spellCheck: false }}
             helperText={websiteSlug ? `lazulitemarble.com/${websiteSlug}/ · lazulitemarble.com/${websiteSlug}/ar/` : t('users.branchWebsiteSlugHelper')}
             sx={inputSx} />
+          {/* Which branch a visitor sees before they pick one. The server keeps this to a
+              single branch, so switching it on here takes it off whichever branch holds it -
+              name that branch rather than let the change be a surprise. */}
+          <Box>
+            <FormControlLabel
+              control={<Switch size="small" checked={websiteDefault}
+                onChange={(e) => setWebsiteDefault(e.target.checked)} />}
+              label={<Typography sx={{ fontSize: '0.8rem', color: T.TEXT_PRI }}>
+                {t('users.branchWebsiteDefaultLabel')}
+              </Typography>}
+              sx={{ ml: 0 }} />
+            <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER, mt: 0.25 }}>
+              {websiteDefault && currentDefaultElsewhere
+                ? t('users.branchWebsiteDefaultMoves', { name: currentDefaultElsewhere.name })
+                : t('users.branchWebsiteDefaultHelper')}
+            </Typography>
+          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             {branch?.flagImage && !flagFile && (
               <Box component="img" src={`${axiosGlobal.defaultTargetApi}${branch.flagImage}`}

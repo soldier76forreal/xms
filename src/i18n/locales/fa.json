@@ -1492,7 +1492,10 @@
     "pwAdminNote": "این کار بلافاصله رمز عبور او را جایگزین و قفل حساب را باز می‌کند. رمز جدید را از راهی مطمئن به او اطلاع دهید.",
     "dsPackingLists": "لیست‌های بسته‌بندی",
     "dsSupply": "تأمین",
-    "dsDigitalMarketing": "بازاریابی دیجیتال"
+    "dsDigitalMarketing": "بازاریابی دیجیتال",
+    "branchWebsiteDefaultLabel": "شعبه پیش‌فرض وب‌سایت",
+    "branchWebsiteDefaultHelper": "بازدیدکنندگانی که شعبه‌ای انتخاب نکرده‌اند این شعبه را می‌بینند. فقط یک شعبه می‌تواند پیش‌فرض باشد.",
+    "branchWebsiteDefaultMoves": "در حال حاضر {{name}} — با ذخیره، به این شعبه منتقل می‌شود."
   },
   "dm": {
     "viewedAndDownloaded": "بازدید و دانلود",

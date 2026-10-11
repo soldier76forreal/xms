@@ -1527,7 +1527,10 @@
     "pwAdminNote": "يستبدل هذا كلمة مروره فورًا ويلغي أي قفل. أبلغه بكلمة المرور الجديدة عبر قناة موثوقة.",
     "dsPackingLists": "قوائم التعبئة",
     "dsSupply": "التوريد",
-    "dsDigitalMarketing": "التسويق الرقمي"
+    "dsDigitalMarketing": "التسويق الرقمي",
+    "branchWebsiteDefaultLabel": "الفرع الافتراضي للموقع",
+    "branchWebsiteDefaultHelper": "يرى الزوار الذين لم يختاروا فرعًا هذا الفرع. يمكن لفرع واحد فقط أن يكون الافتراضي.",
+    "branchWebsiteDefaultMoves": "حاليًا {{name}} — سيؤدي الحفظ إلى نقله إلى هذا الفرع."
   },
   "dm": {
     "viewedAndDownloaded": "المشاهدات والتنزيلات",

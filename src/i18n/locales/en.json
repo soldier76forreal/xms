@@ -1518,7 +1518,10 @@
     "pwAdminNote": "This replaces their password immediately and clears any lockout. Tell them the new password over a channel they already trust.",
     "dsPackingLists": "Packing lists",
     "dsSupply": "Supply",
-    "dsDigitalMarketing": "Digital Marketing"
+    "dsDigitalMarketing": "Digital Marketing",
+    "branchWebsiteDefaultLabel": "Default branch for the website",
+    "branchWebsiteDefaultHelper": "Visitors who have not chosen a branch see this one. Only one branch can be the default.",
+    "branchWebsiteDefaultMoves": "Currently {{name}} — saving moves it to this branch."
   },
   "dm": {
     "viewedAndDownloaded": "Viewed & downloaded",

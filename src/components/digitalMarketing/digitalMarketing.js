@@ -23,7 +23,7 @@ import WhatsappShareSection from './whatsappShareSection';
 import BlogSection from './blogSection';
 import ProductContentSection from './productContentSection';
 import WebsiteAnalyticsSection from './websiteAnalyticsSection';
-import { WEBSITE_FEATURES_ENABLED } from '../../tools/featureFlags';
+import { WEBSITE_FEATURES_ENABLED, BLOG_ENABLED } from '../../tools/featureFlags';
 
 // Three of these tabs exist only to feed the public website — Product Content
 // authors its product pages, Analytics reports on its traffic, Blog writes its
@@ -39,7 +39,7 @@ const TABS = [
   ...(WEBSITE_FEATURES_ENABLED ? [
     { id: 'productContent', Icon: Inventory2OutlinedIcon, labelKey: 'dm.tabProductContent' },
     { id: 'analytics',      Icon: InsightsIcon,    labelKey: 'dm.tabAnalytics' },
-    { id: 'blog',           Icon: ArticleIcon,     labelKey: 'dm.tabBlog' },
+    ...(BLOG_ENABLED ? [{ id: 'blog', Icon: ArticleIcon, labelKey: 'dm.tabBlog' }] : []),
   ] : []),
 ];
 
