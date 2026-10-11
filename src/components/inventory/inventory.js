@@ -277,14 +277,17 @@ const Inventory = () => {
         <Box sx={{ maxWidth: selectedProductId ? '100%' : 960, mx: selectedProductId ? 0 : 'auto', px: { xs: 2, sm: 3 }, py: 3 }}>
 
       {/* ── Header ── */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 3 }}>
-        <Box>
+      {/* The actions outgrow a phone's width, so the row wraps rather than squeezing the
+          title into a sliver - the same flexWrap the CRM, MIS and Supply headers use. */}
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 1.5, mb: 3 }}>
+        <Box sx={{ minWidth: 0 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>{t('nav.inventory')}</Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
             {t('inventory.productsAndVarieties')}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Which branch's catalogue to show — own branches, plus any that
               shared theirs (those open read-only). */}
           <SectionBranchSelect value={viewBranchId} readOnly={branchReadOnly}
