@@ -93,7 +93,17 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
   };
   const discardAndClose = () => { resetForm(); onClose(); };
 
-  const addFiles = (fileList) => setFiles((prev) => [...prev, ...Array.from(fileList)]);
+  // Read the FileList into a real array HERE, not inside the state updater. The input's
+  // onChange clears e.target.value straight after calling this, which empties the live
+  // FileList — and a React updater runs later, during the re-render, so by the time it read
+  // the list there was nothing left in it and the picked files silently vanished.
+  // Every sibling picker (rawContentForm, rawContentDetail, readyToUploadDetail,
+  // productGalleryManager) already reads it synchronously; this one did not.
+  const addFiles = (fileList) => {
+    const picked = Array.from(fileList || []);
+    if (!picked.length) return;
+    setFiles((prev) => [...prev, ...picked]);
+  };
   const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSave = async () => {

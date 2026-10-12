@@ -16,6 +16,12 @@ export const WEBSITE_FEATURES_ENABLED = true;
 // flags on together to bring the blog back.
 export const BLOG_ENABLED = false;
 
+// Inventory's "Website Tools" button, removed from that screen at Pouriya's request
+// (2026-10-12). It is only the entry point that is hidden — websiteTools.js, its routes and
+// the categories/tags it manages are all untouched, and the rest of the website integration
+// stays on, which is why this cannot ride on WEBSITE_FEATURES_ENABLED.
+export const INVENTORY_WEBSITE_TOOLS_ENABLED = false;
+
 // Inventory's "Full Analytics" button/overlay — Phase 1 shipped, disabled for
 // this deploy at Pouriya's request. Nothing deleted; flip back to true to
 // bring it back.

@@ -38,7 +38,7 @@ import ProductForm from './productForm';
 import ImportExportDialog from './importExportDialog';
 import ImportExportIcon from '@mui/icons-material/ImportExport';
 import WebsiteTools from './websiteTools';
-import { WEBSITE_FEATURES_ENABLED, INVENTORY_ANALYTICS_ENABLED } from '../../tools/featureFlags';
+import { WEBSITE_FEATURES_ENABLED, INVENTORY_ANALYTICS_ENABLED, INVENTORY_WEBSITE_TOOLS_ENABLED } from '../../tools/featureFlags';
 import LanguageIcon from '@mui/icons-material/Language';
 import RestrictedAccessScreen from '../main/restrictedAccessScreen';
 import ChromeButton from '../../tools/chromeButton';
@@ -301,7 +301,7 @@ const Inventory = () => {
               {t('inventory.importExportButton')}
             </Button>
           )}
-          {WEBSITE_FEATURES_ENABLED && can('inventory:website:manage') && (
+          {INVENTORY_WEBSITE_TOOLS_ENABLED && WEBSITE_FEATURES_ENABLED && can('inventory:website:manage') && (
             <Button variant="outlined" startIcon={<LanguageIcon />} size="small"
               onClick={() => setWebsiteToolsOpen(true)} sx={{ borderRadius: 2 }}>
               {t('inventory.websiteToolsButton')}
