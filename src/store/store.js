@@ -650,6 +650,19 @@ function downloadFailure(what, err) {
   return `Failed to open the ${what}${reason ? ` — ${reason}` : ''}`;
 }
 
+// A filed job report, printed in the language the viewer picked. Browser
+// printing, like every other document in this app - there is no server-side
+// PDF for job reports and deliberately so.
+export const printJobReport = createAsyncThunk('users/printJobReport', async (theData, { dispatch }) => {
+  try {
+    await printServerHtml(theData.authCtx,
+      `${theData.axiosGlobal.defaultTargetApi}/users/jobReports/${theData.id}/html`,
+      theData.lang ? { lang: theData.lang } : {});
+  } catch (err) {
+    dispatch(actions.setShowSnackBar({ status: true, msg: downloadFailure('job report', err), type: 'error' }));
+  }
+});
+
 export const downloadMisPackingListPdf = createAsyncThunk('overallAssets/downloadMisPackingListPdf', async (theData, { dispatch }) => {
   try {
     const base = `${theData.axiosGlobal.defaultTargetApi}/mis/packing-lists/${theData.id}`;

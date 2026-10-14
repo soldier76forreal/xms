@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback, useRef } from 'react';
+import { useState, useEffect, useContext, useCallback } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
@@ -17,9 +17,6 @@ import CloseIcon from '@mui/icons-material/Close';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
-import MicIcon from '@mui/icons-material/Mic';
-import StopCircleIcon from '@mui/icons-material/StopCircle';
-import AttachFileIcon from '@mui/icons-material/AttachFile';
 import DescriptionIcon from '@mui/icons-material/Description';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ImageIcon from '@mui/icons-material/Image';
@@ -31,6 +28,13 @@ import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer, { downloadFile } from '../digitalMarketing/mediaViewer';
+import JobReportForm from './jobReportForm';
+import { SectionsReadOnlyView, useSpecLang } from './jobReportFields';
+import { printJobReport } from '../../store/store';
+import { useDispatch } from 'react-redux';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import PrintIcon from '@mui/icons-material/Print';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmtDate = (d) => {
@@ -166,6 +170,52 @@ const ThreadComposer = ({ label, buttonLabel, onSubmit, T, accent }) => {
 // full body, attachments, and the "any possible information" footer).
 // onAddFollowUp: provided only when the viewer OWNS the report.
 // onReply: provided only when the viewer holds jobReports:reply (admin mode).
+// Download / print the filed sheet, in a language the viewer picks. It goes
+// through the BROWSER's own print dialog (printServerHtml -> printHtmlDocument),
+// which is how every document in this app is produced since the production
+// server cannot run headless Chrome - the same path invoices and packing lists
+// take, not a second mechanism.
+const PRINT_LANGS = [
+  { code: 'en', label: 'English' },
+  { code: 'ar', label: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' },
+  { code: 'fa', label: '\u0641\u0627\u0631\u0633\u06cc' },
+];
+
+const PrintReportButton = ({ report, T }) => {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const axiosGlobal = useContext(AxiosGlobal);
+  const authCtx = useContext(AuthContext);
+  const lang = useSpecLang();
+  const [anchor, setAnchor] = useState(null);
+
+  if (!report) return null;
+
+  const print = (code) => {
+    setAnchor(null);
+    dispatch(printJobReport({ authCtx, axiosGlobal, id: report._id, lang: code }));
+  };
+
+  return (
+    <>
+      <Tooltip title={t('users.jrPrint')}>
+        <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)} sx={{ color: T.TEXT_SEC }}>
+          <PrintIcon sx={{ fontSize: 17 }} />
+        </IconButton>
+      </Tooltip>
+      {/* The viewer's own language is offered first - it is the one they
+          almost always want - but any of the three can be printed. */}
+      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+        {[...PRINT_LANGS].sort((a, b) => (a.code === lang ? -1 : b.code === lang ? 1 : 0)).map((l) => (
+          <MenuItem key={l.code} onClick={() => print(l.code)} sx={{ fontSize: '0.8rem' }}>
+            {l.label}{l.code === lang ? ` \u00b7 ${t('users.jrYourLanguage')}` : ''}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+};
+
 const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, onOpenAttachment,
   onAddFollowUp, onReply, authorName }) => {
   const { t } = useTranslation();
@@ -205,9 +255,12 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
               </Typography>
             )}
           </Box>
-          <IconButton onClick={onClose} size="small" sx={{ color: T.TEXT_SEC, flexShrink: 0 }}>
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+            <PrintReportButton report={report} T={T} />
+            <IconButton onClick={onClose} size="small" sx={{ color: T.TEXT_SEC }}>
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
         </Box>
 
         <Divider sx={{ borderColor: T.DIVIDER }} />
@@ -220,7 +273,11 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
             </Typography>
           )}
 
-          {report.body ? (
+          {/* A template-driven report is read back through its own spec; a
+              classic one is still just its free text. */}
+          {report.templateKey && report.templateKey !== 'classic' ? (
+            <SectionsReadOnlyView templateKey={report.templateKey} sections={report.sections} T={T} />
+          ) : report.body ? (
             <Typography sx={{ fontSize: '0.9rem', color: T.TEXT_SEC, lineHeight: 1.85,
               whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {report.body}
@@ -271,201 +328,6 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
   );
 };
 
-// ── The add/edit composer — a Dialog so it can be reused for both flows ───────
-const JobReportForm = ({ open, onClose, onSaved, userId, editingReport, T, isXs, isDark }) => {
-  const { t }       = useTranslation();
-  const authCtx     = useContext(AuthContext);
-  const axiosGlobal = useContext(AxiosGlobal);
-
-  const [reportDate, setReportDate] = useState(todayStr());
-  const [title, setTitle]           = useState('');
-  const [body, setBody]             = useState('');
-  const [existingFiles, setExistingFiles] = useState([]);   // files already on the report
-  const [removedFileIds, setRemovedFileIds] = useState([]); // existing fileIds queued for removal
-  const [pendingFiles, setPendingFiles]     = useState([]); // new File[] to upload
-  const [recording, setRecording]   = useState(false);
-  const [recordError, setRecordError] = useState('');
-  const [saving, setSaving]         = useState(false);
-
-  const mediaRecorderRef = useRef(null);
-  const chunksRef        = useRef([]);
-
-  useEffect(() => {
-    if (!open) return;
-    if (editingReport) {
-      setReportDate(editingReport.reportDate ? new Date(editingReport.reportDate).toISOString().slice(0, 10) : todayStr());
-      setTitle(editingReport.title || '');
-      setBody(editingReport.body || '');
-      setExistingFiles(editingReport.files || []);
-    } else {
-      setReportDate(todayStr());
-      setTitle('');
-      setBody('');
-      setExistingFiles([]);
-    }
-    setRemovedFileIds([]);
-    setPendingFiles([]);
-    setRecordError('');
-  }, [open, editingReport]);
-
-  const startRecording = async () => {
-    setRecordError('');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      chunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      recorder.onstop = () => {
-        stream.getTracks().forEach((track) => track.stop());
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        const file = new File([blob], `voice-report-${Date.now()}.webm`, { type: 'audio/webm' });
-        setPendingFiles((prev) => [...prev, file]);
-      };
-      recorder.start();
-      mediaRecorderRef.current = recorder;
-      setRecording(true);
-    } catch (_) {
-      setRecordError(t('crm.micDenied'));
-    }
-  };
-  const stopRecording = () => { mediaRecorderRef.current?.stop(); setRecording(false); };
-
-  const handleAttach = (e) => {
-    const files = Array.from(e.target.files || []);
-    setPendingFiles((prev) => [...prev, ...files]);
-    e.target.value = '';
-  };
-  const removePendingFile = (idx) => setPendingFiles((prev) => prev.filter((_, i) => i !== idx));
-  const removeExistingFile = (fileId) => {
-    setExistingFiles((prev) => prev.filter((f) => String(f.fileId) !== String(fileId)));
-    setRemovedFileIds((prev) => [...prev, fileId]);
-  };
-
-  const save = async () => {
-    if (!title.trim() && !body.trim() && pendingFiles.length === 0 && existingFiles.length === 0) return;
-    setSaving(true);
-    try {
-      const fd = new FormData();
-      fd.append('reportDate', reportDate);
-      fd.append('title', title.trim());
-      fd.append('body', body.trim());
-      pendingFiles.forEach((f) => fd.append('files', f));
-      if (editingReport) {
-        fd.append('removeFileIds', JSON.stringify(removedFileIds));
-        await authCtx.jwtInst({
-          method: 'put',
-          url: `${axiosGlobal.defaultTargetApi}/users/me/jobReports/${editingReport._id}`,
-          data: fd, headers: { 'Content-Type': 'multipart/form-data' },
-        });
-      } else {
-        await authCtx.jwtInst({
-          method: 'post',
-          url: `${axiosGlobal.defaultTargetApi}/users/me/jobReports`,
-          data: fd, headers: { 'Content-Type': 'multipart/form-data' },
-        });
-      }
-      onSaved();
-      onClose();
-    } catch (_) { /* keep the draft open on failure */ }
-    setSaving(false);
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} fullScreen={isXs} maxWidth="sm" fullWidth
-      PaperProps={{ sx: {
-        bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`,
-        borderRadius: isXs ? 0 : '14px', backgroundImage: 'none',
-      }}}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}` }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          {editingReport ? t('users.editJobReport') : t('users.newJobReport')}
-        </Typography>
-        <IconButton onClick={onClose} size="small" sx={{ color: T.TEXT_SEC }}>
-          <CloseIcon sx={{ fontSize: 18 }} />
-        </IconButton>
-      </Box>
-
-      <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        <TextField label={t('users.reportDateLabel')} type="date" size="small" fullWidth
-          value={reportDate} onChange={(e) => setReportDate(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px', color: T.TEXT_PRI },
-            '& input': { color: T.TEXT_PRI } }} />
-
-        <TextField label={t('users.reportTitleLabel')} size="small" fullWidth
-          value={title} onChange={(e) => setTitle(e.target.value)}
-          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px', color: T.TEXT_PRI },
-            '& input': { color: T.TEXT_PRI } }} />
-
-        <TextField multiline minRows={4} fullWidth size="small"
-          placeholder={t('users.reportBodyPlaceholder')}
-          value={body} onChange={(e) => setBody(e.target.value)}
-          sx={{ '& .MuiOutlinedInput-root': { bgcolor: T.INPUT_BG, borderRadius: '10px' },
-            '& textarea': { fontSize: '0.85rem', color: T.TEXT_PRI } }} />
-
-        {recordError && <Typography sx={{ fontSize: '0.7rem', color: '#EA005A' }}>{recordError}</Typography>}
-
-        {existingFiles.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {existingFiles.map((f) => (
-              <Chip key={String(f.fileId)} size="small"
-                label={f.name?.length > 22 ? f.name.slice(0, 19) + '…' : f.name}
-                onDelete={() => removeExistingFile(f.fileId)}
-                sx={{ height: 22, fontSize: '0.68rem', bgcolor: T.INPUT_BG, color: T.TEXT_SEC }} />
-            ))}
-          </Box>
-        )}
-        {pendingFiles.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-            {pendingFiles.map((f, i) => (
-              <Chip key={i} size="small"
-                label={f.name.length > 22 ? f.name.slice(0, 19) + '…' : f.name}
-                onDelete={() => removePendingFile(i)}
-                sx={{ height: 22, fontSize: '0.68rem', bgcolor: 'rgba(100,181,246,0.15)', color: '#64b5f6' }} />
-            ))}
-          </Box>
-        )}
-
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Tooltip title={recording ? t('crm.stopRecording') : t('crm.recordVoiceMessage')}>
-            <IconButton size="small" onClick={recording ? stopRecording : startRecording}
-              sx={{ color: recording ? '#EA005A' : T.TEXT_TER, width: 28, height: 28 }}>
-              {recording ? <StopCircleIcon sx={{ fontSize: 18 }} /> : <MicIcon sx={{ fontSize: 18 }} />}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t('crm.attachImageVideo')}>
-            <IconButton size="small" component="label" sx={{ color: T.TEXT_TER, width: 28, height: 28 }}>
-              <AttachFileIcon sx={{ fontSize: 17 }} />
-              <input type="file" hidden multiple accept="image/*,video/*" onChange={handleAttach} />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={t('users.attachDocument')}>
-            <IconButton size="small" component="label" sx={{ color: T.TEXT_TER, width: 28, height: 28 }}>
-              <DescriptionIcon sx={{ fontSize: 17 }} />
-              <input type="file" hidden multiple onChange={handleAttach} />
-            </IconButton>
-          </Tooltip>
-          {recording && (
-            <Typography sx={{ fontSize: '0.7rem', color: '#EA005A', fontWeight: 600 }}>{t('crm.recording')}</Typography>
-          )}
-          <Box sx={{ flexGrow: 1 }} />
-          <Button onClick={onClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="contained" onClick={save} disabled={saving}
-            startIcon={saving ? <CircularProgress size={13} color="inherit" /> : null}
-            sx={{ fontSize: '0.78rem', textTransform: 'none', borderRadius: '8px', px: 2.5,
-              bgcolor: T.BTN_BG, color: T.BTN_CLR,
-              '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)' } }}>
-            {saving ? t('users.saving') : t('common.save')}
-          </Button>
-        </Box>
-      </Box>
-    </Dialog>
-  );
-};
-
 // ── Job Reports section — rendered as a card on the user's profile ────────────
 const JobReportSection = ({ userId, isSelf }) => {
   const { t }       = useTranslation();
@@ -487,6 +349,9 @@ const JobReportSection = ({ userId, isSelf }) => {
     CARD_BD:  isDark ? 'rgba(255,255,255,0.08)' : theme.palette.divider,
     BTN_BG:   isDark ? '#ffffff'                : '#000000',
     BTN_CLR:  isDark ? '#000000'                : '#ffffff',
+    // Also read by jobReportForm's own chrome (navigator, chips).
+    BD:       isDark ? 'rgba(255,255,255,0.08)' : theme.palette.divider,
+    CTRL_BG:  isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
   };
 
   const [reports, setReports] = useState([]);
@@ -562,7 +427,7 @@ const JobReportSection = ({ userId, isSelf }) => {
     <Box sx={{ p: 2.5, bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`, borderRadius: '14px' }}>
       <MediaViewer open={!!viewerMedia} onClose={() => setViewerMedia(null)} media={viewerMedia} />
       <JobReportForm open={formOpen} onClose={() => setFormOpen(false)} onSaved={() => load(1)}
-        userId={userId} editingReport={editingReport} T={T} isXs={isXs} isDark={isDark} />
+        editingReport={editingReport} T={T} isDark={isDark} />
       <JobReportDetail open={!!viewingReport} onClose={() => setViewingReport(null)}
         report={viewingReport} T={T} isXs={isXs} isDark={isDark} axiosGlobal={axiosGlobal}
         onOpenAttachment={openAttachment}
@@ -643,6 +508,13 @@ const JobReportSection = ({ userId, isSelf }) => {
                 <Chip icon={<EventIcon sx={{ fontSize: '13px !important' }} />} label={fmtDate(report.reportDate)}
                   size="small" sx={{ height: 22, fontSize: '0.68rem', fontWeight: 700,
                     bgcolor: 'rgba(100,181,246,0.12)', color: '#64b5f6' }} />
+                {/* Your own unfinished sheet, autosaved but not filed - nobody
+                    else sees it and no group admin has been told about it. */}
+                {report.status === 'draft' && (
+                  <Chip label={t('users.jrDraft')} size="small"
+                    sx={{ height: 20, fontSize: '0.64rem', fontWeight: 700,
+                      bgcolor: 'rgba(255,193,7,0.16)', color: '#FFC107' }} />
+                )}
                 {report.title && (
                   <Typography sx={{ fontSize: '0.82rem', fontWeight: 700, color: T.TEXT_PRI }}>
                     {report.title}

@@ -9,6 +9,7 @@ import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 import Chip from '@mui/material/Chip';
 import Checkbox from '@mui/material/Checkbox';
+import MenuItem from '@mui/material/MenuItem';
 import Divider from '@mui/material/Divider';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -22,6 +23,9 @@ import { actions } from '../../store/store';
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { Can } from '../../contextApi/PermissionContext';
+// The job report template catalog speaks all three languages itself; these
+// are the same helpers the report form reads it with.
+import { pickLabel as jrLabel, useSpecLang } from './jobReportFields';
 
 const useT = () => {
   const theme  = useTheme();
@@ -54,6 +58,7 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
   const { t }       = useTranslation();
   const isXs        = useMediaQuery(theme.breakpoints.down('sm'));
   const T           = useT();
+  const jrLang      = useSpecLang();
 
   const isNew = !role;
 
@@ -74,6 +79,11 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
   const [description, setDescription] = useState('');
   const [selected,    setSelected]    = useState(new Set());
   const [dataScopes,  setDataScopes]  = useState({});
+  // Which daily report form this role's holders file on. The catalog comes
+  // from the server (one registry, in api/utils/jobReportTemplates.js), so a
+  // new template appears in this list without a frontend change.
+  const [jobReportTemplate, setJobReportTemplate] = useState('classic');
+  const [jrTemplates, setJrTemplates] = useState([]);
   const [saving,      setSaving]      = useState(false);
   const [error,       setError]       = useState('');
   const [expandedMods, setExpandedMods] = useState(new Set());   // collapsed by default — headers show counts
@@ -94,10 +104,22 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
       setDescription(role.description || '');
       setSelected(new Set(role.permissions || []));
       setDataScopes(role.dataScopes || {});
+      setJobReportTemplate(role.jobReportTemplate || 'classic');
     } else {
       setName(''); setDescription(''); setSelected(new Set()); setDataScopes({});
+      setJobReportTemplate('classic');
     }
   }, [open, role]);
+
+  useEffect(() => {
+    if (!open) return;
+    authCtx.jwtInst({ method: 'get', url: `${axiosGlobal.defaultTargetApi}/users/jobReports/templates` })
+      .then((res) => setJrTemplates(res.data.templates || []))
+      // Losing the catalog must not block saving a role: the selector simply
+      // falls back to the one value every role can always have.
+      .catch(() => setJrTemplates([{ key: 'classic', label: { en: 'Classic report' } }]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const setScope = (module, value) => {
     setDataScopes(prev => {
@@ -132,7 +154,7 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
     if (!name.trim()) { setError(t('users.roleNameRequired')); return; }
     setSaving(true); setError('');
     try {
-      const data = { name: name.trim(), description: description.trim(), permissions: Array.from(selected), dataScopes };
+      const data = { name: name.trim(), description: description.trim(), permissions: Array.from(selected), dataScopes, jobReportTemplate };
       if (isNew) {
         await authCtx.jwtInst({ method: 'post', url: `${axiosGlobal.defaultTargetApi}/roles`, data });
       } else {
@@ -277,6 +299,34 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
             );
           })
         )}
+
+        <Divider sx={{ borderColor: T.DIVIDER, my: 1.5 }} />
+
+        {/* ── Daily report form ──────────────────────────────────────────── */}
+        <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER,
+          textTransform: 'uppercase', letterSpacing: 1, mb: 0.5 }}>
+          {t('users.jrRoleTemplateTitle')}
+        </Typography>
+        <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, mb: 1.5 }}>
+          {t('users.jrRoleTemplateHint')}
+        </Typography>
+        <TextField select fullWidth size="small" sx={{ ...inputSx, mb: 1.5 }}
+          value={jobReportTemplate} onChange={(e) => setJobReportTemplate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          label={t('users.jrRoleTemplateLabel')}>
+          {jrTemplates.map((tpl) => (
+            <MenuItem key={tpl.key} value={tpl.key} sx={{ fontSize: '0.82rem' }}>
+              <Box>
+                <Box>{jrLabel(tpl.label, jrLang)}</Box>
+                {tpl.description && (
+                  <Box sx={{ fontSize: '0.68rem', opacity: 0.6, whiteSpace: 'normal' }}>
+                    {jrLabel(tpl.description, jrLang)}
+                  </Box>
+                )}
+              </Box>
+            </MenuItem>
+          ))}
+        </TextField>
 
         <Divider sx={{ borderColor: T.DIVIDER, my: 1.5 }} />
 
