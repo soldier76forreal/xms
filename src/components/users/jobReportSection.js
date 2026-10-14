@@ -221,7 +221,7 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
   const { t } = useTranslation();
   if (!report) return null;
   return (
-    <Dialog open={open} onClose={onClose} fullScreen={isXs} maxWidth="sm" fullWidth
+    <Dialog open={open} onClose={onClose} fullScreen={isXs} maxWidth="lg" fullWidth
       PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', backgroundImage: 'none' } }}>
       <Paper elevation={0} sx={{
         bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}`,
@@ -245,8 +245,8 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
               letterSpacing: 1.5, mb: 0.5, fontWeight: 600 }}>
               {t('users.jobReportsHeader')}
             </Typography>
-            <Typography sx={{ fontSize: { xs: '1.3rem', sm: '1.7rem' }, fontWeight: 800,
-              color: T.TEXT_PRI, lineHeight: 1.15 }}>
+            <Typography sx={{ fontSize: { xs: '1.45rem', sm: '2rem' }, fontWeight: 800,
+              color: T.TEXT_PRI, lineHeight: 1.1, letterSpacing: '-0.02em' }}>
               {fmtDate(report.reportDate)}
             </Typography>
             {authorName && (
@@ -265,10 +265,10 @@ const JobReportDetail = ({ open, onClose, report, T, isXs, isDark, axiosGlobal, 
 
         <Divider sx={{ borderColor: T.DIVIDER }} />
 
-        <Box sx={{ px: { xs: 2.5, sm: 4 }, py: 3, overflowY: 'auto',
-          maxHeight: isXs ? 'none' : '60vh', flex: isXs ? 1 : 'unset', minHeight: 0 }}>
+        <Box sx={{ px: { xs: 2, sm: 4 }, py: 3, overflowY: 'auto',
+          maxHeight: isXs ? 'none' : '72vh', flex: isXs ? 1 : 'unset', minHeight: 0 }}>
           {report.title && (
-            <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, color: T.TEXT_PRI, mb: 1.5 }}>
+            <Typography sx={{ fontSize: '1.05rem', fontWeight: 700, color: T.TEXT_PRI, mb: 2 }}>
               {report.title}
             </Typography>
           )}

@@ -1555,7 +1555,17 @@
     "jrDraft": "مسودة",
     "jrRoleTemplateTitle": "نموذج التقرير اليومي",
     "jrRoleTemplateHint": "نموذج التقرير اليومي الذي يملؤه أصحاب هذا الدور. المستخدم الذي يحمل أكثر من دور يحصل على أول نموذج غير كلاسيكي.",
-    "jrRoleTemplateLabel": "نموذج التقرير"
+    "jrRoleTemplateLabel": "نموذج التقرير",
+    "jrSwitchToText": "اكتبه يدويًا بدلاً من ذلك",
+    "jrSwitchToPicker": "اختره من القائمة بدلاً من ذلك",
+    "jrTypeItInstead": "اكتبه",
+    "jrOrAPerson": "أو شخص",
+    "jrPickCustomer": "عميل من إدارة العملاء…",
+    "jrNothingRecorded": "لا توجد بيانات",
+    "jrSectionOf": "القسم {{index}} من {{total}}",
+    "jrRowsFilled_one": "صف واحد",
+    "jrRowsFilled_other": "{{count}} صفوف",
+    "jrAnswered": "تمت الإجابة"
   },
   "dm": {
     "viewedAndDownloaded": "المشاهدات والتنزيلات",

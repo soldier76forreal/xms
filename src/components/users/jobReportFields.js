@@ -21,8 +21,28 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import ListSubheader from '@mui/material/ListSubheader';
 import { useTranslation } from 'react-i18next';
 import AddIcon from '@mui/icons-material/Add';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import InstagramIcon from '@mui/icons-material/Instagram';
+import TelegramIcon from '@mui/icons-material/Telegram';
+import FacebookRoundedIcon from '@mui/icons-material/FacebookRounded';
+import YouTubeIcon from '@mui/icons-material/YouTube';
+import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import PinterestIcon from '@mui/icons-material/Pinterest';
+import EmailIcon from '@mui/icons-material/Email';
+import SmsIcon from '@mui/icons-material/Sms';
+import LanguageIcon from '@mui/icons-material/Language';
+import MusicNoteIcon from '@mui/icons-material/MusicNote';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import PublicIcon from '@mui/icons-material/Public';
+import PersonIcon from '@mui/icons-material/Person';
+import CloseIcon from '@mui/icons-material/Close';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
@@ -42,19 +62,105 @@ export const useSpecLang = () => {
   return ['en', 'ar', 'fa'].includes(lang) ? lang : 'en';
 };
 
-const inputSx = (T) => ({
+// Where a field's title goes. On a desktop table the column header already
+// says it, so the control carries only a placeholder; on a phone there are no
+// column headers and a placeholder disappears the moment you type — so the
+// title sits ABOVE the control, as a caption that stays put.
+//   'float'   floating MUI label (a form field with room for one)
+//   'none'    nothing but a placeholder (a desktop table cell under a header)
+//   'above'   a caption above the control (every field on a phone)
+export const labelModeFor = ({ dense, stacked }) => (stacked ? 'above' : dense ? 'none' : 'float');
+
+export const FieldLabel = ({ children, T }) => (
+  <Typography sx={{ fontSize: '0.68rem', fontWeight: 600, color: T.TEXT_SEC,
+    mb: 0.4, letterSpacing: '0.01em' }}>
+    {children}
+  </Typography>
+);
+
+const inputSx = (T, stacked) => ({
   '& .MuiOutlinedInput-root': {
-    bgcolor: T.INPUT_BG, borderRadius: '8px', color: T.TEXT_PRI, fontSize: '0.8rem',
+    bgcolor: T.INPUT_BG, borderRadius: stacked ? '10px' : '8px', color: T.TEXT_PRI,
+    fontSize: stacked ? '1rem' : '0.8rem',
+    ...(stacked ? { minHeight: 44 } : {}),
     '& fieldset': { borderColor: T.INPUT_BD },
   },
   '& .MuiInputLabel-root': { color: T.TEXT_SEC, fontSize: '0.78rem' },
-  '& input, & textarea': { color: T.TEXT_PRI, fontSize: '0.8rem' },
+  // 16px on a phone: anything smaller and iOS zooms the whole page on focus.
+  '& input, & textarea': { color: T.TEXT_PRI, fontSize: stacked ? '1rem' : '0.8rem' },
+  '& .MuiSelect-select': { fontSize: stacked ? '1rem' : '0.8rem' },
 });
 
 // A dropdown a MUI portal renders: kept above whatever surface opened it. Set
 // unconditionally — the standing portal z-index trap in this codebase is a
 // control that opens invisibly behind the drawer it belongs to.
 const popperSx = { popper: { sx: { zIndex: (theme) => theme.zIndex.modal + 2 } } };
+const menuSx = { MenuProps: { sx: { zIndex: (theme) => theme.zIndex.modal + 2 } } };
+
+// ── Social channels ─────────────────────────────────────────────────────────
+// The LIST (values, labels, colours) comes from the server's template registry
+// so the printed sheet names the same channels; only the icon components live
+// here, keyed by the registry's `icon` name. MUI ships no TikTok, Snapchat or X
+// glyph, so those three get a readable stand-in rather than a logo drawn from
+// memory and drawn wrong.
+const CHANNEL_ICONS = {
+  whatsapp: WhatsAppIcon, instagram: InstagramIcon, telegram: TelegramIcon,
+  facebook: FacebookRoundedIcon, youtube: YouTubeIcon, linkedin: LinkedInIcon,
+  pinterest: PinterestIcon, email: EmailIcon, sms: SmsIcon, website: LanguageIcon,
+  tiktok: MusicNoteIcon, snapchat: ChatBubbleIcon, other: PublicIcon,
+};
+
+// A brand colour is chosen for a logo, not for text on white — Snapchat yellow
+// is invisible here. Anything too light is darkened until it can be read.
+const readable = (hex) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  let [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  if (lum <= 0.62) return `#${m[1]}`;
+  const k = 0.52 / lum;
+  [r, g, b] = [r, g, b].map((c) => Math.max(0, Math.round(c * k)));
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+};
+
+export const ChannelIcon = ({ channel, size = 16 }) => {
+  if (!channel) return null;
+  const Icon = CHANNEL_ICONS[channel.icon] || PublicIcon;
+  // X ships no MUI glyph. A letter in a box would be read out as text and sit
+  // next to the label as a second "X", so the mark is drawn instead.
+  if (channel.icon === 'x') {
+    return (
+      <Box aria-hidden sx={{ width: size, height: size, borderRadius: '4px', bgcolor: '#000',
+        flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        <CloseIcon sx={{ fontSize: size * 0.7, color: '#fff' }} />
+      </Box>
+    );
+  }
+  return <Icon sx={{ fontSize: size, color: readable(channel.color), flexShrink: 0 }} />;
+};
+
+// ── Pick it, or type it ─────────────────────────────────────────────────────
+// Some rows are about something the app knows (a catalogued stone, a customer
+// on file) and some are not. Rather than forcing free text into a picker — or
+// losing the link by making everything free text — the field carries both and
+// this switches between them. The stored shape says which was used, so nothing
+// downstream has to guess.
+const ModeToggle = ({ isText, onToggle, T, titleText, titlePick, big }) => {
+  const { t } = useTranslation();
+  const side = big ? 44 : 26;   // 44px is the smallest comfortable touch target
+  return (
+    <Tooltip title={isText ? (titlePick || t('users.jrSwitchToPicker')) : (titleText || t('users.jrSwitchToText'))}>
+      <IconButton size="small" onClick={onToggle}
+        sx={{ width: side, height: side, borderRadius: big ? '10px' : '7px', flexShrink: 0,
+          color: T.TEXT_SEC, bgcolor: T.INPUT_BG, border: `1px solid ${T.INPUT_BD}`,
+          '&:hover': { bgcolor: T.INPUT_BG, color: T.TEXT_PRI } }}>
+        {isText ? <ManageSearchIcon sx={{ fontSize: big ? 20 : 15 }} />
+          : <TextFieldsIcon sx={{ fontSize: big ? 19 : 14 }} />}
+      </IconButton>
+    </Tooltip>
+  );
+};
 
 // ── Debounced remote search, shared by all three pickers ────────────────────
 function useLookup(path, search) {
@@ -97,7 +203,7 @@ function useLookup(path, search) {
 // "add" button does not create anything itself: it hands off to the shared
 // customerForm Drawer (the single place a customer is created in this app),
 // and the saved record comes straight back onto the row.
-export const CustomerField = ({ value, onChange, label, T, canCreate, onCreateNew, dense }) => {
+export const CustomerField = ({ value, onChange, label, T, canCreate, onCreateNew, dense, stacked }) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const { options, loading, denied } = useLookup('customers', search);
@@ -134,8 +240,10 @@ export const CustomerField = ({ value, onChange, label, T, canCreate, onCreateNe
           </Box>
         )}
         renderInput={(params) => (
-          <TextField {...params} label={dense ? undefined : label} placeholder={dense ? label : undefined}
-            sx={inputSx(T)}
+          <TextField {...params}
+            label={labelModeFor({ dense, stacked }) === 'float' ? label : undefined}
+            placeholder={labelModeFor({ dense, stacked }) === 'none' ? label : undefined}
+            sx={inputSx(T, stacked)}
             InputProps={{ ...params.InputProps,
               endAdornment: <>{loading ? <CircularProgress size={13} /> : null}{params.InputProps.endAdornment}</> }} />
         )}
@@ -154,22 +262,50 @@ export const CustomerField = ({ value, onChange, label, T, canCreate, onCreateNe
 // ── Inventory variety ────────────────────────────────────────────────────────
 // A stone is referenced by its real product code, never typed as free text —
 // which is what lets a report tie back to the catalogue.
-export const VarietyField = ({ value, onChange, label, T, dense }) => {
+export const VarietyField = ({ value, onChange, label, T, dense, allowText, stacked }) => {
   const { t } = useTranslation();
   const lang = useSpecLang();
   const [search, setSearch] = useState('');
-  const { options, loading, denied } = useLookup('varieties', search);
+  // A value already stored as free text opens in text mode, so reopening a
+  // report shows it the way it was written.
+  const [isText, setIsText] = useState(!!(value && value.text && !value.variantId));
+  const { options, loading, denied } = useLookup('varieties', isText ? '' : search);
 
-  const selected = value || null;
+  const toggleMode = () => {
+    setIsText((prev) => {
+      // Switching modes clears the other mode's value rather than leaving a
+      // stale reference behind a text box that no longer shows it.
+      onChange(null);
+      return !prev;
+    });
+  };
+
+  // Hooks run before any branch: React requires the same order on every
+  // render, and the text-mode return below is a branch.
+  const selected = (value && value.variantId) ? value : null;
   const merged = useMemo(() => {
-    if (!value) return options;
+    if (!value || !value.variantId) return options;
     return options.some((o) => String(o.variantId) === String(value.variantId))
       ? options : [value, ...options];
   }, [options, value]);
 
+  if (allowText && isText) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+        <TextField fullWidth size="small" sx={inputSx(T, stacked)}
+          label={labelModeFor({ dense, stacked }) === 'float' ? label : undefined}
+          placeholder={labelModeFor({ dense, stacked }) === 'float' ? t('users.jrTypeItInstead') : label}
+          InputLabelProps={{ shrink: true }}
+          value={(value && value.text) || ''}
+          onChange={(e) => onChange(e.target.value ? { text: e.target.value } : null)} />
+        <ModeToggle isText onToggle={toggleMode} T={T} big={stacked} />
+      </Box>
+    );
+  }
+
   const nameOf = (o) => (lang === 'ar' && o.productNameAr) || o.productName || '';
 
-  return (
+  const picker = (
     <Autocomplete
       fullWidth size="small" options={merged} value={selected} loading={loading} disabled={denied}
       isOptionEqualToValue={(o, v) => String(o.variantId) === String(v.variantId)}
@@ -195,24 +331,36 @@ export const VarietyField = ({ value, onChange, label, T, dense }) => {
         </Box>
       )}
       renderInput={(params) => (
-        <TextField {...params} label={dense ? undefined : label} placeholder={dense ? label : undefined}
-          sx={inputSx(T)}
+        <TextField {...params}
+          label={labelModeFor({ dense, stacked }) === 'float' ? label : undefined}
+          placeholder={labelModeFor({ dense, stacked }) === 'none' ? label : undefined}
+          sx={inputSx(T, stacked)}
           InputProps={{ ...params.InputProps,
             endAdornment: <>{loading ? <CircularProgress size={13} /> : null}{params.InputProps.endAdornment}</> }} />
       )}
     />
   );
+
+  return allowText ? (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+      {picker}
+      <ModeToggle isText={false} onToggle={toggleMode} T={T} big={stacked} />
+    </Box>
+  ) : picker;
 };
 
 // ── Digital Marketing content ────────────────────────────────────────────────
 // One picker across all four DM record kinds — a rep remembers the content,
 // not which sub-section of Digital Marketing it is filed under.
+// These are the locale keys that actually exist (dm.tab*). The earlier
+// dm.rawContents / dm.readyToUpload guesses were never defined, so i18next
+// fell back to printing the key itself on the chip.
 const DM_KIND_LABEL = {
-  rawContent: 'dm.rawContents', readyToUpload: 'dm.readyToUpload',
-  whatsappShare: 'dm.whatsappShares', linkPage: 'dm.externalLinks',
+  rawContent: 'dm.tabRawContents', readyToUpload: 'dm.tabReadyToUpload',
+  whatsappShare: 'dm.tabWhatsappShares', linkPage: 'dm.tabLinkPages',
 };
 
-export const ContentField = ({ value, onChange, label, T, dense }) => {
+export const ContentField = ({ value, onChange, label, T, dense, stacked }) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const { options, loading, denied } = useLookup('content', search);
@@ -239,17 +387,25 @@ export const ContentField = ({ value, onChange, label, T, dense }) => {
         : (search.trim().length < 2 ? t('users.jrTypeToSearch') : t('common.noResults'))}
       slotProps={popperSx}
       renderOption={(props, o) => (
-        <Box component="li" {...props} key={`${o.kind}:${o.id}`} sx={{ fontSize: '0.78rem', py: '4px !important' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
-            <Box sx={{ flexGrow: 1 }}>{o.title || '—'}</Box>
+        <Box component="li" {...props} key={`${o.kind}:${o.id}`}
+          sx={{ fontSize: '0.78rem', py: '6px !important', alignItems: 'flex-start !important' }}>
+          {/* The title wraps and the kind chip holds its own column — left to
+              share one row they overlapped as soon as a title ran to two lines. */}
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, width: '100%', minWidth: 0 }}>
+            <Box sx={{ flexGrow: 1, minWidth: 0, lineHeight: 1.35, overflowWrap: 'anywhere' }}>
+              {o.title || '—'}
+            </Box>
             <Chip size="small" label={t(DM_KIND_LABEL[o.kind] || o.kind)}
-              sx={{ height: 16, fontSize: '0.6rem' }} />
+              sx={{ height: 18, fontSize: '0.6rem', flexShrink: 0, mt: '1px',
+                '& .MuiChip-label': { px: 0.75 } }} />
           </Box>
         </Box>
       )}
       renderInput={(params) => (
-        <TextField {...params} label={dense ? undefined : label} placeholder={dense ? label : undefined}
-          sx={inputSx(T)}
+        <TextField {...params}
+          label={labelModeFor({ dense, stacked }) === 'float' ? label : undefined}
+          placeholder={labelModeFor({ dense, stacked }) === 'none' ? label : undefined}
+          sx={inputSx(T, stacked)}
           InputProps={{ ...params.InputProps,
             endAdornment: <>{loading ? <CircularProgress size={13} /> : null}{params.InputProps.endAdornment}</> }} />
       )}
@@ -257,26 +413,136 @@ export const ContentField = ({ value, onChange, label, T, dense }) => {
   );
 };
 
+// ── Recipient — a channel, a customer, or just words ────────────────────────
+// Content goes out to a platform at least as often as to a named person, and
+// sometimes to neither ("the walk-in group"). All three are first class here;
+// the stored value says which was meant.
+export const RecipientField = ({ value, onChange, label, T, dense, stacked, channels, canCreate, onCreateNew }) => {
+  const { t } = useTranslation();
+  const lang = useSpecLang();
+  const mode = (value && value.mode) || 'channel';
+  const [isText, setIsText] = useState(mode === 'text');
+
+  const toggleMode = () => {
+    setIsText((prev) => { onChange(null); return !prev; });
+  };
+
+  if (isText) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+        <TextField fullWidth size="small" sx={inputSx(T, stacked)}
+          label={labelModeFor({ dense, stacked }) === 'float' ? label : undefined}
+          placeholder={labelModeFor({ dense, stacked }) === 'float' ? t('users.jrTypeItInstead') : label}
+          InputLabelProps={{ shrink: true }}
+          value={(value && value.text) || ''}
+          onChange={(e) => onChange(e.target.value ? { mode: 'text', text: e.target.value } : null)} />
+        <ModeToggle isText onToggle={toggleMode} T={T} big={stacked} />
+      </Box>
+    );
+  }
+
+  // One list, two groups: every channel, then a search over CRM. Keeping them
+  // in a single control is what makes "who did this go to" one question
+  // instead of three.
+  const channelOptions = (channels || []).map((c) => ({ kind: 'channel', channel: c }));
+  const selected = value && value.mode === 'channel'
+    ? channelOptions.find((o) => o.channel.value === value.channel) || null
+    : null;
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+      {value && value.mode === 'customer' ? (
+        <CustomerField value={value} label={label} T={T} dense={dense} stacked={stacked}
+          canCreate={canCreate} onCreateNew={onCreateNew}
+          onChange={(v) => onChange(v ? { mode: 'customer', ...v } : null)} />
+      ) : (
+        <TextField select fullWidth size="small" sx={inputSx(T, stacked)}
+          label={labelModeFor({ dense, stacked }) === 'float' ? label : undefined}
+          InputLabelProps={{ shrink: true }}
+          value={selected ? selected.channel.value : ''}
+          SelectProps={{
+            ...menuSx,
+            displayEmpty: labelModeFor({ dense, stacked }) !== 'float',
+            renderValue: (v) => {
+              if (!v) return <Box component="span" sx={{ opacity: 0.5 }}>{dense ? label : ''}</Box>;
+              if (v === '__customer') return '';
+              const ch = (channels || []).find((c) => c.value === v);
+              return (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6 }}>
+                  <ChannelIcon channel={ch} size={15} />
+                  <Box component="span">{pickLabel(ch && ch.label, lang)}</Box>
+                </Box>
+              );
+            },
+          }}
+          onChange={(e) => {
+            if (e.target.value === '__customer') { onChange({ mode: 'customer' }); return; }
+            onChange(e.target.value ? { mode: 'channel', channel: e.target.value } : null);
+          }}>
+          <MenuItem value=""><em>—</em></MenuItem>
+          {(channels || []).map((c) => (
+            <MenuItem key={c.value} value={c.value} sx={{ fontSize: '0.8rem', gap: 0.75 }}>
+              <ChannelIcon channel={c} size={16} />
+              {pickLabel(c.label, lang)}
+            </MenuItem>
+          ))}
+          <ListSubheader sx={{ fontSize: '0.64rem', lineHeight: 2, bgcolor: 'transparent' }}>
+            {t('users.jrOrAPerson')}
+          </ListSubheader>
+          <MenuItem value="__customer" sx={{ fontSize: '0.8rem', gap: 0.75 }}>
+            <PersonIcon sx={{ fontSize: 16, opacity: 0.6 }} />
+            {t('users.jrPickCustomer')}
+          </MenuItem>
+        </TextField>
+      )}
+      <ModeToggle isText={false} onToggle={toggleMode} T={T} big={stacked} />
+    </Box>
+  );
+};
+
 // ── One field, whatever its type ─────────────────────────────────────────────
 // `dense` is the in-table variant: the column header already carries the label,
 // so it moves to the placeholder and the field loses its own.
-export const SpecField = ({ field, value, onChange, lang, T, dense, canCreateCustomer, onCreateCustomer }) => {
+export const SpecField = (props) => {
+  const { field, lang, T, stacked } = props;
   const label = pickLabel(field.label, lang);
-  const common = { size: 'small', fullWidth: true, sx: inputSx(T) };
-  const labelProps = dense
-    ? { placeholder: label }
-    : { label, InputLabelProps: { shrink: true } };
+  // On a phone the title is a caption above the control, so it is still
+  // readable once the field has something in it.
+  if (stacked) {
+    return (
+      <Box sx={{ width: '100%', minWidth: 0 }}>
+        <FieldLabel T={T}>{label}</FieldLabel>
+        <SpecControl {...props} />
+      </Box>
+    );
+  }
+  return <SpecControl {...props} />;
+};
+
+const SpecControl = ({ field, value, onChange, lang, T, dense, stacked, canCreateCustomer, onCreateCustomer, channels }) => {
+  const label = pickLabel(field.label, lang);
+  const mode = labelModeFor({ dense, stacked });
+  const common = { size: 'small', fullWidth: true, sx: inputSx(T, stacked) };
+  const labelProps = mode === 'float'
+    ? { label, InputLabelProps: { shrink: true } }
+    : { placeholder: mode === 'none' ? label : undefined };
 
   switch (field.type) {
     case 'customer':
       return (
-        <CustomerField value={value} onChange={onChange} label={label} T={T} dense={dense}
+        <CustomerField value={value} onChange={onChange} label={label} T={T} dense={dense} stacked={stacked}
           canCreate={canCreateCustomer} onCreateNew={onCreateCustomer} />
       );
     case 'variety':
-      return <VarietyField value={value} onChange={onChange} label={label} T={T} dense={dense} />;
+      return <VarietyField value={value} onChange={onChange} label={label} T={T} dense={dense} stacked={stacked}
+        allowText={field.allowText} />;
+    case 'recipient':
+      return (
+        <RecipientField value={value} onChange={onChange} label={label} T={T} dense={dense} stacked={stacked}
+          channels={channels} canCreate={canCreateCustomer} onCreateNew={onCreateCustomer} />
+      );
     case 'dmContent':
-      return <ContentField value={value} onChange={onChange} label={label} T={T} dense={dense} />;
+      return <ContentField value={value} onChange={onChange} label={label} T={T} dense={dense} stacked={stacked} />;
 
     case 'select':
       return (
@@ -301,13 +567,13 @@ export const SpecField = ({ field, value, onChange, lang, T, dense, canCreateCus
 
     case 'date':
       return (
-        <TextField {...common} label={label} InputLabelProps={{ shrink: true }} type="date"
+        <TextField {...common} label={mode === 'float' ? label : undefined} InputLabelProps={{ shrink: true }} type="date"
           value={value ? String(value).slice(0, 10) : ''} onChange={(e) => onChange(e.target.value)} />
       );
 
     case 'time':
       return (
-        <TextField {...common} label={dense ? undefined : label} InputLabelProps={{ shrink: true }} type="time"
+        <TextField {...common} label={mode === 'float' ? label : undefined} InputLabelProps={{ shrink: true }} type="time"
           value={value || ''} onChange={(e) => onChange(e.target.value)} />
       );
 
@@ -366,11 +632,21 @@ export const SectionHint = ({ children, T }) => (
 // fetches the spec by key rather than being handed one, because a manager on
 // the classic form opens a salesperson's sheet and has no spec of their own to
 // render it with.
+// A reference cell is an object, so plain truthiness would call {text:''}
+// filled — the same test the server uses before it stores a row.
+const cellEmpty = (v) => {
+  if (v == null || v === '') return true;
+  if (typeof v !== 'object') return false;
+  return Object.values(v).every((inner) => inner == null || inner === '');
+};
+
 export const SectionsReadOnlyView = ({ templateKey, sections, T }) => {
+  const { t } = useTranslation();
   const lang = useSpecLang();
   const authCtx = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
   const [spec, setSpec] = useState(null);
+  const [channelList, setChannelList] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -378,7 +654,11 @@ export const SectionsReadOnlyView = ({ templateKey, sections, T }) => {
       method: 'get',
       url: `${axiosGlobal.defaultTargetApi}/users/jobReports/templates/${templateKey || 'classic'}`,
     })
-      .then((res) => { if (!cancelled) setSpec(res.data.spec); })
+      .then((res) => {
+        if (cancelled) return;
+        setSpec(res.data.spec);
+        setChannelList(res.data.channels || []);
+      })
       .catch(() => { if (!cancelled) setSpec(null); });
     return () => { cancelled = true; };
   }, [templateKey, authCtx, axiosGlobal.defaultTargetApi]);
@@ -389,8 +669,16 @@ export const SectionsReadOnlyView = ({ templateKey, sections, T }) => {
     if (value == null || value === '') return '—';
     switch (field.type) {
       case 'customer': return [value.name, value.phone].filter(Boolean).join(' · ') || '—';
-      case 'variety': return [value.code, (lang === 'ar' && value.productNameAr) || value.productName]
-        .filter(Boolean).join(' — ') || '—';
+      case 'variety':
+        if (value.text) return value.text;
+        return [value.code, (lang === 'ar' && value.productNameAr) || value.productName]
+          .filter(Boolean).join(' — ') || '—';
+      case 'recipient': {
+        if (value.mode === 'customer') return [value.name, value.phone].filter(Boolean).join(' · ') || '—';
+        if (value.mode === 'text') return value.text || '—';
+        const ch = (channelList || []).find((c) => c.value === value.channel);
+        return ch ? pickLabel(ch.label, lang) : (value.channel || '—');
+      }
       case 'dmContent': return value.title || '—';
       case 'date': return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
       case 'number':
@@ -403,30 +691,55 @@ export const SectionsReadOnlyView = ({ templateKey, sections, T }) => {
     }
   };
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      {(spec.sections || []).map((section) => {
-        const value = (sections || {})[section.key];
-        const isTable = section.kind === 'table';
-        const rows = isTable ? (value || []).filter((r) => !rowIsEmpty(r)) : [];
-        const entries = isTable ? [] : Object.entries(value || {})
-          .filter(([, v]) => v != null && v !== '' && !(typeof v === 'object' && !v));
-        if (isTable ? !rows.length : !entries.length) return null;
+  // A filed sheet reads as a document: each section is a titled card, figures
+  // sit in their own column and the answers carry the weight, not the labels.
+  const ACCENT = '#64b5f6';
 
-        return (
-          <Box key={section.key}>
-            <Typography sx={{ fontSize: '0.65rem', color: T.TEXT_TER, textTransform: 'uppercase',
-              letterSpacing: 1, fontWeight: 600, mb: 0.75 }}>
+  const filled = (spec.sections || []).map((section) => {
+    const value = (sections || {})[section.key];
+    const isTable = section.kind === 'table';
+    const rows = isTable ? (value || []).filter((r) => !rowIsEmpty(r)) : [];
+    const entries = isTable ? [] : Object.entries(value || {})
+      .filter(([, v]) => !cellEmpty(v));
+    return { section, isTable, rows, entries };
+  }).filter((x) => (x.isTable ? x.rows.length : x.entries.length));
+
+  const emptyNames = (spec.sections || [])
+    .filter((sec) => !filled.some((f) => f.section.key === sec.key))
+    .map((sec) => pickLabel(sec.label, lang));
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+      {filled.map(({ section, isTable, rows, entries }) => (
+        <Box key={section.key} sx={{
+          border: `1px solid ${T.DIVIDER}`, borderRadius: '12px', overflow: 'hidden',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.75, py: 1,
+            borderBottom: `1px solid ${T.DIVIDER}`,
+            bgcolor: T.ROW_BG || 'transparent' }}>
+            <Box sx={{ width: 3, height: 14, borderRadius: '2px', bgcolor: ACCENT, flexShrink: 0 }} />
+            <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: T.TEXT_PRI, letterSpacing: '0.01em' }}>
               {pickLabel(section.label, lang)}
             </Typography>
+            {isTable && (
+              <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, ml: 'auto' }}>
+                {rows.length}
+              </Typography>
+            )}
+          </Box>
 
-            {isTable ? (
+          {isTable ? (
+            <>
               <Box sx={{ overflowX: 'auto' }}>
-                <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 460,
-                  '& th, & td': { border: `1px solid ${T.DIVIDER}`, padding: '4px 7px',
-                    fontSize: '0.74rem', textAlign: 'start' },
-                  '& th': { color: T.TEXT_TER, fontWeight: 600, fontSize: '0.66rem' },
-                  '& td': { color: T.TEXT_SEC } }}>
+                <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 520,
+                  '& th, & td': { padding: '8px 12px', fontSize: '0.8rem', textAlign: 'start',
+                    borderBottom: `1px solid ${T.DIVIDER}` },
+                  '& th': { color: T.TEXT_TER, fontWeight: 600, fontSize: '0.64rem',
+                    textTransform: 'uppercase', letterSpacing: 0.6, whiteSpace: 'nowrap' },
+                  '& td': { color: T.TEXT_PRI, lineHeight: 1.45 },
+                  '& tbody tr:last-of-type td': { borderBottom: 'none' },
+                  '& td.num': { fontVariantNumeric: 'tabular-nums', direction: 'ltr',
+                    fontWeight: 600, whiteSpace: 'nowrap' } }}>
                   <thead>
                     <tr>{(section.columns || []).map((c) => (
                       <th key={c.key}>{pickLabel(c.label, lang)}</th>
@@ -435,43 +748,69 @@ export const SectionsReadOnlyView = ({ templateKey, sections, T }) => {
                   <tbody>
                     {rows.map((row, i) => (
                       <tr key={i}>{(section.columns || []).map((c) => (
-                        <td key={c.key}>{show(c, row[c.key])}</td>
+                        <td key={c.key} className={c.type === 'number' || c.type === 'money' ? 'num' : undefined}>
+                          {show(c, row[c.key])}
+                        </td>
                       ))}</tr>
                     ))}
                   </tbody>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 0.75 }}>
-                  {computeTotals(section, rows).map((tot) => (
-                    <Chip key={tot.key} size="small"
-                      label={`${pickLabel(tot.label, lang)}: ${Number(tot.value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
-                      sx={{ height: 20, fontSize: '0.66rem' }} />
-                  ))}
-                </Box>
               </Box>
-            ) : (
-              <Box sx={{ display: 'grid', gap: 0.5,
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
-                {entries.map(([key, v]) => {
-                  const field = (section.fields || []).find((f) => f.key === key);
-                  if (!field) return null;
-                  return (
-                    <Box key={key} sx={{ display: 'flex', gap: 0.75,
-                      gridColumn: field.type === 'textarea' ? '1 / -1' : 'auto' }}>
-                      <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_TER, flexShrink: 0 }}>
-                        {pickLabel(field.label, lang)}:
+              {!!(section.totals || []).length && (
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', px: 1.75, py: 1,
+                  borderTop: `1px solid ${T.DIVIDER}` }}>
+                  {computeTotals(section, rows).map((tot) => (
+                    <Box key={tot.key} sx={{ display: 'flex', alignItems: 'baseline', gap: 0.6 }}>
+                      <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
+                        {pickLabel(tot.label, lang)}
                       </Typography>
-                      <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_PRI,
-                        whiteSpace: field.type === 'textarea' ? 'pre-wrap' : 'normal' }}>
-                        {show(field, v)}
+                      <Typography sx={{ fontSize: '0.86rem', fontWeight: 700, color: T.TEXT_PRI,
+                        fontVariantNumeric: 'tabular-nums', direction: 'ltr' }}>
+                        {Number(tot.value).toLocaleString('en-US', { maximumFractionDigits: 2 })}
                       </Typography>
                     </Box>
-                  );
-                })}
-              </Box>
-            )}
-          </Box>
-        );
-      })}
+                  ))}
+                </Box>
+              )}
+            </>
+          ) : (
+            <Box sx={{ display: 'grid', gap: 0, px: 0, py: 0,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
+              {entries.map(([key, v]) => {
+                const field = (section.fields || []).find((f) => f.key === key);
+                if (!field) return null;
+                const wide = field.type === 'textarea';
+                return (
+                  <Box key={key} sx={{ px: 1.75, py: 1.1, minWidth: 0,
+                    gridColumn: wide ? '1 / -1' : 'auto',
+                    borderBottom: `1px solid ${T.DIVIDER}`,
+                    '&:last-of-type': { borderBottom: 'none' } }}>
+                    <Typography sx={{ fontSize: '0.62rem', color: T.TEXT_TER, textTransform: 'uppercase',
+                      letterSpacing: 0.7, fontWeight: 600, mb: 0.35 }}>
+                      {pickLabel(field.label, lang)}
+                    </Typography>
+                    <Typography sx={{ fontSize: wide ? '0.84rem' : '0.88rem', color: T.TEXT_PRI,
+                      fontWeight: wide ? 400 : 600, lineHeight: wide ? 1.7 : 1.3,
+                      whiteSpace: wide ? 'pre-wrap' : 'normal',
+                      fontVariantNumeric: 'tabular-nums' }}>
+                      {show(field, v)}
+                    </Typography>
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
+        </Box>
+      ))}
+
+      {/* Naming what was left blank is part of the record — a reader should
+          not have to infer it from an absence. */}
+      {!!emptyNames.length && (
+        <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, lineHeight: 1.6 }}>
+          <Box component="span" sx={{ fontWeight: 700 }}>{t('users.jrNothingRecorded')}:</Box>{' '}
+          {emptyNames.join(' · ')}
+        </Typography>
+      )}
     </Box>
   );
 };

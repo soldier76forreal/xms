@@ -1520,7 +1520,16 @@
     "jrDraft": "پیش‌نویس",
     "jrRoleTemplateTitle": "فرم گزارش روزانه",
     "jrRoleTemplateHint": "فرم گزارش روزانه‌ای که دارندگان این نقش پر می‌کنند. کاربری که چند نقش دارد، نخستین فرم غیرکلاسیک را می‌گیرد.",
-    "jrRoleTemplateLabel": "فرم گزارش"
+    "jrRoleTemplateLabel": "فرم گزارش",
+    "jrSwitchToText": "به‌جایش دستی بنویسید",
+    "jrSwitchToPicker": "به‌جایش از فهرست انتخاب کنید",
+    "jrTypeItInstead": "بنویسید",
+    "jrOrAPerson": "یا یک شخص",
+    "jrPickCustomer": "یک مشتری از CRM…",
+    "jrNothingRecorded": "موردی ثبت نشده",
+    "jrSectionOf": "بخش {{index}} از {{total}}",
+    "jrRowsFilled": "{{count}} ردیف",
+    "jrAnswered": "پاسخ داده شد"
   },
   "dm": {
     "viewedAndDownloaded": "بازدید و دانلود",

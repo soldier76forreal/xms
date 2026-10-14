@@ -1546,7 +1546,17 @@
     "jrDraft": "Draft",
     "jrRoleTemplateTitle": "Daily report form",
     "jrRoleTemplateHint": "Which job report form the holders of this role fill in. A user holding several roles gets the first one that is not the classic form.",
-    "jrRoleTemplateLabel": "Report form"
+    "jrRoleTemplateLabel": "Report form",
+    "jrSwitchToText": "Type it instead",
+    "jrSwitchToPicker": "Pick it from the list instead",
+    "jrTypeItInstead": "Type it",
+    "jrOrAPerson": "Or a person",
+    "jrPickCustomer": "A customer from CRM…",
+    "jrNothingRecorded": "Nothing recorded",
+    "jrSectionOf": "Section {{index}} of {{total}}",
+    "jrRowsFilled_one": "{{count}} row",
+    "jrRowsFilled_other": "{{count}} rows",
+    "jrAnswered": "Answered"
   },
   "dm": {
     "viewedAndDownloaded": "Viewed & downloaded",

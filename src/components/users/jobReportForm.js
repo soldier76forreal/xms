@@ -30,7 +30,14 @@ import { useTheme, useMediaQuery } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import LinearProgress from '@mui/material/LinearProgress';
 import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CheckIcon from '@mui/icons-material/Check';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import MicIcon from '@mui/icons-material/Mic';
@@ -110,34 +117,29 @@ const sectionFilledCount = (section, value) => {
   ).length;
 };
 
-// ── Navigator ────────────────────────────────────────────────────────────────
-const SectionNav = ({ spec, values, active, onPick, lang, T, horizontal }) => (
-  <Box sx={{
-    display: 'flex', gap: 0.5, flexShrink: 0,
-    ...(horizontal
-      ? { flexDirection: 'row', overflowX: 'auto', px: 1.5, py: 1, borderBottom: `1px solid ${T.BD}` }
-      : { flexDirection: 'column', width: 208, overflowY: 'auto', p: 1, borderInlineEnd: `1px solid ${T.BD}` }),
-  }}>
+// ── Navigator (desktop) ──────────────────────────────────────────────────────
+// A standing rail: eleven sections are visible at once, so the shape of the
+// whole sheet is visible while you fill any part of it.
+const SectionRail = ({ spec, values, active, onPick, lang, T }) => (
+  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, flexShrink: 0,
+    width: 208, overflowY: 'auto', p: 1, borderInlineEnd: `1px solid ${T.BD}` }}>
     {(spec.sections || []).map((section) => {
       const filled = sectionFilledCount(section, values[section.key]);
       const isActive = active === section.key;
       return (
         <Button key={section.key} onClick={() => onPick(section.key)}
           sx={{
-            justifyContent: horizontal ? 'center' : 'flex-start', textTransform: 'none',
-            textAlign: horizontal ? 'center' : 'start', flexShrink: 0,
-            minWidth: horizontal ? 'auto' : 0, px: 1.25, py: 0.75, borderRadius: '8px',
-            fontSize: '0.72rem', lineHeight: 1.25, whiteSpace: horizontal ? 'nowrap' : 'normal',
+            justifyContent: 'flex-start', textTransform: 'none', textAlign: 'start',
+            flexShrink: 0, minWidth: 0, px: 1.25, py: 0.75, borderRadius: '8px',
+            fontSize: '0.72rem', lineHeight: 1.25, whiteSpace: 'normal',
             fontWeight: isActive ? 700 : 400,
             color: isActive ? T.TEXT_PRI : T.TEXT_SEC,
             bgcolor: isActive ? T.CTRL_BG : 'transparent',
             '&:hover': { bgcolor: T.CTRL_BG },
           }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, width: '100%' }}>
-            <Box sx={{
-              width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
-              bgcolor: filled ? '#4caf50' : T.TEXT_TER,
-            }} />
+            <Box sx={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+              bgcolor: filled ? '#4caf50' : T.TEXT_TER }} />
             <Box sx={{ flexGrow: 1 }}>{pickLabel(section.label, lang)}</Box>
             {filled > 0 && section.kind === 'table' && (
               <Box sx={{ fontSize: '0.62rem', opacity: 0.6 }}>{filled}</Box>
@@ -149,12 +151,95 @@ const SectionNav = ({ spec, values, active, onPick, lang, T, horizontal }) => (
   </Box>
 );
 
+// ── Navigator (phone) ────────────────────────────────────────────────────────
+// A scrolling strip of eleven buttons showed one and a half of them and gave no
+// idea how far through the sheet you were. This names where you are, how many
+// sections there are, how many are done, and opens the whole list on a tap —
+// the same answer Digital Marketing's own tab switcher reached on phones.
+const SectionPicker = ({ spec, values, active, onPick, lang, T }) => {
+  const { t } = useTranslation();
+  const [anchor, setAnchor] = useState(null);
+  const list = spec.sections || [];
+  const index = Math.max(0, list.findIndex((x) => x.key === active));
+  const current = list[index];
+  const doneCount = list.filter((x) => sectionFilledCount(x, values[x.key]) > 0).length;
+
+  const go = (delta) => {
+    const next = list[index + delta];
+    if (next) onPick(next.key);
+  };
+
+  return (
+    <Box sx={{ flexShrink: 0, borderBottom: `1px solid ${T.BD}` }}>
+      <LinearProgress variant="determinate" value={list.length ? (doneCount / list.length) * 100 : 0}
+        sx={{ height: 2, bgcolor: 'transparent', '& .MuiLinearProgress-bar': { bgcolor: '#4caf50' } }} />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 0.75, py: 0.75 }}>
+        <IconButton onClick={() => go(-1)} disabled={index === 0}
+          sx={{ width: 36, height: 36, color: T.TEXT_SEC }}>
+          <ChevronLeftIcon sx={{ fontSize: 20 }} />
+        </IconButton>
+
+        <Button onClick={(e) => setAnchor(e.currentTarget)} fullWidth
+          endIcon={<ExpandMoreIcon sx={{ fontSize: 18 }} />}
+          sx={{ textTransform: 'none', justifyContent: 'space-between', minWidth: 0,
+            px: 1.25, py: 0.6, borderRadius: '10px', bgcolor: T.CTRL_BG, color: T.TEXT_PRI }}>
+          <Box sx={{ minWidth: 0, textAlign: 'start' }}>
+            <Typography sx={{ fontSize: '0.6rem', color: T.TEXT_TER, lineHeight: 1.2 }}>
+              {t('users.jrSectionOf', { index: index + 1, total: list.length })}
+            </Typography>
+            <Typography noWrap sx={{ fontSize: '0.82rem', fontWeight: 700, lineHeight: 1.3 }}>
+              {pickLabel(current && current.label, lang)}
+            </Typography>
+          </Box>
+        </Button>
+
+        <IconButton onClick={() => go(1)} disabled={index >= list.length - 1}
+          sx={{ width: 36, height: 36, color: T.TEXT_SEC }}>
+          <ChevronRightIcon sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Box>
+
+      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}
+        slotProps={{ paper: { sx: { maxHeight: '70vh', width: 'calc(100vw - 48px)', maxWidth: 420 } } }}>
+        {list.map((section, i) => {
+          const filled = sectionFilledCount(section, values[section.key]);
+          return (
+            <MenuItem key={section.key} selected={section.key === active}
+              onClick={() => { onPick(section.key); setAnchor(null); }}
+              sx={{ gap: 1, py: 1.1, alignItems: 'flex-start', whiteSpace: 'normal' }}>
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', mt: '6px', flexShrink: 0,
+                bgcolor: filled ? '#4caf50' : T.TEXT_TER }} />
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: '0.86rem', lineHeight: 1.35,
+                  fontWeight: section.key === active ? 700 : 400 }}>
+                  {pickLabel(section.label, lang)}
+                </Typography>
+                {filled > 0 && (
+                  <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
+                    {section.kind === 'table'
+                      ? t('users.jrRowsFilled', { count: filled })
+                      : t('users.jrAnswered')}
+                  </Typography>
+                )}
+              </Box>
+              {section.key === active && <CheckIcon sx={{ fontSize: 16, mt: '4px', opacity: 0.6 }} />}
+              <Typography sx={{ fontSize: '0.64rem', color: T.TEXT_TER, mt: '5px' }}>{i + 1}</Typography>
+            </MenuItem>
+          );
+        })}
+      </Menu>
+    </Box>
+  );
+};
+
 // ── A `fields` section ───────────────────────────────────────────────────────
-const FieldsSection = ({ section, value, onField, lang, T, canCreateCustomer, onCreateCustomer }) => (
-  <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+const FieldsSection = ({ section, value, onField, lang, T, canCreateCustomer, onCreateCustomer, channels, isPhone }) => (
+  <Box sx={{ display: 'grid', gap: isPhone ? 2 : 1.5,
+    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
     {(section.fields || []).map((field) => (
-      <Box key={field.key} sx={{ gridColumn: field.type === 'textarea' ? '1 / -1' : 'auto' }}>
-        <SpecField field={field} value={(value || {})[field.key]} lang={lang} T={T}
+      <Box key={field.key} sx={{ gridColumn: field.type === 'textarea' ? '1 / -1' : 'auto', minWidth: 0 }}>
+        <SpecField field={field} value={(value || {})[field.key]} lang={lang} T={T} channels={channels}
+          stacked={isPhone}
           onChange={(v) => onField(field.key, v)}
           canCreateCustomer={canCreateCustomer}
           onCreateCustomer={() => onCreateCustomer(section.key, null, field.key)} />
@@ -166,7 +251,7 @@ const FieldsSection = ({ section, value, onField, lang, T, canCreateCustomer, on
 // ── A `table` section ────────────────────────────────────────────────────────
 // Rows are cards on a phone and a real table on a desktop: the salesperson
 // sheet has five to seven columns, which no phone shows as a grid worth using.
-const TableSection = ({ section, rows, onRows, lang, T, isNarrow, canCreateCustomer, onCreateCustomer }) => {
+const TableSection = ({ section, rows, onRows, lang, T, isNarrow, canCreateCustomer, onCreateCustomer, channels }) => {
   const { t } = useTranslation();
   const list = rows || [];
   const totals = computeTotals(section, list);
@@ -193,16 +278,20 @@ const TableSection = ({ section, rows, onRows, lang, T, isNarrow, canCreateCusto
 
       {list.map((row, index) => (
         isNarrow ? (
-          <Box key={index} sx={{ border: `1px solid ${T.BD}`, borderRadius: '10px', p: 1.25,
-            display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box key={index} sx={{ border: `1px solid ${T.BD}`, borderRadius: '12px', p: 1.5,
+            display: 'flex', flexDirection: 'column', gap: 1.75 }}>
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER, flexGrow: 1 }}>#{index + 1}</Typography>
-              <IconButton size="small" onClick={() => removeRow(index)} sx={{ color: T.TEXT_TER, width: 24, height: 24 }}>
-                <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+              <Typography sx={{ fontSize: '0.7rem', fontWeight: 700, color: T.TEXT_SEC, flexGrow: 1 }}>
+                #{index + 1}
+              </Typography>
+              <IconButton onClick={() => removeRow(index)}
+                sx={{ color: T.TEXT_TER, width: 36, height: 36 }}>
+                <DeleteOutlineIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Box>
             {(section.columns || []).map((col) => (
-              <SpecField key={col.key} field={col} value={row[col.key]} lang={lang} T={T}
+              <SpecField key={col.key} field={col} value={row[col.key]} lang={lang} T={T} channels={channels}
+                stacked
                 onChange={(v) => setCell(index, col.key, v)}
                 canCreateCustomer={canCreateCustomer}
                 onCreateCustomer={() => onCreateCustomer(section.key, index, col.key)} />
@@ -213,7 +302,7 @@ const TableSection = ({ section, rows, onRows, lang, T, isNarrow, canCreateCusto
             gap: 0.75, alignItems: 'center' }}>
             <Typography sx={{ fontSize: '0.7rem', color: T.TEXT_TER }}>{index + 1}</Typography>
             {(section.columns || []).map((col) => (
-              <SpecField key={col.key} field={col} value={row[col.key]} lang={lang} T={T} dense
+              <SpecField key={col.key} field={col} value={row[col.key]} lang={lang} T={T} dense channels={channels}
                 onChange={(v) => setCell(index, col.key, v)}
                 canCreateCustomer={canCreateCustomer}
                 onCreateCustomer={() => onCreateCustomer(section.key, index, col.key)} />
@@ -225,9 +314,13 @@ const TableSection = ({ section, rows, onRows, lang, T, isNarrow, canCreateCusto
         )
       ))}
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-        <Button onClick={addRow} startIcon={<AddIcon sx={{ fontSize: 15 }} />} size="small"
-          sx={{ textTransform: 'none', fontSize: '0.74rem', color: T.TEXT_SEC, borderRadius: '8px' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap',
+        ...(isNarrow ? { flexDirection: 'column-reverse', alignItems: 'stretch' } : {}) }}>
+        <Button onClick={addRow} startIcon={<AddIcon sx={{ fontSize: isNarrow ? 18 : 15 }} />}
+          size={isNarrow ? 'medium' : 'small'} variant={isNarrow ? 'outlined' : 'text'} fullWidth={isNarrow}
+          sx={{ textTransform: 'none', fontSize: isNarrow ? '0.85rem' : '0.74rem',
+            color: T.TEXT_SEC, borderRadius: '10px', minHeight: isNarrow ? 44 : 0,
+            borderColor: T.BD, '&:hover': { borderColor: T.BD } }}>
           {t('users.jrAddRow')}
         </Button>
         <Box sx={{ flexGrow: 1 }} />
@@ -256,6 +349,7 @@ const JobReportForm = ({ open, onClose, onSaved, editingReport, T, isDark }) => 
   const isEditing = !!editingReport && editingReport.status !== 'draft';
 
   const [spec, setSpec] = useState(null);
+  const [channels, setChannels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [values, setValues] = useState({});
   const [active, setActive] = useState('');
@@ -297,6 +391,7 @@ const JobReportForm = ({ open, onClose, onSaved, editingReport, T, isDark }) => 
         if (cancelled) return;
         const loaded = res.data.spec;
         setSpec(loaded);
+        setChannels(res.data.channels || []);
         setActive((loaded.sections || [])[0]?.key || '');
 
         const base = {};
@@ -571,7 +666,7 @@ const JobReportForm = ({ open, onClose, onSaved, editingReport, T, isDark }) => 
             <Typography noWrap sx={{ fontSize: '0.92rem', fontWeight: 700, color: T.TEXT_PRI }}>
               {spec ? pickLabel(spec.label, lang) : t('users.jobReportsHeader')}
             </Typography>
-            {spec && (
+            {spec && !isXs && (
               <Typography noWrap sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
                 {pickLabel(spec.description, lang)}
               </Typography>
@@ -600,28 +695,35 @@ const JobReportForm = ({ open, onClose, onSaved, editingReport, T, isDark }) => 
           <Box sx={{ display: 'flex', flexDirection: isNarrow ? 'column' : 'row',
             flexGrow: 1, minHeight: 0, overflow: 'hidden' }}>
 
-            <SectionNav spec={spec} values={values} active={active} onPick={setActive}
-              lang={lang} T={T} horizontal={isNarrow} />
+            {isNarrow
+              ? <SectionPicker spec={spec} values={values} active={active} onPick={setActive} lang={lang} T={T} />
+              : <SectionRail spec={spec} values={values} active={active} onPick={setActive} lang={lang} T={T} />}
 
             <Box sx={{ flexGrow: 1, overflowY: 'auto', p: { xs: 1.5, sm: 2.5 }, minWidth: 0 }}>
               {activeSection && (
                 <>
-                  <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: T.TEXT_PRI, mb: 0.25 }}>
-                    {pickLabel(activeSection.label, lang)}
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER, mb: 2 }}>
-                    {t('users.jrSectionHint')}
-                  </Typography>
+                  {/* On a phone the picker above already names the section —
+                      repeating it here costs two lines of a small screen. */}
+                  {!isXs && (
+                    <>
+                      <Typography sx={{ fontSize: '0.78rem', fontWeight: 700, color: T.TEXT_PRI, mb: 0.25 }}>
+                        {pickLabel(activeSection.label, lang)}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.66rem', color: T.TEXT_TER, mb: 2 }}>
+                        {t('users.jrSectionHint')}
+                      </Typography>
+                    </>
+                  )}
 
                   {activeSection.kind === 'table' ? (
                     <TableSection section={activeSection} rows={values[activeSection.key]}
                       onRows={(rows) => setSection(activeSection.key, rows)}
-                      lang={lang} T={T} isNarrow={isXs}
+                      lang={lang} T={T} isNarrow={isXs} channels={channels}
                       canCreateCustomer={canCreateCustomer} onCreateCustomer={openCustomerForm} />
                   ) : (
                     <FieldsSection section={activeSection} value={values[activeSection.key]}
                       onField={(fieldKey, v) => setField(activeSection.key, fieldKey, v)}
-                      lang={lang} T={T}
+                      lang={lang} T={T} channels={channels} isPhone={isXs}
                       canCreateCustomer={canCreateCustomer} onCreateCustomer={openCustomerForm} />
                   )}
 
@@ -679,7 +781,8 @@ const JobReportForm = ({ open, onClose, onSaved, editingReport, T, isDark }) => 
         )}
 
         {/* footer */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1.5,
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2,
+          py: 1.5, pb: { xs: 'calc(12px + env(safe-area-inset-bottom))', sm: 1.5 },
           borderTop: `1px solid ${T.BD}`, flexShrink: 0, flexWrap: 'wrap' }}>
           {error && (
             <Typography sx={{ fontSize: '0.7rem', color: '#EA005A', flexBasis: '100%' }}>{error}</Typography>
@@ -695,6 +798,7 @@ const JobReportForm = ({ open, onClose, onSaved, editingReport, T, isDark }) => 
             {isEditing ? t('common.cancel') : t('users.jrCloseKeepDraft')}
           </Button>
           <Button variant="contained" onClick={submit} disabled={submitting || loading || !spec}
+            size={isXs ? 'large' : 'medium'}
             startIcon={submitting ? <CircularProgress size={13} color="inherit" />
               : isEditing ? <CheckCircleIcon sx={{ fontSize: 16 }} /> : <SendIcon sx={{ fontSize: 15 }} />}
             sx={{ fontSize: '0.78rem', textTransform: 'none', borderRadius: '8px', px: 2.5,
