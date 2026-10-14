@@ -323,12 +323,19 @@ const TableSection = ({ section, rows, onRows, lang, T, isNarrow, canCreateCusto
             borderColor: T.BD, '&:hover': { borderColor: T.BD } }}>
           {t('users.jrAddRow')}
         </Button>
-        <Box sx={{ flexGrow: 1 }} />
-        {totals.map((tot) => (
-          <Chip key={tot.key} size="small"
-            label={`${pickLabel(tot.label, lang)}: ${Number(tot.value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
-            sx={{ height: 22, fontSize: '0.68rem', bgcolor: T.CTRL_BG, color: T.TEXT_PRI }} />
-        ))}
+        {!isNarrow && <Box sx={{ flexGrow: 1 }} />}
+        {/* Kept together so the phone's column-reverse moves the totals as a
+            block instead of also reversing them against each other — the paper
+            form reads "number of orders" before "total order value". */}
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap',
+          ...(isNarrow ? { flexDirection: 'column' } : {}) }}>
+          {totals.map((tot) => (
+            <Chip key={tot.key} size="small"
+              label={`${pickLabel(tot.label, lang)}: ${Number(tot.value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
+              sx={{ height: isNarrow ? 30 : 22, fontSize: isNarrow ? '0.76rem' : '0.68rem',
+                bgcolor: T.CTRL_BG, color: T.TEXT_PRI }} />
+          ))}
+        </Box>
       </Box>
     </Box>
   );

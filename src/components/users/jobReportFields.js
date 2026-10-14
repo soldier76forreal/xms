@@ -249,11 +249,20 @@ export const CustomerField = ({ value, onChange, label, T, canCreate, onCreateNe
         )}
       />
       {canCreate && !denied && (
-        <Button onClick={onCreateNew} size="small" title={t('users.jrAddCustomer')}
-          sx={{ minWidth: 28, width: 28, height: 28, p: 0, borderRadius: '8px',
-            color: T.TEXT_SEC, bgcolor: T.INPUT_BG, border: `1px solid ${T.INPUT_BD}` }}>
-          <AddIcon sx={{ fontSize: 15 }} />
-        </Button>
+        <Tooltip title={t('users.jrAddCustomer')}>
+          {/* Matches the field it sits beside and the mode toggle it sits above:
+              44px on a phone, where there is no tooltip to explain a small
+              square and a 28px target is barely hittable. flexShrink: 0 so a
+              full-width Autocomplete can never squeeze it out of the row. */}
+          <Button onClick={onCreateNew} size="small" aria-label={t('users.jrAddCustomer')}
+            sx={{ minWidth: stacked ? 44 : 28, width: stacked ? 44 : 28,
+              height: stacked ? 44 : 28, p: 0, flexShrink: 0,
+              borderRadius: stacked ? '10px' : '8px',
+              color: T.TEXT_SEC, bgcolor: T.INPUT_BG, border: `1px solid ${T.INPUT_BD}`,
+              '&:hover': { bgcolor: T.INPUT_BG, color: T.TEXT_PRI } }}>
+            <AddIcon sx={{ fontSize: stacked ? 20 : 15 }} />
+          </Button>
+        </Tooltip>
       )}
     </Box>
   );
