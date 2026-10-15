@@ -12,7 +12,7 @@
 // another component's body is a new type on every render, which remounts the
 // subtree on each keystroke and throws the caret out of the field being typed
 // in — the defect this app has already been bitten by six times.
-import { useState, useEffect, useContext, useMemo } from 'react';
+import { useState, useEffect, useRef, useContext, useMemo } from 'react';
 import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
@@ -170,6 +170,18 @@ function useLookup(path, search) {
   const [loading, setLoading] = useState(false);
   const [denied, setDenied] = useState(false);
 
+  // The effect below must restart ONLY when the query changes. AuthContext
+  // hands out a fresh object on every render of its provider (contextValue is
+  // an object literal, not memoized), so listing authCtx as a dependency made
+  // the effect re-run on any auth re-render — token refresh, socket connect,
+  // the online/offline listener. Each re-run cleared the pending 300 ms timer
+  // before it could fire and set loading back to true, so the request was
+  // never sent and the picker span forever. Reading both through refs keeps
+  // the latest values without making identity a trigger; this is the same
+  // reason digitalMarketing/productVarietyPicker.js depends on its input alone.
+  const ctxRef = useRef({ authCtx, axiosGlobal });
+  ctxRef.current = { authCtx, axiosGlobal };
+
   useEffect(() => {
     const term = (search || '').trim();
     if (term.length < 2) { setOptions([]); return undefined; }
@@ -177,9 +189,10 @@ function useLookup(path, search) {
     setLoading(true);
     const id = setTimeout(async () => {
       try {
-        const res = await authCtx.jwtInst({
+        const { authCtx: ctx, axiosGlobal: urls } = ctxRef.current;
+        const res = await ctx.jwtInst({
           method: 'get',
-          url: `${axiosGlobal.defaultTargetApi}/users/jobReports/lookup/${path}`,
+          url: `${urls.defaultTargetApi}/users/jobReports/lookup/${path}`,
           params: { search: term },
         });
         if (!cancelled) { setOptions(res.data.data || []); setDenied(false); }
@@ -193,7 +206,7 @@ function useLookup(path, search) {
       }
     }, 300);
     return () => { cancelled = true; clearTimeout(id); };
-  }, [path, search, authCtx, axiosGlobal.defaultTargetApi]);
+  }, [path, search]);
 
   return { options, loading, denied };
 }
