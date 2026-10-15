@@ -619,7 +619,17 @@ export default function InvoiceForm({ open, mode = 'new', docType = 'invoice', d
 
   // ── UI helpers ───────────────────────────────────────────────────────────────
 
-  const tfSx = { '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD } };
+  // The spinner arrows on a number input eat ~17px INSIDE the field and are
+  // useless for a quantity or a price nobody nudges one step at a time — the
+  // same reason the packing list drops them. inputMode still gives a phone the
+  // numeric keypad.
+  const tfSx = {
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: T.BD },
+    '& input[type=number]': { MozAppearance: 'textfield' },
+    '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+      WebkitAppearance: 'none', margin: 0,
+    },
+  };
   const tfInput = { style: { fontSize: '0.8rem' } };
   const tfLabel = { style: { fontSize: '0.75rem' } };
 

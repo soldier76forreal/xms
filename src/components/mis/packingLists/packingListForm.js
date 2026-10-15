@@ -32,6 +32,26 @@ import SpecCodeBuilder from '../../inventory/specCodeBuilder';
 import { parseStoneCode } from '../../inventory/util/codeParser';
 
 const EMPTY_ITEM = { code: '', lengthCm: '', widthCm: '', thicknessCm: '', pcs: '', sqm: '', sqmTouched: false };
+
+// ── The item grid ───────────────────────────────────────────────────────────
+// ONE column definition, used by the header and by every row, so they cannot
+// drift apart. It was two independent flex lines of fixed pixel widths before,
+// which is how the numbers became unreadable: a flex child shrinks by default,
+// so six 62px fields plus a 150px code in a drawer narrower than their sum were
+// squeezed to slivers — on a phone down to a sliver that fits a caret and
+// nothing else. `minmax(Npx, …)` cannot go below N; the code column takes the
+// slack instead.
+const ITEM_GRID = 'minmax(96px, 1.6fr) repeat(4, minmax(58px, 0.8fr)) minmax(76px, 1fr) 30px';
+
+// A number input's spinner arrows eat ~17px INSIDE an already tight field and
+// are useless for a measurement nobody nudges one at a time. inputMode still
+// gives a phone the numeric keypad.
+const NO_SPINNERS = {
+  '& input[type=number]': { MozAppearance: 'textfield' },
+  '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+    WebkitAppearance: 'none', margin: 0,
+  },
+};
 const EMPTY_PALLET = { palletId: '', reference: '', productCode: '', processingType: '', items: [{ ...EMPTY_ITEM }] };
 
 // Common processing descriptions seen on the real packing lists. freeSolo —
@@ -414,9 +434,12 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
 
   // Number cells in the item grid: right-aligned tabular figures, and the value
   // selects on focus so a wrong entry can just be overtyped.
-  const numCell = (w) => ({
-    width: w,
-    '& input': { textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
+  // Geometry comes from the grid; this is only about how a figure READS —
+  // right-aligned, tabular, and without the spinner arrows stealing width.
+  const numCell = () => ({
+    ...NO_SPINNERS,
+    minWidth: 0,
+    '& input': { textAlign: 'right', fontVariantNumeric: 'tabular-nums', px: 1 },
   });
   const selectOnFocus = { onFocus: (e) => e.target.select() };
 
@@ -617,24 +640,29 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
                   </Box>
 
                   {/* Column headers — so a row of numbers is readable */}
-                  <Box sx={{ display: 'flex', gap: 0.75, px: 1.5, pt: 1.25, pb: 0.5, alignItems: 'center' }}>
-                    {[
-                      { label: t('mis.plColCode'), w: isXs ? 100 : 150, align: 'left' },
-                      { label: t('mis.plColLength'), w: 62 },
-                      { label: t('mis.plColWidth'), w: 62 },
-                      { label: t('mis.plColThickness'), w: 62 },
-                      { label: t('mis.plColPcs'), w: 62 },
-                      { label: t('mis.plColSqm'), w: 84 },
-                    ].map((c) => (
-                      <Typography key={c.label} sx={{ width: c.w, flexShrink: 0,
-                        fontSize: '0.6rem', fontWeight: 700, letterSpacing: 0.4,
-                        textTransform: 'uppercase', color: T.TEXT_TER,
-                        textAlign: c.align === 'left' ? 'left' : 'right' }}>
-                        {c.label}
-                      </Typography>
-                    ))}
-                    <Box sx={{ width: 28, flexShrink: 0 }} />
-                  </Box>
+                  {/* Column headers belong to the desktop table only — on a phone
+                      each row is a card and carries its own labels. */}
+                  {!isXs && (
+                    <Box sx={{ display: 'grid', gridTemplateColumns: ITEM_GRID, gap: 0.75,
+                      px: 1.5, pt: 1.25, pb: 0.5, alignItems: 'center' }}>
+                      {[
+                        { label: t('mis.plColCode'), align: 'start' },
+                        { label: t('mis.plColLength') },
+                        { label: t('mis.plColWidth') },
+                        { label: t('mis.plColThickness') },
+                        { label: t('mis.plColPcs') },
+                        { label: t('mis.plColSqm') },
+                      ].map((c) => (
+                        <Typography key={c.label} noWrap sx={{ minWidth: 0,
+                          fontSize: '0.6rem', fontWeight: 700, letterSpacing: 0.4,
+                          textTransform: 'uppercase', color: T.TEXT_TER,
+                          textAlign: c.align === 'start' ? 'start' : 'end' }}>
+                          {c.label}
+                        </Typography>
+                      ))}
+                      <Box />
+                    </Box>
+                  )}
 
                   {/* Item rows */}
                   <Box sx={{ px: 1.5, pb: 1 }}>
@@ -644,41 +672,63 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
                       const badCode = type === 'linked' && it.code && scope.prefixes.size > 0
                         && !scope.prefixes.has(productPrefix(it.code));
                       return (
-                        <Box key={iIdx} sx={{ display: 'flex', gap: 0.75, mb: 0.75, alignItems: 'center' }}>
-                          {type === 'linked' ? (
-                            <Autocomplete freeSolo options={codeOptions}
-                              value={it.code || ''}
-                              onInputChange={(_, v) => setItemField(pIdx, iIdx, 'code', v)}
-                              sx={{ width: isXs ? 100 : 150, flexShrink: 0 }}
-                              renderInput={(params) => (
-                                <TextField {...params} size="small" error={Boolean(badCode)}
-                                  placeholder={t('mis.itemCodePlaceholder')}
-                                  sx={{ '& input': { fontFamily: 'monospace', fontSize: '0.75rem' } }} />
-                              )} />
-                          ) : (
-                            <TextField size="small" value={it.code}
-                              placeholder={t('mis.itemCodePlaceholder')}
-                              onChange={(e) => setItemField(pIdx, iIdx, 'code', e.target.value)}
-                              sx={{ width: isXs ? 100 : 150, flexShrink: 0,
-                                '& input': { fontFamily: 'monospace', fontSize: '0.75rem' } }} />
-                          )}
-                          <TextField size="small" type="number" value={it.lengthCm} sx={numCell(62)}
+                        <Box key={iIdx} sx={isXs
+                          ? { mb: 1.25, p: 1.25, borderRadius: '12px',
+                              border: `1px solid ${T.BD}`, display: 'grid',
+                              gridTemplateColumns: '1fr 1fr', gap: 1.25, alignItems: 'end' }
+                          : { display: 'grid', gridTemplateColumns: ITEM_GRID, gap: 0.75,
+                              mb: 0.75, alignItems: 'center' }}>
+                          {/* On a phone the column headers are gone, so every field
+                              carries its own label; on a desktop the header row
+                              says it once and a label here would be noise. */}
+                          <Box sx={{ minWidth: 0, gridColumn: isXs ? '1 / -1' : 'auto' }}>
+                            {type === 'linked' ? (
+                              <Autocomplete freeSolo options={codeOptions} fullWidth
+                                value={it.code || ''}
+                                onInputChange={(_, v) => setItemField(pIdx, iIdx, 'code', v)}
+                                renderInput={(params) => (
+                                  <TextField {...params} size="small" error={Boolean(badCode)}
+                                    label={isXs ? t('mis.plColCode') : undefined}
+                                    InputLabelProps={isXs ? { shrink: true } : undefined}
+                                    placeholder={t('mis.itemCodePlaceholder')}
+                                    sx={{ '& input': { fontFamily: 'monospace', fontSize: isXs ? '0.95rem' : '0.75rem' } }} />
+                                )} />
+                            ) : (
+                              <TextField size="small" value={it.code} fullWidth
+                                label={isXs ? t('mis.plColCode') : undefined}
+                                InputLabelProps={isXs ? { shrink: true } : undefined}
+                                placeholder={t('mis.itemCodePlaceholder')}
+                                onChange={(e) => setItemField(pIdx, iIdx, 'code', e.target.value)}
+                                sx={{ '& input': { fontFamily: 'monospace', fontSize: isXs ? '0.95rem' : '0.75rem' } }} />
+                            )}
+                          </Box>
+                          <TextField size="small" type="number" value={it.lengthCm} sx={numCell()}
+                            label={isXs ? t('mis.plColLength') : undefined}
+                            InputLabelProps={isXs ? { shrink: true } : undefined}
                             {...selectOnFocus} inputProps={{ inputMode: 'decimal', min: 0 }}
                             onChange={(e) => setItemField(pIdx, iIdx, 'lengthCm', e.target.value)} />
-                          <TextField size="small" type="number" value={it.widthCm} sx={numCell(62)}
+                          <TextField size="small" type="number" value={it.widthCm} sx={numCell()}
+                            label={isXs ? t('mis.plColWidth') : undefined}
+                            InputLabelProps={isXs ? { shrink: true } : undefined}
                             {...selectOnFocus} inputProps={{ inputMode: 'decimal', min: 0 }}
                             onChange={(e) => setItemField(pIdx, iIdx, 'widthCm', e.target.value)} />
-                          <TextField size="small" type="number" value={it.thicknessCm} sx={numCell(62)}
+                          <TextField size="small" type="number" value={it.thicknessCm} sx={numCell()}
+                            label={isXs ? t('mis.plColThickness') : undefined}
+                            InputLabelProps={isXs ? { shrink: true } : undefined}
                             {...selectOnFocus} inputProps={{ inputMode: 'decimal', step: '0.1', min: 0 }}
                             onChange={(e) => setItemField(pIdx, iIdx, 'thicknessCm', e.target.value)} />
-                          <TextField size="small" type="number" value={it.pcs} sx={numCell(62)}
+                          <TextField size="small" type="number" value={it.pcs} sx={numCell()}
+                            label={isXs ? t('mis.plColPcs') : undefined}
+                            InputLabelProps={isXs ? { shrink: true } : undefined}
                             {...selectOnFocus} inputProps={{ inputMode: 'numeric', step: '1', min: 0 }}
                             onChange={(e) => setItemField(pIdx, iIdx, 'pcs', e.target.value)} />
                           <Tooltip title={isAuto ? t('mis.plSqmAuto') : t('mis.plSqmManual')}>
                             <TextField size="small" type="number" value={it.sqm} sx={{
-                              ...numCell(84),
+                              ...numCell(),
                               '& .MuiOutlinedInput-root': isAuto ? { bgcolor: T.CTRL_BG } : {},
                             }}
+                              label={isXs ? t('mis.plColSqm') : undefined}
+                              InputLabelProps={isXs ? { shrink: true } : undefined}
                               {...selectOnFocus} inputProps={{ inputMode: 'decimal', min: 0 }}
                               onChange={(e) => setItemField(pIdx, iIdx, 'sqm', e.target.value)}
                               InputProps={{ endAdornment: isAuto
@@ -692,10 +742,12 @@ export default function PackingListForm({ open, onClose, packingList = null, pre
                                     </Tooltip>
                                   )) }} />
                           </Tooltip>
-                          <Box sx={{ width: 28, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+                          <Box sx={{ display: 'flex', justifyContent: isXs ? 'flex-end' : 'center',
+                            minWidth: 0, gridColumn: isXs ? '1 / -1' : 'auto' }}>
                             {pallet.items.length > 1 && (
-                              <IconButton size="small" onClick={() => removeItem(pIdx, iIdx)}>
-                                <DeleteOutlineIcon sx={{ fontSize: 14, color: T.TEXT_TER }} />
+                              <IconButton size={isXs ? 'medium' : 'small'} onClick={() => removeItem(pIdx, iIdx)}
+                                sx={isXs ? { width: 40, height: 40 } : undefined}>
+                                <DeleteOutlineIcon sx={{ fontSize: isXs ? 18 : 14, color: T.TEXT_TER }} />
                               </IconButton>
                             )}
                           </Box>
