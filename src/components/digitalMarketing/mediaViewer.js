@@ -26,6 +26,33 @@ export const resolveMediaKind = (nameOrMime = '') => {
   return 'other';
 };
 
+// What KIND of thing is this stored file? Takes the whole entry, because the
+// answer is only reliable when the three things it carries are tried in the
+// right order:
+//
+//   1. mimetype  — snapshotted by the upload route from what the browser sent.
+//                  Authoritative, and the ONLY one that survives both a rename
+//                  and an upload whose filename had no extension at all.
+//   2. diskName  — the server-generated name. It keeps the original extension
+//                  when there was one, and is never edited afterwards.
+//   3. name      — last, because it is the DISPLAY name: the file edit dialog
+//                  lets anyone rename "clip.mp4" to "B-roll 1", and a phone or
+//                  a share sheet can hand over a file with no extension in the
+//                  first place.
+//
+// Reading `name` FIRST is what made every attachment in Digital Marketing show
+// as a grey "file" tile: `name || diskName` short-circuits on a perfectly
+// truthy name that simply has no extension, so the extension never got looked
+// at and the mimetype never got looked at either.
+export const resolveEntryKind = (entry) => {
+  if (!entry) return 'other';
+  const fromMime = entry.mimetype ? resolveMediaKind(entry.mimetype) : 'other';
+  if (fromMime !== 'other') return fromMime;
+  const fromDisk = entry.diskName ? resolveMediaKind(entry.diskName) : 'other';
+  if (fromDisk !== 'other') return fromDisk;
+  return resolveMediaKind(entry.name || '');
+};
+
 // Native browser download WITH progress. We route a /uploads/<diskName> URL
 // through the API's /download/<diskName> endpoint, which sets
 // `Content-Disposition: attachment` — so the browser saves the file with its OWN

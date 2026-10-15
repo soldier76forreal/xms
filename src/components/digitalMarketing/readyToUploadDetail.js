@@ -28,7 +28,7 @@ import { usePermissions } from '../../contextApi/PermissionContext';
 import { fetchReadyToUpload, updateReadyToUpload, deleteReadyToUpload, actions } from '../../store/store';
 import { copyText } from '../../tools/clipboard';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
-import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
+import MediaViewer, { resolveEntryKind, downloadFile } from './mediaViewer';
 import { MediaGrid, MediaGalleryViewer, toMediaItems } from './mediaGallery';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -166,12 +166,12 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
   };
 
   // In-app viewer — never window.open.
-  const viewFile = (diskName, name, kindHint) => {
+  const viewFile = (diskName, name, kindHint, mimetype) => {
     if (!diskName) return;
     setViewerMedia({
       url: `${axiosGlobal.defaultTargetApi}/uploads/${diskName}`,
       name: name || diskName,
-      kind: kindHint || resolveMediaKind(name || diskName),
+      kind: kindHint || resolveEntryKind({ mimetype, diskName, name }),
     });
   };
 
@@ -326,7 +326,7 @@ export default function ReadyToUploadDetail({ id, onClose, onDeleted }) {
               {(f.mimetype || '').startsWith('video/')
                 ? <MovieIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />
                 : <InsertDriveFileIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />}
-              <Typography onClick={() => viewFile(f.diskName, f.name)} noWrap
+              <Typography onClick={() => viewFile(f.diskName, f.name, undefined, f.mimetype)} noWrap
                 sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, flexGrow: 1, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}>
                 <OpenInNewIcon sx={{ fontSize: 12, flexShrink: 0 }} /> {f.name || t('dm.previewFileFallback')}

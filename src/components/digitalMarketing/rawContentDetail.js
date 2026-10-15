@@ -42,7 +42,7 @@ import ProductVarietyPicker from './productVarietyPicker';
 import DmFileEditDialog from './dmFileEditDialog';
 import DmActivityLog from './dmActivityLog';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
-import MediaViewer, { resolveMediaKind, downloadFile } from './mediaViewer';
+import MediaViewer, { resolveEntryKind, downloadFile } from './mediaViewer';
 import { MediaGrid, MediaGalleryViewer, toMediaItems } from './mediaGallery';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
@@ -219,12 +219,12 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
 
   // Files are served statically from /uploads/<diskName>. Viewing happens
   // IN-APP via MediaViewer — never window.open / a browser tab.
-  const viewFile = (diskName, name, kindHint) => {
+  const viewFile = (diskName, name, kindHint, mimetype) => {
     if (!diskName) return;
     setViewerMedia({
       url: `${axiosGlobal.defaultTargetApi}/uploads/${diskName}`,
       name: name || diskName,
-      kind: kindHint || resolveMediaKind(name || diskName),
+      kind: kindHint || resolveEntryKind({ mimetype, diskName, name }),
     });
   };
 
@@ -501,15 +501,15 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   {/* inline thumbnail for images/videos; icon for the rest — click opens the in-app viewer */}
                   {(() => {
-                    const kind = resolveMediaKind(f.name || f.diskName || '');
+                    const kind = resolveEntryKind(f);
                     const url  = f.diskName ? `${axiosGlobal.defaultTargetApi}/uploads/${f.diskName}` : null;
                     if (kind === 'image' && url) {
-                      return <Box component="img" src={url} alt="" onClick={() => viewFile(f.diskName, f.name, kind)}
+                      return <Box component="img" src={url} alt="" onClick={() => viewFile(f.diskName, f.name, kind, f.mimetype)}
                         sx={{ width: 34, height: 34, borderRadius: '6px', objectFit: 'cover', cursor: 'pointer', flexShrink: 0 }} />;
                     }
                     if (kind === 'video' && url) {
                       return (
-                        <Box onClick={() => viewFile(f.diskName, f.name, kind)}
+                        <Box onClick={() => viewFile(f.diskName, f.name, kind, f.mimetype)}
                           sx={{ position: 'relative', width: 34, height: 34, borderRadius: '6px', overflow: 'hidden',
                             cursor: 'pointer', flexShrink: 0, bgcolor: '#000' }}>
                           <Box component="video" src={`${playbackUrl(url)}#t=0.1`} muted preload="metadata" playsInline
@@ -520,7 +520,7 @@ export default function RawContentDetail({ id, onClose, onDeleted }) {
                     }
                     return <InsertDriveFileIcon sx={{ fontSize: 15, color: T.TEXT_TER, flexShrink: 0 }} />;
                   })()}
-                  <Typography onClick={() => viewFile(f.diskName, f.name)}
+                  <Typography onClick={() => viewFile(f.diskName, f.name, undefined, f.mimetype)}
                     sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, flexGrow: 1, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}
                     noWrap>

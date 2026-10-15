@@ -18,7 +18,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 
 import { playbackUrl } from '../../tools/videoSource';
-import { resolveMediaKind, downloadFile } from './mediaViewer';
+import { resolveEntryKind, downloadFile } from './mediaViewer';
 
 // Telegram-style media view for a record's attachments: a dense thumbnail grid
 // with type filters, opening into a full-screen viewer you can page through.
@@ -71,7 +71,7 @@ export function toMediaItems(files, apiBase) {
         name: f.name || '',
         description: f.description || '',
         voiceDescriptionDiskName: f.voiceDescriptionDiskName || null,
-        kind: resolveMediaKind(f.name || f.diskName || ''),
+        kind: resolveEntryKind(f),
       };
     });
 }

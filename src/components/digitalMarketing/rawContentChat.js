@@ -29,7 +29,7 @@ import {
   editRawContentChatMessage, deleteRawContentChatMessage, markRawContentChatSeen,
   actions,
 } from '../../store/store';
-import MediaViewer, { resolveMediaKind } from './mediaViewer';
+import MediaViewer, { resolveEntryKind } from './mediaViewer';
 import { playbackUrl } from '../../tools/videoSource';
 import UserAvatar from '../main/userAvatar';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
@@ -198,7 +198,7 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
     setViewerMedia({
       url: `${axiosGlobal.defaultTargetApi}/uploads/${diskName}`,
       name: name || diskName,
-      kind: kindHint || resolveMediaKind(name || diskName),
+      kind: kindHint || resolveEntryKind({ diskName, name }),
     });
   };
 
@@ -323,7 +323,7 @@ export default function RawContentChat({ rawContentId, readyToUploadId, T, isDar
                 {m.type === 'file' && (() => {
                   // Telegram-style inline previews: images and videos render in
                   // the bubble; anything else is a row that opens the viewer.
-                  const kind = resolveMediaKind(m.fileName || m.fileDiskName || '');
+                  const kind = resolveEntryKind({ diskName: m.fileDiskName, name: m.fileName });
                   const url  = `${axiosGlobal.defaultTargetApi}/uploads/${m.fileDiskName}`;
                   if (kind === 'image') {
                     return <Box component="img" src={url} alt={m.fileName}
