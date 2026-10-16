@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk , configureStore, current } from '@reduxjs/toolkit';
+import uploadErrorMessage from '../tools/uploadError';
 import axios from 'axios';
 
 import { useSelector } from 'react-redux';
@@ -93,7 +94,10 @@ export const uploadFile = createAsyncThunk('getFilesAndFolders/uploadFile', asyn
                   // Handle other errors
                 }
                 console.log(error)
-                dispatch(actions.updateUploadError({index:i , error:{status:true , msg:error}}))
+                // `msg: error` put a raw Error object where the transfer centre
+                // prints a reason, so a refused upload showed nothing useful.
+                // The proxy's size cap is the usual cause — name it.
+                dispatch(actions.updateUploadError({index:i , error:{status:true , msg:uploadErrorMessage(error, 'Upload failed')}}))
                 dispatch(actions.updateUploadOveralStatus({index:i , status:false}))
 
               }
@@ -784,7 +788,7 @@ export const createRawContent = createAsyncThunk('overallAssets/createRawContent
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Raw content uploaded', type: 'success' }));
     return response.data;
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to upload raw content', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: uploadErrorMessage(err, 'Failed to upload raw content'), type: 'error' }));
     throw err;
   }
 });
@@ -838,7 +842,7 @@ export const submitReadyToUpload = createAsyncThunk('overallAssets/submitReadyTo
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Marked ready to upload', type: 'success' }));
     return response.data;
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to submit ready-to-upload content', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: uploadErrorMessage(err, 'Failed to submit ready-to-upload content'), type: 'error' }));
     throw err;
   }
 });
@@ -969,7 +973,7 @@ export const createReadyToUpload = createAsyncThunk('overallAssets/createReadyTo
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Ready-to-upload content created', type: 'success' }));
     return response.data;
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to create ready-to-upload content', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: uploadErrorMessage(err, 'Failed to create ready-to-upload content'), type: 'error' }));
     throw err;
   }
 });
@@ -1217,7 +1221,7 @@ export const uploadBlogInlineImage = createAsyncThunk('overallAssets/uploadBlogI
     });
     return response.data;
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to upload image', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: uploadErrorMessage(err, 'Failed to upload image'), type: 'error' }));
     throw err;
   }
 });
@@ -1474,7 +1478,7 @@ export const createTutorial = createAsyncThunk('overallAssets/createTutorial', a
     dispatch(actions.setShowSnackBar({ status: true, msg: 'Tutorial uploaded', type: 'success' }));
     return response.data;
   } catch (err) {
-    dispatch(actions.setShowSnackBar({ status: true, msg: err?.response?.data?.message || 'Failed to upload tutorial', type: 'error' }));
+    dispatch(actions.setShowSnackBar({ status: true, msg: uploadErrorMessage(err, 'Failed to upload tutorial'), type: 'error' }));
     throw err;
   }
 });
