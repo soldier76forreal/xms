@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useTheme, useMediaQuery } from '@mui/material';
@@ -22,6 +22,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { useBranch } from '../../contextApi/BranchContext';
 import { submitReadyToUpload, createReadyToUpload } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
+import { saveDraft, loadDraft, clearDraft, totalBytes, DRAFT_BLOB_BUDGET } from './draftStore';
 import ProductVarietyPicker from './productVarietyPicker';
 
 // Freeform suggestions — the field is freeSolo (extensible), so these stay literal
@@ -77,6 +78,17 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
   const [error, setError]       = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
+  // ── Unsent draft ────────────────────────────────────────────────────────
+  // Local until Save, same rule as the raw content form: uploading is what
+  // creates the record. One draft per source batch, so two half-finished
+  // hand-offs never overwrite each other.
+  const DRAFT_KEY = `readyToUpload:${rawContentId || 'new'}`;
+  const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const [draftTruncated, setDraftTruncated] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const hydrating = useRef(false);
+
   useEffect(() => { if (open) setBranchId(defaultBranchId || ''); }, [open, defaultBranchId]);
   // Pre-fills with the source raw content's already-tagged varieties when
   // opened from the "mark ready to upload" flow — a graduated record is the
@@ -85,13 +97,78 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
   // Still fully editable from here.
   useEffect(() => { if (open) setProducts(defaultProducts || []); }, [open, defaultProducts]);
 
+  useEffect(() => {
+    if (!open) { setRestored(false); return; }
+    let cancelled = false;
+    hydrating.current = true;
+    (async () => {
+      const draft = await loadDraft(DRAFT_KEY);
+      if (cancelled) { hydrating.current = false; return; }
+      if (draft && draft.fields) {
+        const f = draft.fields;
+        setTitle(f.title || '');
+        setLanguage(f.language || '');
+        setPlatform(f.platform || '');
+        setCaption(f.caption || '');
+        if (f.branchId) setBranchId(f.branchId);
+        setProducts(f.products || []);
+        setFiles((draft.files || [])
+          .filter((e) => e.blob)
+          .map((e) => new File([e.blob], e.fileName || 'file', { type: e.fileType || undefined })));
+        setDraftSavedAt(draft.updatedAt || null);
+        setDraftTruncated(Boolean(draft.droppedContent));
+        setRestored(true);
+      }
+      setTimeout(() => { hydrating.current = false; }, 0);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, DRAFT_KEY]);
+
+  const isEmptyForm = () => !title.trim() && !caption.trim() && !files.length
+    && !platform && !products.length;
+
+  useEffect(() => {
+    if (!open || hydrating.current) return undefined;
+    const id = setTimeout(async () => {
+      if (isEmptyForm()) { await clearDraft(DRAFT_KEY); setDraftSavedAt(null); return; }
+      const withinBudget = totalBytes(files.map((f) => ({ file: f }))) <= DRAFT_BLOB_BUDGET;
+      const ok = await saveDraft(DRAFT_KEY, {
+        kind: 'readyToUpload',
+        rawContentId: rawContentId || null,
+        fields: { title, language, platform, caption, branchId, products },
+        files: files.map((f) => ({
+          fileName: f.name, fileType: f.type, fileSize: f.size,
+          blob: withinBudget ? f : null,
+        })),
+        droppedContent: !withinBudget && files.length > 0,
+      });
+      if (ok) { setDraftSavedAt(Date.now()); setDraftTruncated(!withinBudget && files.length > 0); }
+    }, 900);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, title, language, platform, caption, branchId, products, files]);
+
+  const handleReset = async () => {
+    setConfirmReset(false);
+    hydrating.current = true;
+    await clearDraft(DRAFT_KEY);
+    resetForm();
+    setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+    setTimeout(() => { hydrating.current = false; }, 0);
+  };
+
   const resetForm = () => { setTitle(''); setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setBranchId(''); setProducts([]); setError(''); };
   const handleClose = () => {
     if (files.length) { setConfirmDiscard(true); return; }
     resetForm();
     onClose();
   };
-  const discardAndClose = () => { resetForm(); onClose(); };
+  const discardAndClose = async () => {
+    await clearDraft(DRAFT_KEY);
+    setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+    resetForm(); onClose();
+  };
 
   // Read the FileList into a real array HERE, not inside the state updater. The input's
   // onChange clears e.target.value straight after calling this, which empties the live
@@ -125,6 +202,8 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
       } else {
         await dispatch(submitReadyToUpload({ authCtx, axiosGlobal, id: rawContentId, formData: fd, onProgress })).unwrap();
       }
+      await clearDraft(DRAFT_KEY);
+      setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
       resetForm();
       onClose();
     } catch (err) {
@@ -207,6 +286,21 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
           </TextField>
         )}
 
+        {restored && (
+          <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC }}>
+            {t('dm.draftRestoredNotice')}
+          </Typography>
+        )}
+        {draftTruncated && (
+          <Typography sx={{ fontSize: '0.75rem', color: '#B26A00' }}>
+            {t('dm.draftTooBigNotice', { mb: Math.round(DRAFT_BLOB_BUDGET / 1024 / 1024) })}
+          </Typography>
+        )}
+        {draftSavedAt && (
+          <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
+            {t('dm.draftKeptAt', { time: new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })}
+          </Typography>
+        )}
         {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
       </Box>
 
@@ -221,6 +315,10 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
         )}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>{t('common.cancel')}</Button>
+          <Button onClick={() => setConfirmReset(true)} disabled={saving || isEmptyForm()}
+            sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>
+            {t('common.reset')}
+          </Button>
           <Box sx={{ flexGrow: 1 }} />
           <Button onClick={handleSave} disabled={saving} variant="contained" color="success"
             startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
@@ -229,6 +327,16 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
           </Button>
         </Box>
       </Box>
+
+      <ConfirmDialog
+        open={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        onConfirm={handleReset}
+        title={t('dm.resetFormTitle')}
+        message={t('dm.resetFormMessage')}
+        confirmLabel={t('common.reset')}
+        destructive
+      />
 
       <ConfirmDialog
         open={confirmDiscard}

@@ -28,6 +28,9 @@ import { useBranch } from '../../contextApi/BranchContext';
 import { createRawContent } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
 import MediaViewer from './mediaViewer';
+import {
+  saveDraft, loadDraft, clearDraft, packFiles, unpackFiles, DRAFT_BLOB_BUDGET,
+} from './draftStore';
 import ProductVarietyPicker from './productVarietyPicker';
 
 // value stays the literal English word (stored on the record); only the displayed label translates.
@@ -125,6 +128,17 @@ export default function RawContentForm({ open, onClose }) {
   // on purpose — guessing which one a batch is for would silently mistag it.
   const autoBranchId = branches.length === 1 ? String(branches[0]._id) : '';
   const [branchTouched, setBranchTouched] = useState(false);
+
+  // ── Unsent draft ────────────────────────────────────────────────────────
+  // Nothing here reaches the server until Upload is pressed — uploading a file
+  // IS the record. The draft only exists so a closed tab or a crash does not
+  // cost the typing. See draftStore.js for why it is IndexedDB.
+  const DRAFT_KEY = 'rawContent';
+  const [draftSavedAt, setDraftSavedAt] = useState(null);
+  const [draftTruncated, setDraftTruncated] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const hydrating = useRef(false);     // never autosave over a draft while loading it
   const prevOpen = useRef(false);
 
   useEffect(() => {
@@ -139,6 +153,37 @@ export default function RawContentForm({ open, onClose }) {
     setBranchId(autoBranchId);
   }, [open, autoBranchId, branchTouched]);
 
+  // Reopening picks up exactly where it was left, files included when they
+  // fit the budget (draftStore.js).
+  useEffect(() => {
+    if (!open) { setRestored(false); return; }
+    let cancelled = false;
+    hydrating.current = true;
+    (async () => {
+      const draft = await loadDraft(DRAFT_KEY);
+      if (cancelled) { hydrating.current = false; return; }
+      if (draft && draft.fields) {
+        const f = draft.fields;
+        setTitle(f.title || '');
+        setLanguage(f.language || '');
+        setUseCase(f.useCase || 'Anything');
+        setPlatform(f.platform || 'Anything');
+        if (f.branchId) { setBranchId(f.branchId); setBranchTouched(true); }
+        setProducts(f.products || []);
+        setTextContent(f.textContent || '');
+        setPendingFiles(unpackFiles(draft.files, nextLocalKey));
+        setDraftSavedAt(draft.updatedAt || null);
+        setDraftTruncated(Boolean(draft.droppedContent));
+        setRestored(true);
+      }
+      // Let the restored values settle before autosave is allowed to run,
+      // otherwise the first pass writes the half-applied state back.
+      setTimeout(() => { hydrating.current = false; }, 0);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const resetForm = () => {
     setTitle(''); setLanguage(''); setUseCase('Anything'); setPlatform('Anything');
     setBranchId(autoBranchId); setBranchTouched(false);
@@ -148,14 +193,50 @@ export default function RawContentForm({ open, onClose }) {
   // Default a friendly per-file name from the filename (extension stripped).
   const baseName = (filename) => (filename || '').replace(/\.[^.]+$/, '');
 
+  const isEmptyForm = () => !title.trim() && !textContent.trim() && !textVoiceFile
+    && !pendingFiles.length && !products.length;
+
+  // Autosaved on a pause rather than a keystroke: writing a batch of video
+  // Blobs to disk is not something to do on every character.
+  useEffect(() => {
+    if (!open || hydrating.current) return undefined;
+    const id = setTimeout(async () => {
+      if (isEmptyForm()) { await clearDraft(DRAFT_KEY); setDraftSavedAt(null); return; }
+      const { entries, droppedContent } = packFiles(pendingFiles);
+      const ok = await saveDraft(DRAFT_KEY, {
+        kind: 'rawContent',
+        fields: { title, language, useCase, platform, branchId, products, textContent },
+        files: entries,
+        droppedContent,
+      });
+      if (ok) { setDraftSavedAt(Date.now()); setDraftTruncated(droppedContent); }
+    }, 900);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, title, language, useCase, platform, branchId, products, textContent, pendingFiles]);
+
   const handleClose = () => {
     if (pendingFiles.length || textContent.trim() || textVoiceFile) { setConfirmDiscard(true); return; }
     resetForm();
     onClose();
   };
-  const discardAndClose = () => {
+  const discardAndClose = async () => {
+    await clearDraft(DRAFT_KEY);
+    setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
     resetForm();
     onClose();
+  };
+
+  // Reset empties the form AND throws the draft away — one button, one
+  // meaning, so nothing is left behind to reappear on the next open.
+  const handleReset = async () => {
+    setConfirmReset(false);
+    hydrating.current = true;            // stop autosave re-writing what we just cleared
+    await clearDraft(DRAFT_KEY);
+    resetForm();
+    setTextVoiceFile(null);
+    setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+    setTimeout(() => { hydrating.current = false; }, 0);
   };
 
   const addFiles = (fileList) => {
@@ -276,6 +357,9 @@ export default function RawContentForm({ open, onClose }) {
         authCtx, axiosGlobal, formData,
         onProgress: (e) => setUploadProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null),
       })).unwrap();
+      // Sent — the record exists now, so the draft has nothing left to protect.
+      await clearDraft(DRAFT_KEY);
+      setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
       resetForm();
       onClose();
     } catch (err) {
@@ -292,9 +376,18 @@ export default function RawContentForm({ open, onClose }) {
 
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
-        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
-          {t('dm.newRawContentBatch')}
-        </Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
+            {t('dm.newRawContentBatch')}
+          </Typography>
+          {draftSavedAt && (
+            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>
+              {t('dm.draftKeptAt', {
+                time: new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              })}
+            </Typography>
+          )}
+        </Box>
         <IconButton onClick={handleClose} size="small" sx={{ color: T.TEXT_SEC }}>
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
@@ -461,6 +554,22 @@ export default function RawContentForm({ open, onClose }) {
           </TextField>
         )}
 
+        {restored && (
+          <Typography sx={{ fontSize: '0.75rem', color: T.TEXT_SEC }}>
+            {t('dm.draftRestoredNotice')}
+          </Typography>
+        )}
+        {draftTruncated && (
+          <Typography sx={{ fontSize: '0.75rem', color: '#B26A00' }}>
+            {t('dm.draftTooBigNotice', { mb: Math.round(DRAFT_BLOB_BUDGET / 1024 / 1024) })}
+          </Typography>
+        )}
+        {pendingFiles.some((f) => f.missingContent) && (
+          <Typography sx={{ fontSize: '0.75rem', color: '#B26A00' }}>
+            {t('dm.draftRepickNotice')}
+          </Typography>
+        )}
+
         {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
       </Box>
 
@@ -475,6 +584,10 @@ export default function RawContentForm({ open, onClose }) {
         )}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={handleClose} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>{t('common.cancel')}</Button>
+          <Button onClick={() => setConfirmReset(true)} disabled={saving || isEmptyForm()}
+            sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>
+            {t('common.reset')}
+          </Button>
           <Box sx={{ flexGrow: 1 }} />
           <Button onClick={handleSave} disabled={saving} variant="contained"
             startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
@@ -485,6 +598,16 @@ export default function RawContentForm({ open, onClose }) {
       </Box>
 
       <MediaViewer open={Boolean(viewerMedia)} onClose={() => setViewerMedia(null)} media={viewerMedia} />
+
+      <ConfirmDialog
+        open={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        onConfirm={handleReset}
+        title={t('dm.resetFormTitle')}
+        message={t('dm.resetFormMessage')}
+        confirmLabel={t('common.reset')}
+        destructive
+      />
 
       <ConfirmDialog
         open={confirmDiscard}

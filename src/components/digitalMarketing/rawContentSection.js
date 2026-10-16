@@ -33,6 +33,7 @@ import { fetchRawContents } from '../../store/store';
 import InfiniteScrollSentinel from '../../tools/loader/infiniteScrollSentinel';
 import PageSizeSelect from '../../tools/inputs/pageSizeSelect';
 import RawContentForm from './rawContentForm';
+import DraftStrip from './draftStrip';
 import RawContentDetail from './rawContentDetail';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
 import SidebarResizer from '../../tools/navs/sidebarResizer';
@@ -101,6 +102,9 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
     return () => window.removeEventListener('pointerup', stop);
   }, [listResizing]);
   const [formOpen, setFormOpen] = useState(false);
+  // Bumped when the form closes, so the draft strip re-reads rather than
+  // showing a draft that was just sent or thrown away.
+  const [draftTick, setDraftTick] = useState(0);
 
   const T = {
     PANEL_BG: isDark ? '#0d0d0d' : theme.palette.background.paper,
@@ -229,6 +233,11 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
 
           {/* ── Timeline ── */}
           <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 2, pb: 2 }}>
+            {/* An unsent draft sits ABOVE the list: it is not a record yet —
+                nothing has been uploaded — so it is a reminder, not a row. */}
+            <DraftStrip kind="rawContent" T={T} refreshKey={draftTick}
+              onOpen={() => setFormOpen(true)} />
+
             {loading && items.length === 0 ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                 <CircularProgress size={22} sx={{ color: T.TEXT_TER }} />
@@ -316,7 +325,8 @@ export default function RawContentSection({ openId = null, onOpenHandled = () =>
         </Box>
       )}
 
-      <RawContentForm open={formOpen} onClose={() => setFormOpen(false)} />
+      <RawContentForm open={formOpen}
+        onClose={() => { setFormOpen(false); setDraftTick((n) => n + 1); }} />
 
       {/* ── Filter Drawer — same sidebar pattern as CRM's ── */}
       <Drawer anchor="right" open={filterOpen} onClose={() => setFilterOpen(false)}

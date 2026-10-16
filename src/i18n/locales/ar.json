@@ -68,7 +68,8 @@
     "copyLink": "نسخ الرابط",
     "linkCopied": "تم نسخ الرابط!",
     "linkCreateFailed": "فشل إنشاء الرابط",
-    "copyToClipboard": "نسخ إلى الحافظة"
+    "copyToClipboard": "نسخ إلى الحافظة",
+    "reset": "إعادة تعيين"
   },
   "restricted": {
     "title": "وصول مقيد",
@@ -2037,7 +2038,27 @@
     "anMissing_description": "بلا وصف",
     "anMissing_seo": "بلا عنوان/وصف للبحث",
     "anMissing_translations": "تنقصها ترجمة",
-    "anRecentlyEdited": "عُدّلت مؤخرًا"
+    "anRecentlyEdited": "عُدّلت مؤخرًا",
+    "draftUnsent": "مسودة غير مُرسلة",
+    "draftUntitled": "بدون عنوان",
+    "draftContinue": "متابعة",
+    "draftJustNow": "حُفظت للتو",
+    "draftMinutesAgo_one": "حُفظت قبل دقيقة",
+    "draftMinutesAgo_other": "حُفظت قبل {{count}} دقيقة",
+    "draftHoursAgo_one": "حُفظت قبل ساعة",
+    "draftHoursAgo_other": "حُفظت قبل {{count}} ساعات",
+    "draftFileCount_one": "ملف واحد",
+    "draftFileCount_other": "{{count}} ملفات",
+    "draftHasText": "مع نص",
+    "draftNeedsRepick": "يلزم اختيار الملفات مجددًا",
+    "draftKeptAt": "حُفظت المسودة {{time}} — لا يتم رفع شيء حتى ترسلها",
+    "draftRestoredNotice": "تم استرجاع ما كنت تكتبه. لم يُرفع أي شيء بعد.",
+    "draftTooBigNotice": "حجم هذه الدفعة يتجاوز {{mb}} ميغابايت، لذا احتفظت المسودة بالنص والإعدادات دون الملفات نفسها — اخترها مجددًا قبل الإرسال.",
+    "draftRepickNotice": "بعض الملفات تحتاج إلى اختيارها مجددًا قبل الإرسال.",
+    "discardDraftTitle": "حذف هذه المسودة؟",
+    "discardDraftMessage": "سيتم حذف المسودة المحفوظة. لم يُرفع أي شيء، لذا لن يتأثر شيء آخر.",
+    "resetFormTitle": "إعادة تعيين النموذج؟",
+    "resetFormMessage": "سيتم مسح كل الحقول وحذف المسودة المحفوظة. لم يُرفع أي شيء، لذا لن يتأثر شيء آخر."
   },
   "tutorials": {
     "noPermissionView": "ليس لديك إذن لعرض مركز الدروس التعليمية",

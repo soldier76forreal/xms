@@ -37,6 +37,7 @@ import SidebarResizer from '../../tools/navs/sidebarResizer';
 import { useUnreadRecords } from '../../tools/hooks/useUnreadRecords';
 import UnreadDot, { unreadRowTint } from '../../tools/unreadDot';
 import ReadyToUploadForm from './readyToUploadForm';
+import DraftStrip from './draftStrip';
 
 const fmtDate = (d) => {
   if (!d) return '—';
@@ -59,6 +60,7 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
   const { can }     = usePermissions();
   const { branches } = useBranch();
   const [formOpen, setFormOpen] = useState(false);
+  const [draftTick, setDraftTick] = useState(0);
 
   const items      = useSelector(s => s.dmReadyToUpload);
   const total      = useSelector(s => s.dmReadyToUploadTotal);
@@ -209,6 +211,11 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
           </Box>
 
           <Box sx={{ flexGrow: 1, overflowY: 'auto', px: 2, pb: 2 }}>
+            {/* Unsent drafts sit above the list — nothing has been uploaded,
+                so they are a reminder rather than a record. */}
+            <DraftStrip kind="readyToUpload" T={T} refreshKey={draftTick}
+              onOpen={() => setFormOpen(true)} />
+
             {loading && items.length === 0 ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
                 <CircularProgress size={22} sx={{ color: T.TEXT_TER }} />
@@ -290,7 +297,8 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
         </Box>
       )}
 
-      <ReadyToUploadForm open={formOpen} onClose={() => setFormOpen(false)} />
+      <ReadyToUploadForm open={formOpen}
+        onClose={() => { setFormOpen(false); setDraftTick((n) => n + 1); }} />
 
       {/* ── Filter Drawer — same sidebar pattern as CRM's / RawContentSection's ── */}
       <Drawer anchor="right" open={filterOpen} onClose={() => setFilterOpen(false)}

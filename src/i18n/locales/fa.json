@@ -63,7 +63,8 @@
     "copyLink": "کپی لینک",
     "linkCopied": "لینک کپی شد!",
     "linkCreateFailed": "ایجاد لینک ناموفق بود",
-    "copyToClipboard": "کپی در کلیپ‌بورد"
+    "copyToClipboard": "کپی در کلیپ‌بورد",
+    "reset": "بازنشانی"
   },
   "restricted": {
     "title": "دسترسی محدود",
@@ -1985,7 +1986,24 @@
     "anMissing_description": "بدون توضیح",
     "anMissing_seo": "بدون عنوان/توضیح جستجو",
     "anMissing_translations": "بدون ترجمه",
-    "anRecentlyEdited": "ویرایش‌های اخیر"
+    "anRecentlyEdited": "ویرایش‌های اخیر",
+    "draftUnsent": "پیش‌نویس ارسال‌نشده",
+    "draftUntitled": "بدون عنوان",
+    "draftContinue": "ادامه",
+    "draftJustNow": "همین حالا ذخیره شد",
+    "draftMinutesAgo": "{{count}} دقیقه پیش ذخیره شد",
+    "draftHoursAgo": "{{count}} ساعت پیش ذخیره شد",
+    "draftFileCount": "{{count}} فایل",
+    "draftHasText": "همراه متن",
+    "draftNeedsRepick": "فایل‌ها باید دوباره انتخاب شوند",
+    "draftKeptAt": "پیش‌نویس در {{time}} ذخیره شد — تا ارسال نکنید چیزی بارگذاری نمی‌شود",
+    "draftRestoredNotice": "از همان‌جا که رها کرده بودید ادامه می‌دهید. هنوز چیزی بارگذاری نشده است.",
+    "draftTooBigNotice": "حجم این دسته بیش از {{mb}} مگابایت است، بنابراین پیش‌نویس متن و تنظیمات را نگه داشت اما خود فایل‌ها را نه — پیش از ارسال دوباره انتخابشان کنید.",
+    "draftRepickNotice": "برخی فایل‌ها باید پیش از ارسال دوباره انتخاب شوند.",
+    "discardDraftTitle": "این پیش‌نویس دور انداخته شود؟",
+    "discardDraftMessage": "پیش‌نویس ذخیره‌شده دور انداخته می‌شود. چیزی بارگذاری نشده بود، پس چیز دیگری تحت تأثیر قرار نمی‌گیرد.",
+    "resetFormTitle": "فرم بازنشانی شود؟",
+    "resetFormMessage": "همه فیلدها پاک و پیش‌نویس ذخیره‌شده دور انداخته می‌شود. چیزی بارگذاری نشده بود، پس چیز دیگری تحت تأثیر قرار نمی‌گیرد."
   },
   "tutorials": {
     "noPermissionView": "شما اجازه مشاهده مرکز آموزش را ندارید",

@@ -64,7 +64,8 @@
     "copyLink": "Copy link",
     "linkCopied": "Link copied!",
     "linkCreateFailed": "Failed to create the link",
-    "copyToClipboard": "Copy to clipboard"
+    "copyToClipboard": "Copy to clipboard",
+    "reset": "Reset"
   },
   "restricted": {
     "title": "Restricted access",
@@ -2028,7 +2029,27 @@
     "anMissing_description": "Without a description",
     "anMissing_seo": "Without search title/description",
     "anMissing_translations": "Missing a translation",
-    "anRecentlyEdited": "Recently edited"
+    "anRecentlyEdited": "Recently edited",
+    "draftUnsent": "Unsent draft",
+    "draftUntitled": "Untitled",
+    "draftContinue": "Continue",
+    "draftJustNow": "saved just now",
+    "draftMinutesAgo_one": "saved {{count}} minute ago",
+    "draftMinutesAgo_other": "saved {{count}} minutes ago",
+    "draftHoursAgo_one": "saved {{count}} hour ago",
+    "draftHoursAgo_other": "saved {{count}} hours ago",
+    "draftFileCount_one": "{{count}} file",
+    "draftFileCount_other": "{{count}} files",
+    "draftHasText": "with text",
+    "draftNeedsRepick": "files need picking again",
+    "draftKeptAt": "Draft kept at {{time}} — nothing is uploaded until you send it",
+    "draftRestoredNotice": "Picked up where you left off. Nothing has been uploaded yet.",
+    "draftTooBigNotice": "This batch is over {{mb}} MB, so the draft kept your text and settings but not the files themselves — pick them again before sending.",
+    "draftRepickNotice": "Some files need picking again before this can be sent.",
+    "discardDraftTitle": "Discard this draft?",
+    "discardDraftMessage": "The saved draft will be thrown away. Nothing was uploaded, so nothing else is affected.",
+    "resetFormTitle": "Reset this form?",
+    "resetFormMessage": "Every field will be cleared and the saved draft discarded. Nothing was uploaded, so nothing else is affected."
   },
   "tutorials": {
     "noPermissionView": "You don't have permission to view the Tutorial Center",
