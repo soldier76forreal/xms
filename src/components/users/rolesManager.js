@@ -27,6 +27,14 @@ import { Can } from '../../contextApi/PermissionContext';
 // are the same helpers the report form reads it with.
 import { pickLabel as jrLabel, useSpecLang } from './jobReportFields';
 
+// Every module's data scope defaults to 'all' (no restriction) — EXCEPT those
+// listed here. Report & Info tickets are somebody's own words and screenshots,
+// so unset means 'mine' (api/utils/feedbackScope.js). The screen has to know,
+// or it would show "All" for a role the server is treating as "Own", and
+// picking "All" would delete the key — silently changing nothing.
+const SCOPE_DEFAULTS = { feedback: 'mine' };
+const scopeDefaultOf = (module) => SCOPE_DEFAULTS[module] || 'all';
+
 const useT = () => {
   const theme  = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -124,8 +132,8 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
   const setScope = (module, value) => {
     setDataScopes(prev => {
       const next = { ...prev };
-      if (value === 'all') {
-        delete next[module]; // 'all' = no restriction, so remove the key
+      if (value === scopeDefaultOf(module)) {
+        delete next[module]; // the module's default — nothing to store
       } else {
         next[module] = value;
       }
@@ -353,8 +361,9 @@ const RoleForm = ({ open, onClose, onSave, role, allPermissions }) => {
             { id: 'digitalMarketing', labelKey: 'users.dsDigitalMarketing' },
             { id: 'files',            labelKey: 'users.dsFiles'            },
             { id: 'tasks',            labelKey: 'users.dsTasks'            },
+            { id: 'feedback',         labelKey: 'users.dsFeedback'         },
           ].map(({ id, labelKey }) => {
-            const current = dataScopes[id] || 'all';
+            const current = dataScopes[id] || scopeDefaultOf(id);
             return (
               <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap' }}>
                 <Typography sx={{ fontSize: '0.78rem', color: T.TEXT_SEC, width: { xs: '100%', sm: 150 }, flexShrink: 0 }}>

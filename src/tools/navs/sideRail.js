@@ -25,7 +25,7 @@ import LanguageCtx from '../../contextApi/languageContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
 import NormalMenuForProfile from './normalMenuForProfile';
-import { NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED } from './navConfig';
+import { NAV_ITEMS, FOOTER_NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED } from './navConfig';
 import { useSidebarWidth } from '../hooks/useSidebarWidth';
 import SidebarResizer from './sidebarResizer';
 
@@ -79,30 +79,40 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
   };
 
   const visibleItems = NAV_ITEMS.filter(item => !item.permission || can(item.permission));
+  const visibleFooter = FOOTER_NAV_ITEMS.filter(item => !item.permission || can(item.permission));
 
   // Shared row shell for the bottom utility rows (branch / theme)
-  const utilRow = (icon, label, onClick, tooltip) => {
+  // `active` marks the page you are on (Report & Info lives in this block);
+  // `key` lets a caller map over it.
+  const utilRow = (icon, label, onClick, tooltip, active = false, key = undefined) => {
     const row = (
-      <Box onClick={onClick}
+      <Box key={key} onClick={onClick}
         sx={{
-          display: 'flex', alignItems: 'center', gap: 1.5,
+          display: 'flex', alignItems: 'center', gap: 1.5, position: 'relative',
           mx: '6px', px: '8px', height: 38, borderRadius: '8px',
           cursor: 'pointer', flexShrink: 0,
-          '&:hover': { bgcolor: T.HVR_BG },
+          bgcolor: active ? T.ACT_BG : 'transparent',
+          '&:hover': { bgcolor: active ? T.ACT_BG : T.HVR_BG },
           transition: 'background-color 0.12s',
         }}>
+        {active && (
+          <Box sx={{
+            position: 'absolute', left: '-6px', top: '50%', transform: 'translateY(-50%)',
+            width: 3, height: 18, borderRadius: '0 3px 3px 0', bgcolor: T.ICON_ACT,
+          }} />
+        )}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: T.ICON, flexShrink: 0, '& svg': { fontSize: 19 } }}>
+          color: active ? T.ICON_ACT : T.ICON, flexShrink: 0, '& svg': { fontSize: 19 } }}>
           {icon}
         </Box>
         {expanded && (
-          <Typography noWrap sx={{ fontSize: '0.78rem', fontWeight: 500, color: T.LABEL }}>
+          <Typography noWrap sx={{ fontSize: '0.78rem', fontWeight: active ? 700 : 500, color: active ? T.ICON_ACT : T.LABEL }}>
             {label}
           </Typography>
         )}
       </Box>
     );
-    return expanded ? row : <Tooltip title={tooltip || label} placement="right">{row}</Tooltip>;
+    return expanded ? row : <Tooltip key={key} title={tooltip || label} placement="right">{row}</Tooltip>;
   };
 
   return (
@@ -266,6 +276,16 @@ const SideRail = ({ expanded, onToggle, onNavigate }) => {
             themeMode === 'light' ? t('profile.darkMode') : t('profile.lightMode'),
             toggleTheme
           )}
+
+          {/* Report & Info — right above the profile, as asked */}
+          {visibleFooter.map((item) => utilRow(
+            item.icon,
+            t(`nav.${item.navKey}`),
+            () => { pageSection.selectedSectionFunc(item.section); history.push(item.path); onNavigate && onNavigate(); },
+            t(`nav.${item.navKey}`),
+            pageSection.selectedSection === item.section,
+            item.section,
+          ))}
 
           <Tooltip title="Profile" placement="right">
             <Box onClick={openProfileMenu}

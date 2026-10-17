@@ -226,6 +226,15 @@ const ThemedApp = () => {
             <Redirect to="/logIn" />
           )}
 
+          {/* Report & Info — permission-gated (info:view) inside main.js like every other section. */}
+          {authCtx.isLoggedIn === true ? (
+            <Route path="/info">
+              <Main />
+            </Route>
+          ) : (
+            <Redirect to="/logIn" />
+          )}
+
           {/* Self-service Activity Log + Job Reports — login-only, deliberately
               NOT gated by users:view (see main.js's isMyActivity branch). */}
           {authCtx.isLoggedIn === true ? (

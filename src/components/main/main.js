@@ -9,7 +9,8 @@ import { useTheme } from '@mui/material/styles';
 
 import MainNav    from '../../tools/navs/mainNav';
 import SideRail   from '../../tools/navs/sideRail';
-import { NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED, NAV_EXPANDED_KEY } from '../../tools/navs/navConfig';
+import { NAV_ITEMS, FOOTER_NAV_ITEMS, RAIL_WIDTH_COLLAPSED, RAIL_WIDTH_EXPANDED, NAV_EXPANDED_KEY } from '../../tools/navs/navConfig';
+import { rememberPath } from '../../tools/lastPath';
 import { useSidebarWidth } from '../../tools/hooks/useSidebarWidth';
 import Mis        from '../mis/mis';
 import Crm        from '../crm/crm';
@@ -21,6 +22,7 @@ import Tutorials from '../tutorials/tutorials';
 import JobReportsMainSection from '../users/jobReportsMainSection';
 import MyActivityPage from '../users/myActivityPage';
 import Supply from '../supply/supply';
+import Info from '../info/info';
 
 import PageSection from '../../contextApi/pageSection';
 import { usePermissions } from '../../contextApi/PermissionContext';
@@ -38,7 +40,12 @@ const PATH_TO_SECTION = {
   '/tutorials': 8,
   '/jobReports': 9,
   '/supply':     10,
+  '/info':       11,   // Report & Info — lives in FOOTER_NAV_ITEMS, beside the profile
 };
+
+// Permission lookups must see the footer entries too, or /info would be treated
+// as having no gate. The REDIRECT target below still walks NAV_ITEMS only.
+const ALL_NAV_ITEMS = [...NAV_ITEMS, ...FOOTER_NAV_ITEMS];
 
 const Main = () => {
   const pageSection = useContext(PageSection);
@@ -64,6 +71,10 @@ const Main = () => {
   const { width: expandedRailWidth } = useSidebarWidth('navRail', RAIL_WIDTH_EXPANDED, { min: 140, max: 420 });
   const railWidth = navExpanded ? expandedRailWidth : RAIL_WIDTH_COLLAPSED;
 
+  // Remember the page the person was on, so a report filed from Report & Info
+  // can say which section it is about (the form itself opens on /info).
+  useEffect(() => { rememberPath(location.pathname); }, [location.pathname]);
+
   // Sync URL → selectedSection so direct navigation / page refresh works —
   // AND enforce access: a section the user has no view permission for is never
   // rendered (typing the URL included); they're redirected to their first
@@ -76,7 +87,7 @@ const Main = () => {
     if (!entry) return;
 
     const [matchedPath, sectionIdx] = entry;
-    const navItem = NAV_ITEMS.find((n) => n.path === matchedPath);
+    const navItem = ALL_NAV_ITEMS.find((n) => n.path === matchedPath);
     const allowed = !navItem?.permission || can(navItem.permission);
 
     if (!allowed) {
@@ -105,7 +116,7 @@ const Main = () => {
   // links "worked" only because the stale frame and the real one agreed.
   const matchedEntry   = Object.entries(PATH_TO_SECTION).find(([p]) => location.pathname.startsWith(p));
   const matchedSection = matchedEntry ? matchedEntry[1] : null;
-  const matchedNavItem = matchedEntry ? NAV_ITEMS.find((n) => n.path === matchedEntry[0]) : null;
+  const matchedNavItem = matchedEntry ? ALL_NAV_ITEMS.find((n) => n.path === matchedEntry[0]) : null;
   const matchedAllowed = !ready || !matchedNavItem?.permission || can(matchedNavItem.permission);
   const renderSection  = matchedSection !== null && matchedAllowed ? matchedSection : pageSection.selectedSection;
 
@@ -133,6 +144,7 @@ const Main = () => {
           : renderSection === 8 ? <Tutorials />
           : renderSection === 9 ? <JobReportsMainSection />
           : renderSection === 10 ? <Supply />
+          : renderSection === 11 ? <Info />
           : null}
       </Box>
 

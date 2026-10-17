@@ -24,7 +24,7 @@ import ThemeCtx from '../../contextApi/themeContext';
 import LanguageCtx from '../../contextApi/languageContext';
 import { usePermissions } from '../../contextApi/PermissionContext';
 import { useBranch } from '../../contextApi/BranchContext';
-import { NAV_ITEMS } from './navConfig';
+import { NAV_ITEMS, FOOTER_NAV_ITEMS } from './navConfig';
 
 // ── Mobile navigation drawer ──────────────────────────────────────────────────
 // Phase 7: on desktop (md+) the permanent icon rail (sideRail.js) replaces this
@@ -40,6 +40,7 @@ export default function LeftSideNav(props) {
   const { branches, activeBranchId, setActiveBranchId } = useBranch();
 
   const visibleItems = NAV_ITEMS.filter(item => !item.permission || can(item.permission));
+  const visibleFooter = FOOTER_NAV_ITEMS.filter(item => !item.permission || can(item.permission));
 
   const drawerContent = (anchor) => (
     <Box
@@ -162,6 +163,26 @@ export default function LeftSideNav(props) {
               primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
           </ListItemButton>
         </ListItem>
+
+        {/* Report & Info — with the utilities. The profile avatar is in the top bar on a
+            phone, so "beside the profile" here means the bottom block of this menu. */}
+        {visibleFooter.map((item) => (
+          <ListItem key={item.section} disablePadding>
+            <ListItemButton
+              selected={pageSection.selectedSection === item.section}
+              onClick={() => {
+                pageSection.selectedSectionFunc(item.section);
+                history.push(item.path);
+                props.setLeftSideNav({ left: false });
+              }}
+              sx={{ borderRadius: 2, mx: 1, minHeight: 44,
+                '&.Mui-selected': { backgroundColor: 'action.selected', '&:hover': { backgroundColor: 'action.selected' } } }}>
+              <ListItemIcon sx={{ minWidth: 0, mr: 1.5, color: 'inherit' }}>{item.icon}</ListItemIcon>
+              <ListItemText primary={t(`nav.${item.navKey}`)}
+                primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
+            </ListItemButton>
+          </ListItem>
+        ))}
       </List>
     </Box>
   );

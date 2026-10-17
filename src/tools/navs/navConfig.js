@@ -7,6 +7,7 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import SchoolIcon from '@mui/icons-material/School';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import TerrainIcon from '@mui/icons-material/Terrain';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 // ── Phase 7 navConfig — the single source of truth for section navigation ─────
 // Consumed by BOTH the desktop icon rail (sideRail.js) and the mobile drawer
@@ -35,6 +36,15 @@ export const NAV_ITEMS = [
   // Supply (Session 72) — stone-coupe sourcing/processing, separate from Inventory's
   // sellable-stock view but branch-scoped the same way.
   { label: 'Supply',            navKey: 'supply',            icon: <TerrainIcon />,         section: 10, path: '/supply',          permission: 'supply:view' },
+];
+
+// Entries that live beside the profile at the BOTTOM of the rail (and with the
+// utilities in the mobile drawer), not in the main list. Kept as a separate
+// array on purpose: main.js's "redirect to the first section you can open"
+// walks NAV_ITEMS, and a utility must never become where someone lands.
+// Report & Info is gated by info:view (default-deny) like every section.
+export const FOOTER_NAV_ITEMS = [
+  { label: 'Report & Info', navKey: 'info', icon: <InfoOutlinedIcon />, section: 11, path: '/info', permission: 'info:view' },
 ];
 
 export const RAIL_WIDTH_COLLAPSED = 52;
