@@ -14,6 +14,28 @@
 // type: 'new' | 'improved' | 'fixed'
 export const CHANGELOG = [
   {
+    version: '1.7.1',
+    date: '2026-10-17',
+    changes: [
+      {
+        type: 'new',
+        text: {
+          en: 'Report & Info: edit a report you sent while it is still Open — change the text, add or remove files and voice notes — and delete reports you no longer need.',
+          ar: 'الإبلاغ والمعلومات: عدّل بلاغًا أرسلته ما دام مفتوحًا — غيّر النص وأضف الملفات والمذكرات الصوتية أو أزلها — واحذف البلاغات التي لم تعد بحاجة إليها.',
+          fa: 'گزارش و اطلاعات: گزارشی را که فرستاده‌اید تا وقتی «باز» است ویرایش کنید — متن را عوض کنید، فایل و پیام صوتی اضافه یا حذف کنید — و گزارش‌هایی را که دیگر لازم ندارید حذف کنید.',
+        },
+      },
+      {
+        type: 'new',
+        text: {
+          en: 'You are now notified when the status of your report changes or someone answers it, and the answer is shown on the report itself.',
+          ar: 'يصلك الآن إشعار عند تغيّر حالة بلاغك أو عند الردّ عليه، ويظهر الردّ على البلاغ نفسه.',
+          fa: 'اکنون وقتی وضعیت گزارش شما تغییر کند یا کسی به آن پاسخ دهد اعلان می‌گیرید و پاسخ روی خود گزارش دیده می‌شود.',
+        },
+      },
+    ],
+  },
+  {
     version: '1.7.0',
     date: '2026-10-17',
     changes: [

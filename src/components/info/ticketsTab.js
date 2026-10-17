@@ -13,8 +13,8 @@ import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 
 import AuthContext from '../authAndConnections/auth';
 import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
-import { fetchTickets } from './feedbackApi';
-import { TICKET_TYPES, TICKET_STATUSES } from './ticketMeta';
+import { fetchTickets, fetchAdminTickets } from './feedbackApi';
+import { TICKET_TYPES, TICKET_STATUSES, TICKET_AREAS } from './ticketMeta';
 import { StatusChip, TypeBadge, formatStamp } from './ticketParts';
 import TicketDetail from './ticketDetail';
 import TicketForm from './ticketForm';
@@ -36,6 +36,19 @@ function Pill({ active, onClick, children, T }) {
   );
 }
 
+function FilterSelect({ value, onChange, options, label, T }) {
+  return (
+    <Box component="select" value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}
+      sx={{
+        flex: '1 1 0', minWidth: 0, height: 28, px: 0.75, borderRadius: '8px', outline: 'none',
+        fontSize: '0.72rem', fontFamily: 'inherit', bgcolor: T.CTRL_BG, color: T.TEXT_PRI, border: `1px solid ${T.BD}`,
+        '& option': { backgroundColor: T.PANEL_BG, color: T.TEXT_PRI },
+      }}>
+      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </Box>
+  );
+}
+
 function TicketCard({ ticket, selected, showOwner, language, onSelect, T, t }) {
   return (
     <Box onClick={() => onSelect(ticket._id)} role="button" tabIndex={0}
@@ -49,6 +62,11 @@ function TicketCard({ ticket, selected, showOwner, language, onSelect, T, t }) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.75 }}>
         <TypeBadge type={ticket.type} T={T} t={t} withLabel={false} />
         <Typography dir="ltr" sx={{ fontSize: '0.7rem', fontWeight: 700, color: T.TEXT_TER, fontFamily: 'monospace' }}>{ticket.code}</Typography>
+        {ticket.deleted && (
+          <Typography sx={{ fontSize: '0.64rem', fontWeight: 700, color: '#EA005A', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            {t('info.filterDeleted')}
+          </Typography>
+        )}
         <Box sx={{ flexGrow: 1 }} />
         <StatusChip status={ticket.status} T={T} t={t} size="sm" />
       </Box>
@@ -64,6 +82,7 @@ function TicketCard({ ticket, selected, showOwner, language, onSelect, T, t }) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.9, color: T.TEXT_TER }}>
         <Typography sx={{ fontSize: '0.68rem' }} noWrap>
           {showOwner && ticket.createdByName ? `${ticket.createdByName} · ` : ''}{formatStamp(ticket.insertDate, language, false)}
+          {ticket.editedAt ? ` · ${t('info.edited')}` : ''}
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
         {ticket.voiceCount > 0 && <MicIcon sx={{ fontSize: 13 }} />}
@@ -78,7 +97,10 @@ function TicketCard({ ticket, selected, showOwner, language, onSelect, T, t }) {
   );
 }
 
-export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandled }) {
+// mode 'own'   — the person's reports (as far as their data scope reaches).
+// mode 'admin' — the developers' dashboard: every report from everyone, deleted
+//                ones included, filterable by section, no "new report" button.
+export default function TicketsTab({ T, canView, canCreate, canEdit, canDelete, openId, onOpenHandled, mode = 'own', preset }) {
   const { t, i18n } = useTranslation();
   const language = (i18n.language || 'en').slice(0, 2);
   const theme = useTheme();
@@ -100,7 +122,11 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
   const [type, setType] = useState('all');
   const [status, setStatus] = useState('all');
   const [mineOnly, setMineOnly] = useState(false);
+  const [area, setArea] = useState('all');
+  const [sort, setSort] = useState('newest');
+  const [showDeleted, setShowDeleted] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const admin = mode === 'admin';
 
   const [selectedId, setSelectedId] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -109,6 +135,16 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
     const id = setTimeout(() => setDebounced(search.trim()), 300);
     return () => clearTimeout(id);
   }, [search]);
+
+  // A card on the dashboard's overview can open this list already filtered.
+  useEffect(() => {
+    if (!preset) return;
+    setSearch(''); setDebounced('');
+    setType(preset.type || 'all'); setStatus(preset.status || 'all'); setArea(preset.area || 'all');
+    setSort(preset.sort || 'newest'); setShowDeleted(Boolean(preset.deleted));
+    setSelectedId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset && preset.nonce]);
 
   // A notification or link can name a ticket to open.
   useEffect(() => {
@@ -123,12 +159,18 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
     const mine = ++requestRef.current;
     setLoading(true); setFailed(false);
     try {
-      const res = await fetchTickets(authCtx, axiosGlobal, {
+      const res = await (admin ? fetchAdminTickets : fetchTickets)(authCtx, axiosGlobal, {
         page: pg, limit: 20,
         ...(debounced ? { search: debounced } : {}),
         ...(type !== 'all' ? { type } : {}),
         ...(status !== 'all' ? { status } : {}),
-        ...(mineOnly ? { mine: true } : {}),
+        ...(admin
+          ? {
+            ...(area !== 'all' ? { area } : {}),
+            ...(sort !== 'newest' ? { sort } : {}),
+            ...(showDeleted ? { deleted: true } : {}),
+          }
+          : (mineOnly ? { mine: true } : {})),
       });
       if (mine !== requestRef.current) return;
       setItems((prev) => (append ? [...prev, ...res.data] : res.data));
@@ -139,7 +181,7 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
     } finally {
       if (mine === requestRef.current) setLoading(false);
     }
-  }, [authCtx, axiosGlobal, canView, debounced, type, status, mineOnly]);
+  }, [authCtx, axiosGlobal, canView, admin, debounced, type, status, mineOnly, area, sort, showDeleted]);
 
   useEffect(() => { load(1, false); }, [load, reloadTick]);
 
@@ -164,8 +206,8 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
     );
   }
 
-  const filtered = Boolean(debounced || type !== 'all' || status !== 'all' || mineOnly);
-  const showOwner = scope !== 'mine' && !mineOnly;
+  const filtered = Boolean(debounced || type !== 'all' || status !== 'all' || mineOnly || area !== 'all' || showDeleted);
+  const showOwner = admin || (scope !== 'mine' && !mineOnly);
   const statusChips = TICKET_STATUSES.filter((s) => statusCounts[s.value] > 0 || status === s.value);
   const allCount = Object.values(statusCounts).reduce((a, b) => a + b, 0);
 
@@ -184,7 +226,7 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
               sx={{ flexGrow: 1, minWidth: 0, border: 'none', outline: 'none', bgcolor: 'transparent',
                 color: T.TEXT_PRI, fontSize: '0.82rem', fontFamily: 'inherit' }} />
           </Box>
-          {canCreate && (
+          {!admin && canCreate && (
             <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 15 }} />} onClick={() => setFormOpen(true)}
               sx={{ textTransform: 'none', borderRadius: '9px', height: 32, flexShrink: 0, fontSize: '0.74rem' }}>
               {t('info.newReport')}
@@ -218,8 +260,24 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
           ))}
         </Box>
 
+        {admin && (
+          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+            <FilterSelect T={T} value={area} onChange={setArea} label={t('info.fieldSection')}
+              options={[{ value: 'all', label: t('info.allSections') }, ...TICKET_AREAS.map((a) => ({ value: a.value, label: t(a.labelKey) }))]} />
+            <FilterSelect T={T} value={sort} onChange={setSort} label={t('info.sortLabel')}
+              options={[
+                { value: 'newest', label: t('info.sortNewest') },
+                { value: 'oldest', label: t('info.sortOldest') },
+                { value: 'updated', label: t('info.sortUpdated') },
+              ]} />
+            <Pill T={T} active={showDeleted} onClick={() => setShowDeleted((v) => !v)}>
+              <Typography sx={{ fontSize: '0.7rem', fontWeight: showDeleted ? 700 : 500, color: T.TEXT_PRI }}>{t('info.filterDeleted')}</Typography>
+            </Pill>
+          </Box>
+        )}
+
         {/* A wider data scope is worth saying out loud: these are other people's words. */}
-        {scope !== 'mine' && (
+        {!admin && scope !== 'mine' && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography sx={{ fontSize: '0.72rem', color: T.TEXT_SEC, flexGrow: 1 }}>
               {scope === 'all' ? t('info.scopeAll') : t('info.scopeGroup')}
@@ -241,10 +299,10 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
           <Box sx={{ textAlign: 'center', py: 6, px: 2 }}>
             <ForumOutlinedIcon sx={{ fontSize: 34, color: T.TEXT_TER, mb: 1 }} />
             <Typography sx={{ fontSize: '0.9rem', fontWeight: 700, color: T.TEXT_PRI }}>
-              {filtered ? t('info.noMatches') : t('info.emptyTitle')}
+              {filtered ? t('info.noMatches') : (admin ? t('info.adminEmptyTitle') : t('info.emptyTitle'))}
             </Typography>
-            {!filtered && <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_SEC, mt: 0.5 }}>{t('info.emptyHint')}</Typography>}
-            {!filtered && canCreate && (
+            {!filtered && <Typography sx={{ fontSize: '0.8rem', color: T.TEXT_SEC, mt: 0.5 }}>{admin ? t('info.adminEmptyHint') : t('info.emptyHint')}</Typography>}
+            {!filtered && !admin && canCreate && (
               <Button variant="contained" startIcon={<AddIcon />} onClick={() => setFormOpen(true)}
                 sx={{ textTransform: 'none', borderRadius: '10px', mt: 2 }}>{t('info.newReport')}</Button>
             )}
@@ -276,14 +334,19 @@ export default function TicketsTab({ T, canView, canCreate, openId, onOpenHandle
       {list}
       <Box sx={{ flexGrow: 1, minWidth: 0, display: (isMob && !selectedId) ? 'none' : 'block', height: '100%' }}>
         {selectedId
-          ? <TicketDetail key={selectedId} ticketId={selectedId} T={T} showBack={isMob} onBack={() => setSelectedId(null)} />
+          ? (
+            <TicketDetail key={selectedId} ticketId={selectedId} T={T} showBack={isMob} onBack={() => setSelectedId(null)}
+              mode={mode} canEdit={Boolean(canEdit)} canDelete={Boolean(canDelete)}
+              onChanged={() => setReloadTick((n) => n + 1)}
+              onDeleted={() => { setSelectedId(null); setReloadTick((n) => n + 1); }} />
+          )
           : (
             <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Typography sx={{ fontSize: '0.84rem', color: T.TEXT_TER }}>{t('info.selectReport')}</Typography>
             </Box>
           )}
       </Box>
-      <TicketForm open={formOpen} onClose={() => setFormOpen(false)} onCreated={handleCreated} />
+      {!admin && <TicketForm open={formOpen} onClose={() => setFormOpen(false)} onCreated={handleCreated} />}
     </Box>
   );
 }

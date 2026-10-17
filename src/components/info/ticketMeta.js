@@ -58,3 +58,13 @@ export const areaForPath = (path = '') => {
 };
 
 export const LIMITS = { titleMax: 120, descriptionMax: 5000, maxFiles: 10, maxVoice: 3 };
+
+// Statuses in which the person who filed a ticket may still edit it. Mirrors
+// EDITABLE_STATUSES in api/utils/feedbackConstants.js — the server is the real
+// gate (it answers 409 FEEDBACK_LOCKED); this only decides whether to show the
+// Edit button. Once a developer has picked a report up, it is theirs to move.
+export const EDITABLE_STATUSES = ['open'];
+export const isEditable = (status) => EDITABLE_STATUSES.includes(status);
+
+// The statuses a developer can set, in the order the picker lists them.
+export const STATUS_VALUES = TICKET_STATUSES.map((s) => s.value);

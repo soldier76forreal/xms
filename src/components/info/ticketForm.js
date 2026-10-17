@@ -25,7 +25,7 @@ import useVoiceRecorder from '../../tools/hooks/useVoiceRecorder';
 import uploadErrorMessage from '../../tools/uploadError';
 import { lastPath } from '../../tools/lastPath';
 import { APP_VERSION } from './changelog';
-import { createTicket } from './feedbackApi';
+import { createTicket, updateTicket } from './feedbackApi';
 import { TICKET_TYPES, TICKET_AREAS, LIMITS, areaForPath } from './ticketMeta';
 
 // ── at MODULE scope: a component declared inside another is a new type on every
@@ -95,7 +95,55 @@ function FileRow({ entry, onRemove, T, t }) {
   );
 }
 
-export default function TicketForm({ open, onClose, onCreated }) {
+// An attachment the ticket already holds (edit mode). Removing it only marks it:
+// nothing is deleted until Save, and "Undo" brings it back.
+function ExistingRow({ att, removed, onToggle, apiBase, T, t }) {
+  const isImage = att.kind === 'image';
+  const thumb = att.thumbnail || att.diskName;
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 0.75, borderRadius: '10px',
+      bgcolor: T.INPUT_BG, border: `1px solid ${T.CARD_BD}`, opacity: removed ? 0.5 : 1 }}>
+      {att.isVoice ? (
+        <>
+          <Typography sx={{ fontSize: '0.74rem', color: T.TEXT_SEC, flexShrink: 0, pl: 0.5,
+            textDecoration: removed ? 'line-through' : 'none' }}>
+            {t('info.voiceNoteSaved')}
+          </Typography>
+          {!removed && <Box component="audio" controls preload="metadata" src={`${apiBase}/uploads/${att.diskName}`}
+            sx={{ flexGrow: 1, minWidth: 0, height: 32 }} />}
+          {removed && <Box sx={{ flexGrow: 1 }} />}
+        </>
+      ) : (
+        <>
+          <Box sx={{ width: 36, height: 36, borderRadius: '7px', overflow: 'hidden', flexShrink: 0, bgcolor: T.CARD_BG,
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isImage
+              ? <Box component="img" src={`${apiBase}/uploads/${thumb}`} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <AttachFileIcon sx={{ fontSize: 17, color: T.TEXT_TER }} />}
+          </Box>
+          <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+            <Typography noWrap sx={{ fontSize: '0.8rem', color: T.TEXT_PRI, textDecoration: removed ? 'line-through' : 'none' }}>{att.name}</Typography>
+            <Typography sx={{ fontSize: '0.68rem', color: T.TEXT_TER }}>{fmtSize(att.size)}</Typography>
+          </Box>
+        </>
+      )}
+      {removed ? (
+        <Button size="small" onClick={() => onToggle(String(att.fileId))}
+          sx={{ textTransform: 'none', fontSize: '0.72rem', color: T.TEXT_SEC, minWidth: 0, flexShrink: 0 }}>
+          {t('info.undoRemove')}
+        </Button>
+      ) : (
+        <IconButton size="small" aria-label={t('info.removeFile')} onClick={() => onToggle(String(att.fileId))}
+          sx={{ color: T.TEXT_TER, '&:hover': { color: T.ERR_CLR } }}>
+          <DeleteOutlineIcon sx={{ fontSize: 17 }} />
+        </IconButton>
+      )}
+    </Box>
+  );
+}
+
+// Creates a report — or, given `ticket`, edits one the person already sent.
+export default function TicketForm({ open, onClose, onCreated, ticket, onSaved, onLocked }) {
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -103,6 +151,8 @@ export default function TicketForm({ open, onClose, onCreated }) {
   const dispatch = useDispatch();
   const authCtx = useContext(AuthContext);
   const axiosGlobal = useContext(AxiosGlobal);
+  const apiBase = axiosGlobal.defaultTargetApi;
+  const editing = Boolean(ticket);
 
   const T = {
     DIALOG_BG: isDark ? '#0d0d0d'                : theme.palette.background.paper,
@@ -125,6 +175,8 @@ export default function TicketForm({ open, onClose, onCreated }) {
   const [voiceNotes, setVoiceNotes] = useState([]);   // [{ id, file, url }]
   const [files, setFiles] = useState([]);             // [{ id, file, url }]
   const [includeContext, setIncludeContext] = useState(true);
+  const [existing, setExisting] = useState([]);        // attachments the ticket already holds (edit)
+  const [removed, setRemoved] = useState([]);          // ids of those the person took off
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
@@ -149,18 +201,41 @@ export default function TicketForm({ open, onClose, onCreated }) {
     onRecorded: (file) => setVoiceNotes((prev) => [...prev, makeEntry(file)]),
   });
 
-  // A fresh form each time it opens, pointed at the section the person was in.
+  // A fresh form each time it opens: empty and pointed at the section the person
+  // was in — or, when editing, filled with the report as it was sent. Keyed on the
+  // ticket's id, not the object: a refetch behind the form must not wipe typing.
   useEffect(() => {
     if (!open) return undefined;
     releaseUrls();
-    setType('bug'); setTitle(''); setDescription(''); setVoiceNotes([]); setFiles([]);
-    setIncludeContext(true); setSaving(false); setProgress(null); setError('');
-    setArea(areaForPath(lastPath()));
+    setVoiceNotes([]); setFiles([]); setRemoved([]);
+    setSaving(false); setProgress(null); setError('');
+    if (ticket) {
+      setType(ticket.type); setTitle(ticket.title); setDescription(ticket.description || '');
+      setArea(ticket.area || 'other'); setExisting(ticket.attachments || []);
+    } else {
+      setType('bug'); setTitle(''); setDescription(''); setExisting([]);
+      setIncludeContext(true);
+      setArea(areaForPath(lastPath()));
+    }
     return releaseUrls;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, ticket && ticket._id]);
 
-  const dirty = Boolean(title.trim() || description.trim() || voiceNotes.length || files.length);
+  // What the report will hold once saved: what it has, minus what was taken off,
+  // plus what is new. The limits apply to THAT, not to this request alone.
+  const keptExisting = existing.filter((a) => !removed.includes(String(a.fileId)));
+  const keptFileCount = keptExisting.filter((a) => !a.isVoice).length;
+  const keptVoiceCount = keptExisting.filter((a) => a.isVoice).length;
+  const fileTotal = keptFileCount + files.length;
+  const voiceTotal = keptVoiceCount + voiceNotes.length;
+
+  const dirty = editing
+    ? Boolean(type !== ticket.type || title.trim() !== ticket.title
+      || description.trim() !== String(ticket.description || '').trim()
+      || area !== (ticket.area || 'other') || removed.length || voiceNotes.length || files.length)
+    : Boolean(title.trim() || description.trim() || voiceNotes.length || files.length);
+
+  const toggleRemoved = (id) => setRemoved((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const handleClose = () => {
     if (saving) return;
@@ -177,10 +252,10 @@ export default function TicketForm({ open, onClose, onCreated }) {
     if (!picked.length) return;
     setError('');
     setFiles((prev) => {
-      const room = Math.max(0, LIMITS.maxFiles - prev.length);
+      const room = Math.max(0, LIMITS.maxFiles - keptFileCount - prev.length);
       return [...prev, ...picked.slice(0, room).map(makeEntry)];
     });
-    if (files.length + picked.length > LIMITS.maxFiles) setError(t('info.tooManyFiles', { count: LIMITS.maxFiles }));
+    if (fileTotal + picked.length > LIMITS.maxFiles) setError(t('info.tooManyFiles', { count: LIMITS.maxFiles }));
   };
   const removeFile = (id) => setFiles((prev) => {
     const gone = prev.find((f) => f.id === id);
@@ -213,7 +288,7 @@ export default function TicketForm({ open, onClose, onCreated }) {
 
   const handleSend = async () => {
     if (!title.trim()) { setError(t('info.needTitle')); return; }
-    if (!description.trim() && !voiceNotes.length && !files.length) { setError(t('info.needSomething')); return; }
+    if (!description.trim() && !voiceTotal && !fileTotal) { setError(t('info.needSomething')); return; }
     if (recorder.recording) recorder.stop();
 
     setSaving(true); setError(''); setProgress(0);
@@ -223,26 +298,42 @@ export default function TicketForm({ open, onClose, onCreated }) {
       fd.append('title', title.trim());
       fd.append('area', area);
       fd.append('description', description.trim());
-      fd.append('includeContext', String(includeContext));
-      if (includeContext) fd.append('context', JSON.stringify(buildContext()));
+      // The technical details were captured when the report was first sent; an
+      // edit never re-captures (or drops) them.
+      if (!editing) {
+        fd.append('includeContext', String(includeContext));
+        if (includeContext) fd.append('context', JSON.stringify(buildContext()));
+      } else {
+        fd.append('removeFileIds', JSON.stringify(removed));
+      }
       files.forEach((f) => fd.append('attachments', f.file));
       voiceNotes.forEach((v) => fd.append('voice', v.file));
 
-      const ticket = await createTicket(authCtx, axiosGlobal, fd,
-        (e) => setProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null));
-      dispatch(actions.setShowSnackBar({ status: true, msg: t('info.sentToast', { code: ticket.code }), type: 'success' }));
-      if (onCreated) onCreated(ticket);
+      const onProgress = (e) => setProgress(e.total ? Math.round((100 * e.loaded) / e.total) : null);
+      if (editing) {
+        const saved = await updateTicket(authCtx, axiosGlobal, ticket._id, fd, onProgress);
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('info.savedToast', { code: saved.code }), type: 'success' }));
+        if (onSaved) onSaved(saved);
+      } else {
+        const created = await createTicket(authCtx, axiosGlobal, fd, onProgress);
+        dispatch(actions.setShowSnackBar({ status: true, msg: t('info.sentToast', { code: created.code }), type: 'success' }));
+        if (onCreated) onCreated(created);
+      }
       onClose();
     } catch (err) {
       // uploadErrorMessage names a proxy's size cap or a dropped connection;
-      // the API's own messages (validation, the hourly limit) win over it.
-      setError(uploadErrorMessage(err, t('info.sendFailed')));
+      // the API's own messages (validation, the hourly limit, "already being
+      // handled") win over it.
+      setError(uploadErrorMessage(err, editing ? t('info.saveFailed') : t('info.sendFailed')));
+      // Somebody picked the report up while it was open on screen: tell the page
+      // behind, so it stops offering Edit.
+      if (editing && err && err.response && err.response.data && err.response.data.code === 'FEEDBACK_LOCKED' && onLocked) onLocked();
     } finally {
       setSaving(false);
     }
   };
 
-  const voiceFull = voiceNotes.length >= LIMITS.maxVoice;
+  const voiceFull = voiceTotal >= LIMITS.maxVoice;
   const micMessage = recorder.error === 'denied' ? t('info.micDenied')
     : (recorder.error === 'unsupported' || !recorder.supported) ? t('info.micUnsupported') : '';
 
@@ -253,7 +344,9 @@ export default function TicketForm({ open, onClose, onCreated }) {
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           px: 3, py: 2, borderBottom: `1px solid ${T.DIVIDER}`, flexShrink: 0 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>{t('info.formTitle')}</Typography>
+          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', color: T.TEXT_PRI }}>
+            {editing ? t('info.editTitle', { code: ticket.code }) : t('info.formTitle')}
+          </Typography>
           <IconButton size="small" onClick={handleClose} aria-label={t('common.close')} sx={{ color: T.TEXT_SEC }}>
             <CloseIcon sx={{ fontSize: 18 }} />
           </IconButton>
@@ -317,6 +410,14 @@ export default function TicketForm({ open, onClose, onCreated }) {
               </Box>
             )}
             {micMessage && <Typography sx={{ fontSize: '0.76rem', color: T.ERR_CLR, mt: 0.75 }}>{micMessage}</Typography>}
+            {existing.some((a) => a.isVoice) && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1.25 }}>
+                {existing.filter((a) => a.isVoice).map((a) => (
+                  <ExistingRow key={a.fileId} att={a} removed={removed.includes(String(a.fileId))}
+                    onToggle={toggleRemoved} apiBase={apiBase} T={T} t={t} />
+                ))}
+              </Box>
+            )}
             {voiceNotes.length > 0 && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1.25 }}>
                 {voiceNotes.map((v, i) => (
@@ -340,20 +441,25 @@ export default function TicketForm({ open, onClose, onCreated }) {
           <Box>
             <BlockTitle T={T} title={t('info.attachTitle')} hint={t('info.attachHint')} />
             <Button component="label" fullWidth startIcon={<AttachFileIcon sx={{ fontSize: 16 }} />}
-              disabled={files.length >= LIMITS.maxFiles || saving}
+              disabled={fileTotal >= LIMITS.maxFiles || saving}
               sx={{ borderRadius: '10px', border: `1.5px dashed ${T.INPUT_BD}`, py: 1.25, color: T.TEXT_SEC,
                 textTransform: 'none', fontSize: '0.8rem', '&:hover': { borderColor: T.TEXT_PRI, color: T.TEXT_PRI } }}>
               {t('info.attachButton')}
               <input type="file" hidden multiple onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
             </Button>
-            {files.length > 0 && (
+            {(existing.some((a) => !a.isVoice) || files.length > 0) && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mt: 1.25 }}>
+                {existing.filter((a) => !a.isVoice).map((a) => (
+                  <ExistingRow key={a.fileId} att={a} removed={removed.includes(String(a.fileId))}
+                    onToggle={toggleRemoved} apiBase={apiBase} T={T} t={t} />
+                ))}
                 {files.map((entry) => <FileRow key={entry.id} entry={entry} onRemove={removeFile} T={T} t={t} />)}
               </Box>
             )}
           </Box>
 
-          {/* ── technical details ── */}
+          {/* ── technical details (new reports only) ── */}
+          {!editing && (
           <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}` }}>
             <FormControlLabel
               control={<Checkbox size="small" checked={includeContext} onChange={(e) => setIncludeContext(e.target.checked)} />}
@@ -365,6 +471,7 @@ export default function TicketForm({ open, onClose, onCreated }) {
               </Typography>
             )}
           </Box>
+          )}
 
           {error && <Typography sx={{ fontSize: '0.82rem', color: T.ERR_CLR }}>{error}</Typography>}
         </Box>
@@ -376,11 +483,11 @@ export default function TicketForm({ open, onClose, onCreated }) {
           <Button onClick={handleClose} disabled={saving} sx={{ color: T.TEXT_SEC, textTransform: 'none' }}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={handleSend} disabled={saving} variant="contained"
+          <Button onClick={handleSend} disabled={saving || (editing && !dirty)} variant="contained"
             sx={{ textTransform: 'none', borderRadius: '10px', fontWeight: 700,
               bgcolor: isDark ? '#fff' : '#000', color: isDark ? '#000' : '#fff',
               '&:hover': { bgcolor: isDark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.85)' } }}>
-            {saving ? t('info.sending') : t('info.send')}
+            {saving ? (editing ? t('info.saving') : t('info.sending')) : (editing ? t('info.saveChanges') : t('info.send'))}
           </Button>
         </Box>
       </Drawer>
