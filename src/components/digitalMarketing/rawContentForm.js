@@ -135,7 +135,6 @@ export default function RawContentForm({ open, onClose }) {
   // cost the typing. See draftStore.js for why it is IndexedDB.
   const DRAFT_KEY = 'rawContent';
   const [draftSavedAt, setDraftSavedAt] = useState(null);
-  const [draftTruncated, setDraftTruncated] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [restored, setRestored] = useState(false);
   const hydrating = useRef(false);     // never autosave over a draft while loading it
@@ -173,7 +172,6 @@ export default function RawContentForm({ open, onClose }) {
         setTextContent(f.textContent || '');
         setPendingFiles(unpackFiles(draft.files, nextLocalKey));
         setDraftSavedAt(draft.updatedAt || null);
-        setDraftTruncated(Boolean(draft.droppedContent));
         setRestored(true);
       }
       // Let the restored values settle before autosave is allowed to run,
@@ -209,7 +207,7 @@ export default function RawContentForm({ open, onClose }) {
         files: entries,
         droppedContent,
       });
-      if (ok) { setDraftSavedAt(Date.now()); setDraftTruncated(droppedContent); }
+      if (ok) setDraftSavedAt(Date.now());
     }, 900);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -222,7 +220,7 @@ export default function RawContentForm({ open, onClose }) {
   };
   const discardAndClose = async () => {
     await clearDraft(DRAFT_KEY);
-    setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+    setDraftSavedAt(null); setRestored(false);
     resetForm();
     onClose();
   };
@@ -235,7 +233,7 @@ export default function RawContentForm({ open, onClose }) {
     await clearDraft(DRAFT_KEY);
     resetForm();
     setTextVoiceFile(null);
-    setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+    setDraftSavedAt(null); setRestored(false);
     setTimeout(() => { hydrating.current = false; }, 0);
   };
 
@@ -247,6 +245,10 @@ export default function RawContentForm({ open, onClose }) {
   };
 
   const removeFile = (key) => setPendingFiles((prev) => prev.filter((f) => f.key !== key));
+
+  // Files the draft kept by name only: their bytes were too big to store, so
+  // there is nothing to preview or send until each one is picked again.
+  const missingFiles = pendingFiles.filter((f) => !f.file);
 
   const updateName = (key, name) =>
     setPendingFiles((prev) => prev.map((f) => (f.key === key ? { ...f, name } : f)));
@@ -262,7 +264,11 @@ export default function RawContentForm({ open, onClose }) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    setPendingFiles((prev) => prev.map((f) => (f.key === replaceTargetKey.current ? { ...f, file } : f)));
+    setPendingFiles((prev) => prev.map((f) => (f.key === replaceTargetKey.current
+      // Picking a draft's missing file again goes through here too, so the
+      // saved name and the "missing" mark have to follow the new File.
+      ? { ...f, file, missingContent: false, fileName: file.name, fileType: file.type, fileSize: file.size }
+      : f)));
   };
 
   // Preview a not-yet-uploaded file IN-APP via an object URL — no browser tab.
@@ -326,6 +332,11 @@ export default function RawContentForm({ open, onClose }) {
       setError(t('dm.addFilesOrTextRequired'));
       return;
     }
+    // Sending the rest would quietly upload an incomplete batch.
+    if (missingFiles.length) {
+      setError(t('dm.draftRepickBeforeSend', { names: missingFiles.map((f) => f.fileName || f.name).join(', ') }));
+      return;
+    }
     setSaving(true); setError('');
     try {
       const formData = new FormData();
@@ -359,7 +370,7 @@ export default function RawContentForm({ open, onClose }) {
       })).unwrap();
       // Sent — the record exists now, so the draft has nothing left to protect.
       await clearDraft(DRAFT_KEY);
-      setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+      setDraftSavedAt(null); setRestored(false);
       resetForm();
       onClose();
     } catch (err) {
@@ -420,19 +431,40 @@ export default function RawContentForm({ open, onClose }) {
         {pendingFiles.length > 0 && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {pendingFiles.map((f) => (
-              <Box key={f.key} sx={{ p: 1.5, borderRadius: '10px', bgcolor: T.CARD_BG, border: `1px solid ${T.CARD_BD}` }}>
+              <Box key={f.key} sx={{ p: 1.5, borderRadius: '10px', bgcolor: T.CARD_BG,
+                border: f.file ? `1px solid ${T.CARD_BD}` : '1px dashed #B26A00' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography onClick={() => openPreview(f.file)} noWrap
-                    sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, flexGrow: 1, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}>
-                    <OpenInNewIcon sx={{ fontSize: 13, color: T.TEXT_TER }} />
-                    {f.file.name}
-                  </Typography>
-                  <Tooltip title={t('dm.replaceFile')}>
-                    <IconButton size="small" onClick={() => openReplace(f.key)} sx={{ color: T.TEXT_TER, width: 26, height: 26 }}>
-                      <ChangeCircleIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Tooltip>
+                  {f.file ? (
+                    <Typography onClick={() => openPreview(f.file)} noWrap
+                      sx={{ fontSize: '0.78rem', color: T.TEXT_PRI, flexGrow: 1, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 0.5, '&:hover': { textDecoration: 'underline' } }}>
+                      <OpenInNewIcon sx={{ fontSize: 13, color: T.TEXT_TER }} />
+                      {f.file.name}
+                    </Typography>
+                  ) : (
+                    // In the draft by name only. Nothing to preview — the one
+                    // useful thing to offer is picking it again.
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Typography noWrap sx={{ fontSize: '0.78rem', color: T.TEXT_PRI }}>
+                        {f.fileName || f.name || t('dm.draftUntitled')}
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.68rem', color: '#B26A00' }}>
+                        {t('dm.draftFileMissing')}
+                      </Typography>
+                    </Box>
+                  )}
+                  {f.file ? (
+                    <Tooltip title={t('dm.replaceFile')}>
+                      <IconButton size="small" onClick={() => openReplace(f.key)} sx={{ color: T.TEXT_TER, width: 26, height: 26 }}>
+                        <ChangeCircleIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                  ) : (
+                    <Button size="small" onClick={() => openReplace(f.key)}
+                      sx={{ textTransform: 'none', fontSize: '0.72rem', color: '#B26A00', flexShrink: 0, minWidth: 0, px: 1 }}>
+                      {t('dm.draftPickAgain')}
+                    </Button>
+                  )}
                   <Tooltip title={t('dm.removeFileTitle')}>
                     <IconButton size="small" onClick={() => removeFile(f.key)} sx={{ color: T.ERR_CLR, width: 26, height: 26 }}>
                       <DeleteOutlineIcon sx={{ fontSize: 16 }} />
@@ -559,14 +591,9 @@ export default function RawContentForm({ open, onClose }) {
             {t('dm.draftRestoredNotice')}
           </Typography>
         )}
-        {draftTruncated && (
+        {missingFiles.length > 0 && (
           <Typography sx={{ fontSize: '0.75rem', color: '#B26A00' }}>
-            {t('dm.draftTooBigNotice', { mb: Math.round(DRAFT_BLOB_BUDGET / 1024 / 1024) })}
-          </Typography>
-        )}
-        {pendingFiles.some((f) => f.missingContent) && (
-          <Typography sx={{ fontSize: '0.75rem', color: '#B26A00' }}>
-            {t('dm.draftRepickNotice')}
+            {t('dm.draftRepickNotice', { count: missingFiles.length, mb: Math.round(DRAFT_BLOB_BUDGET / 1024 / 1024) })}
           </Typography>
         )}
 

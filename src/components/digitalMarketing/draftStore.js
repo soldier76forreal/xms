@@ -114,24 +114,52 @@ export function totalBytes(files) {
 }
 
 /**
+ * Which files to keep the BYTES of, given their sizes. Smallest first, so one
+ * huge video costs only itself: the first version dropped every file's bytes
+ * the moment the batch as a whole went over budget, so a single 500 MB clip
+ * took ten small photos down with it.
+ * @returns {Set<number>} indexes into `sizes`
+ */
+export function keepWithinBudget(sizes, budget = DRAFT_BLOB_BUDGET) {
+  const order = sizes.map((_, i) => i).sort((a, b) => (sizes[a] || 0) - (sizes[b] || 0));
+  const keep = new Set();
+  let used = 0;
+  for (const i of order) {
+    const size = sizes[i] || 0;
+    if (used + size <= budget) { keep.add(i); used += size; }
+  }
+  return keep;
+}
+
+/**
  * @param files the form's own pendingFiles shape
- * @returns {{ entries, droppedContent }} droppedContent is true when the batch
- *          was over budget and only the typing was kept.
+ * @returns {{ entries, droppedContent }} droppedContent is true when at least
+ *          one file is in the draft by name only and has to be picked again.
  */
 export function packFiles(files) {
-  const withinBudget = totalBytes(files) <= DRAFT_BLOB_BUDGET;
-  const entries = (files || []).map((f) => ({
+  const list = files || [];
+  // Voice notes are small and are the person's own recording — always kept, so
+  // they come off the budget before any picked file is considered.
+  const voiceBytes = list.reduce((n, f) => n + ((f.voiceFile && f.voiceFile.size) || 0), 0);
+  const keep = keepWithinBudget(list.map((f) => (f.file ? f.file.size : 0)), DRAFT_BLOB_BUDGET - voiceBytes);
+  const entries = list.map((f, i) => ({
     key: f.key,
     name: f.name || '',
     description: f.description || '',
-    fileName: (f.file && f.file.name) || '',
-    fileType: (f.file && f.file.type) || '',
-    fileSize: (f.file && f.file.size) || 0,
-    blob: withinBudget && f.file ? f.file : null,
-    voiceBlob: f.voiceFile || null,          // voice notes are small; always kept
+    // A restored entry whose bytes were not kept has no File at all. Fall back
+    // to the name and size it was saved with — reading them off the missing
+    // File wiped them on the very next autosave.
+    fileName: (f.file && f.file.name) || f.fileName || '',
+    fileType: (f.file && f.file.type) || f.fileType || '',
+    fileSize: (f.file && f.file.size) || f.fileSize || 0,
+    blob: f.file && keep.has(i) ? f.file : null,
+    voiceBlob: f.voiceFile || null,
     voiceName: (f.voiceFile && f.voiceFile.name) || '',
   }));
-  return { entries, droppedContent: !withinBudget && files.some((f) => f.file) };
+  // Derived from the entries themselves, not from "was this save over budget":
+  // after a restore nothing is over budget (the big file has no bytes left to
+  // count), and the old rule then reported nothing missing.
+  return { entries, droppedContent: entries.some((e) => !e.blob && e.fileName) };
 }
 
 /** Rebuild the form's pendingFiles. Entries whose bytes were dropped come back
@@ -145,6 +173,7 @@ export function unpackFiles(entries, nextKey) {
     voiceFile: e.voiceBlob ? new File([e.voiceBlob], e.voiceName || 'voice.webm', { type: 'audio/webm' }) : null,
     missingContent: !e.blob,          // picked before, bytes not kept — re-pick to send
     fileName: e.fileName,
+    fileType: e.fileType,
     fileSize: e.fileSize,
   }));
 }

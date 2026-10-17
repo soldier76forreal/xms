@@ -22,7 +22,7 @@ import AxiosGlobal from '../authAndConnections/axiosGlobalUrl';
 import { useBranch } from '../../contextApi/BranchContext';
 import { submitReadyToUpload, createReadyToUpload } from '../../store/store';
 import ConfirmDialog from '../../tools/modal/confirmDialog';
-import { saveDraft, loadDraft, clearDraft, totalBytes, DRAFT_BLOB_BUDGET } from './draftStore';
+import { saveDraft, loadDraft, clearDraft, keepWithinBudget, DRAFT_BLOB_BUDGET } from './draftStore';
 import ProductVarietyPicker from './productVarietyPicker';
 
 // Freeform suggestions — the field is freeSolo (extensible), so these stay literal
@@ -84,7 +84,10 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
   // hand-offs never overwrite each other.
   const DRAFT_KEY = `readyToUpload:${rawContentId || 'new'}`;
   const [draftSavedAt, setDraftSavedAt] = useState(null);
-  const [draftTruncated, setDraftTruncated] = useState(false);
+  // Files a restored draft holds by NAME only — their bytes were too big to
+  // keep. They stay on the form until picked again or removed: dropping them
+  // silently let a partial batch be sent, and the next autosave forgot them.
+  const [missingFiles, setMissingFiles] = useState([]);
   const [confirmReset, setConfirmReset] = useState(false);
   const [restored, setRestored] = useState(false);
   const hydrating = useRef(false);
@@ -112,11 +115,12 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
         setCaption(f.caption || '');
         if (f.branchId) setBranchId(f.branchId);
         setProducts(f.products || []);
-        setFiles((draft.files || [])
-          .filter((e) => e.blob)
+        const entries = draft.files || [];
+        setFiles(entries.filter((e) => e.blob)
           .map((e) => new File([e.blob], e.fileName || 'file', { type: e.fileType || undefined })));
+        setMissingFiles(entries.filter((e) => !e.blob && e.fileName)
+          .map((e) => ({ fileName: e.fileName, fileType: e.fileType || '', fileSize: e.fileSize || 0 })));
         setDraftSavedAt(draft.updatedAt || null);
-        setDraftTruncated(Boolean(draft.droppedContent));
         setRestored(true);
       }
       setTimeout(() => { hydrating.current = false; }, 0);
@@ -125,40 +129,44 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, DRAFT_KEY]);
 
-  const isEmptyForm = () => !title.trim() && !caption.trim() && !files.length
+  const isEmptyForm = () => !title.trim() && !caption.trim() && !files.length && !missingFiles.length
     && !platform && !products.length;
 
   useEffect(() => {
     if (!open || hydrating.current) return undefined;
     const id = setTimeout(async () => {
       if (isEmptyForm()) { await clearDraft(DRAFT_KEY); setDraftSavedAt(null); return; }
-      const withinBudget = totalBytes(files.map((f) => ({ file: f }))) <= DRAFT_BLOB_BUDGET;
+      const keep = keepWithinBudget(files.map((f) => f.size));
+      const entries = [
+        ...files.map((f, i) => ({
+          fileName: f.name, fileType: f.type, fileSize: f.size, blob: keep.has(i) ? f : null,
+        })),
+        // Still missing from an earlier draft: carried forward, never forgotten.
+        ...missingFiles.map((m) => ({ ...m, blob: null })),
+      ];
       const ok = await saveDraft(DRAFT_KEY, {
         kind: 'readyToUpload',
         rawContentId: rawContentId || null,
         fields: { title, language, platform, caption, branchId, products },
-        files: files.map((f) => ({
-          fileName: f.name, fileType: f.type, fileSize: f.size,
-          blob: withinBudget ? f : null,
-        })),
-        droppedContent: !withinBudget && files.length > 0,
+        files: entries,
+        droppedContent: entries.some((e) => !e.blob),
       });
-      if (ok) { setDraftSavedAt(Date.now()); setDraftTruncated(!withinBudget && files.length > 0); }
+      if (ok) setDraftSavedAt(Date.now());
     }, 900);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, title, language, platform, caption, branchId, products, files]);
+  }, [open, title, language, platform, caption, branchId, products, files, missingFiles]);
 
   const handleReset = async () => {
     setConfirmReset(false);
     hydrating.current = true;
     await clearDraft(DRAFT_KEY);
     resetForm();
-    setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+    setDraftSavedAt(null); setRestored(false);
     setTimeout(() => { hydrating.current = false; }, 0);
   };
 
-  const resetForm = () => { setTitle(''); setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setBranchId(''); setProducts([]); setError(''); };
+  const resetForm = () => { setTitle(''); setFiles([]); setLanguage(''); setPlatform(''); setCaption(''); setBranchId(''); setProducts([]); setMissingFiles([]); setError(''); };
   const handleClose = () => {
     if (files.length) { setConfirmDiscard(true); return; }
     resetForm();
@@ -166,7 +174,7 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
   };
   const discardAndClose = async () => {
     await clearDraft(DRAFT_KEY);
-    setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+    setDraftSavedAt(null); setRestored(false);
     resetForm(); onClose();
   };
 
@@ -180,10 +188,17 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
     const picked = Array.from(fileList || []);
     if (!picked.length) return;
     setFiles((prev) => [...prev, ...picked]);
+    // Picking a missing file again settles it — matched by name, the one thing
+    // the draft could keep about it.
+    setMissingFiles((prev) => prev.filter((m) => !picked.some((p) => p.name === m.fileName)));
   };
   const removeFile = (idx) => setFiles((prev) => prev.filter((_, i) => i !== idx));
 
   const handleSave = async () => {
+    if (missingFiles.length) {
+      setError(t('dm.draftRepickBeforeSend', { names: missingFiles.map((m) => m.fileName).join(', ') }));
+      return;
+    }
     if (!files.length) { setError(t('dm.addAtLeastOneFile')); return; }
     setSaving(true); setError('');
     try {
@@ -203,7 +218,7 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
         await dispatch(submitReadyToUpload({ authCtx, axiosGlobal, id: rawContentId, formData: fd, onProgress })).unwrap();
       }
       await clearDraft(DRAFT_KEY);
-      setDraftSavedAt(null); setDraftTruncated(false); setRestored(false);
+      setDraftSavedAt(null); setRestored(false);
       resetForm();
       onClose();
     } catch (err) {
@@ -251,6 +266,17 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
             ))}
           </Box>
         )}
+        {missingFiles.length > 0 && (
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {missingFiles.map((m, i) => (
+              <Chip key={`missing-${m.fileName}-${i}`} size="small" variant="outlined"
+                label={`${m.fileName.length > 22 ? m.fileName.slice(0, 19) + '…' : m.fileName} · ${t('dm.draftPickAgain')}`}
+                onDelete={() => setMissingFiles((prev) => prev.filter((_, j) => j !== i))}
+                deleteIcon={<DeleteOutlineIcon sx={{ fontSize: 14 }} />}
+                sx={{ height: 24, fontSize: '0.7rem', color: '#B26A00', borderColor: '#B26A00', borderStyle: 'dashed' }} />
+            ))}
+          </Box>
+        )}
 
         <TextField select label={t('dm.contentLanguageLabel')} size="small" fullWidth value={language}
           onChange={(e) => setLanguage(e.target.value)}
@@ -291,9 +317,9 @@ export default function ReadyToUploadForm({ open, onClose, rawContentId, default
             {t('dm.draftRestoredNotice')}
           </Typography>
         )}
-        {draftTruncated && (
+        {missingFiles.length > 0 && (
           <Typography sx={{ fontSize: '0.75rem', color: '#B26A00' }}>
-            {t('dm.draftTooBigNotice', { mb: Math.round(DRAFT_BLOB_BUDGET / 1024 / 1024) })}
+            {t('dm.draftRepickNotice', { count: missingFiles.length, mb: Math.round(DRAFT_BLOB_BUDGET / 1024 / 1024) })}
           </Typography>
         )}
         {draftSavedAt && (

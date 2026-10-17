@@ -61,6 +61,11 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
   const { branches } = useBranch();
   const [formOpen, setFormOpen] = useState(false);
   const [draftTick, setDraftTick] = useState(0);
+  // Which hand-off the form is for. A draft started from a raw content's
+  // "Mark ready to upload" is keyed to that batch, so Continue has to reopen
+  // the form FOR that batch — opening the standalone form instead loaded a
+  // different, empty draft and made the real one look lost.
+  const [formRawContentId, setFormRawContentId] = useState(null);
 
   const items      = useSelector(s => s.dmReadyToUpload);
   const total      = useSelector(s => s.dmReadyToUploadTotal);
@@ -202,7 +207,7 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
             </Tooltip>
             {can('digitalMarketing:readyToUpload:edit') && (
               <Button size="small" variant="outlined" startIcon={<AddIcon sx={{ fontSize: 14 }} />}
-                onClick={() => setFormOpen(true)}
+                onClick={() => { setFormRawContentId(null); setFormOpen(true); }}
                 sx={{ fontSize: '0.7rem', textTransform: 'none', borderRadius: '8px', flexShrink: 0 }}>
                 {t('common.new')}
               </Button>
@@ -214,7 +219,7 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
             {/* Unsent drafts sit above the list — nothing has been uploaded,
                 so they are a reminder rather than a record. */}
             <DraftStrip kind="readyToUpload" T={T} refreshKey={draftTick}
-              onOpen={() => setFormOpen(true)} />
+              onOpen={(d) => { setFormRawContentId((d && d.rawContentId) || null); setFormOpen(true); }} />
 
             {loading && items.length === 0 ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
@@ -297,7 +302,7 @@ export default function ReadyToUploadSection({ openId = null, onOpenHandled = ()
         </Box>
       )}
 
-      <ReadyToUploadForm open={formOpen}
+      <ReadyToUploadForm open={formOpen} rawContentId={formRawContentId || undefined}
         onClose={() => { setFormOpen(false); setDraftTick((n) => n + 1); }} />
 
       {/* ── Filter Drawer — same sidebar pattern as CRM's / RawContentSection's ── */}

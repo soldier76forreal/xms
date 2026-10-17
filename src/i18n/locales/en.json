@@ -2044,12 +2044,15 @@
     "draftNeedsRepick": "files need picking again",
     "draftKeptAt": "Draft kept at {{time}} — nothing is uploaded until you send it",
     "draftRestoredNotice": "Picked up where you left off. Nothing has been uploaded yet.",
-    "draftTooBigNotice": "This batch is over {{mb}} MB, so the draft kept your text and settings but not the files themselves — pick them again before sending.",
-    "draftRepickNotice": "Some files need picking again before this can be sent.",
     "discardDraftTitle": "Discard this draft?",
     "discardDraftMessage": "The saved draft will be thrown away. Nothing was uploaded, so nothing else is affected.",
     "resetFormTitle": "Reset this form?",
-    "resetFormMessage": "Every field will be cleared and the saved draft discarded. Nothing was uploaded, so nothing else is affected."
+    "resetFormMessage": "Every field will be cleared and the saved draft discarded. Nothing was uploaded, so nothing else is affected.",
+    "draftRepickNotice_one": "1 file was too large to keep in the draft — pick it again, or remove it, before sending. A draft keeps up to {{mb}} MB of files.",
+    "draftRepickNotice_other": "{{count}} files were too large to keep in the draft — pick them again, or remove them, before sending. A draft keeps up to {{mb}} MB of files.",
+    "draftFileMissing": "Not kept in the draft — pick this file again",
+    "draftPickAgain": "Pick again",
+    "draftRepickBeforeSend": "Pick these files again, or remove them, before sending: {{names}}"
   },
   "tutorials": {
     "noPermissionView": "You don't have permission to view the Tutorial Center",
